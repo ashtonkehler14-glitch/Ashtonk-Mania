@@ -406,6 +406,8 @@ const SongSelect = {
   rebuild(keepScroll = false, stay = false) {
     if (!this.el) return;
     if (this.convBtn) { this.convBtn.hidden = ![...BeatmapManager.maps.values()].some(m => m.mode === 0); this.convBtn.classList.toggle('on', Settings.get('songselect.converts') !== false); }
+    const oldScroll = stay ? this.scroller.scrollTop : null;
+    const oldIndex = stay ? Math.max(0, (this.results || []).findIndex(r => r.maps.some(m => m.id === this.selectedId))) : 0;
     const pq = this.parseQuery(this.query.trim());
     const keys = Settings.get('songselect.keys') || [];
     const sMin = +Settings.get('songselect.starsMin') || 0, sMax = +Settings.get('songselect.starsMax') || 10.1;
@@ -475,7 +477,7 @@ const SongSelect = {
     const allVisible = new Map();
     for (const r of shown) for (const m of r.maps) allVisible.set(m.id, r);
     if (!this.selectedId || !allVisible.has(this.selectedId)) {
-      const first = shown[0];
+      const first = shown[stay ? Math.min(oldIndex, shown.length - 1) : 0];
       // nothing matches: keep the current beatmap (as lazer does) so the wedge stays and clearing the search returns to it
       if (first) this.selectedId = this.pickDiff(first.maps).id;
       else if (this.selectedId && !BeatmapManager.maps.has(this.selectedId)) this.selectedId = null;
@@ -491,7 +493,7 @@ const SongSelect = {
     else this.updateInfo();
     // (the rows are built where the list ends up, once: built here and then again after the jump to the selected
     // beatmap, the browser laid the whole screen out twice — a long stall opening song select on a slow device)
-    if (stay) this.renderVisible(true);
+    if (stay) { this.scroller.scrollTop = oldScroll; this.renderVisible(true); }
     // the selected beatmap's song plays (arriving with nothing playing, or a filter that moved the selection)
     const sel = this.selectedId && BeatmapManager.maps.get(this.selectedId);
     // (back from that very song: it's loaded but stopped — it plays again, unless you paused the music yourself)
@@ -1347,7 +1349,7 @@ const SongSelect = {
     if (!fresh) { list.append(h('div.lb-empty.lb-loading', h('span.spinner'))); return list; }
     const sel = [...(Settings.get('songselect.mods') || [])].filter(x => x !== 'AT').sort().join();
     const me = Presence.pid(), who = ProfileManager.profile.name;
-    const asScore = e => ({ id: 'o-' + e.pid, online: true, own: e.pid === me, player: e.pid === me ? who : e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
+    const asScore = e => ({ id: 'o-' + e.pid, pid: e.pid, online: true, own: e.pid === me, player: e.pid === me ? who : e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
       grade: e.grade, mods: e.mods || [], counts: e.counts && e.counts.length === 6 ? e.counts : null, pp: e.pp, srVersion: SR_VERSION, passed: true, date: e.date, rank: e.rank, role: e.role || null,
       ...(e.stars > 0 ? { stars: e.stars } : {}) }); // (the play's own star rating — with its mods — when the server judged it)
     const scores = d.scores.map(asScore).filter(x => !modsOn || [...x.mods].sort().join() === sel);
@@ -1362,7 +1364,8 @@ const SongSelect = {
     const items = [];
     const mods = (s.mods || []).filter(x => x !== 'AT');
     if (mods.length) items.push({ label: 'Use these mods', icon: 'mods', onClick: () => { Settings.set('songselect.mods', mods); Bus.emit('mods:changed'); } });
-    if (s.replayId) items.push({ label: 'Watch replay', icon: 'play', onClick: async () => { const r = await ReplayManager.get(s.replayId); if (r) Game.launch({ mapId: m.id, mode: 'replay', replay: r, returnTo: { score: s, replay: r } }); else Toast.err('No replay available'); } });
+    if (s.online) items.push({ label: 'Watch replay', icon: 'play', onClick: async () => { try { const r = await PublicReplays.get({ ...s, mapHash: m.hash }); if (r) Game.launch({ mapId: m.id, mode: 'replay', replay: r, returnTo: { score: s, browse: true, watched: 'online' } }); else Toast.err('No shared replay available for this score'); } catch (e) { Toast.err('Replay unavailable', friendlyError(e)); } } });
+    if (!s.online && s.replayId) items.push({ label: 'Watch replay', icon: 'play', onClick: async () => { const r = await ReplayManager.get(s.replayId); if (r) Game.launch({ mapId: m.id, mode: 'replay', replay: r, returnTo: { score: s, replay: r } }); else Toast.err('No replay available'); } });
     if (!s.online) items.push({ label: 'Delete', icon: 'trash', danger: true, onClick: async () => { if (await Dialog.confirm('Delete this score?', 'It goes from your scores, profile and pp for good.', { ok: 'Delete', danger: true })) { await ScoreManager.remove(s.id); } } });
     if (items.length) showMenu(e.clientX, e.clientY, items);
   },

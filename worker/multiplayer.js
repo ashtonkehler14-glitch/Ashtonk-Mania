@@ -3225,6 +3225,51 @@ export class Matchmaker {
   /** A finished play, to be judged here: { pid, key, osu (the beatmap file, base64), play: { mods, modConfig, seed,
    *  events }, daily? }. The file's SHA-256 is the beatmap's id; verifyPlay plays the key presses through the game's
    *  judging and works the score out; that score — never the player's own — goes on the boards and rankings. */
+  /** Public game replays are kept only for the player's current board / pp best. */
+  async publicReplay(request) {
+    const url = new URL(request.url), posting = request.method === 'POST';
+    const body = posting ? await request.json().catch(() => null) : Object.fromEntries(url.searchParams);
+    const pid = String(body?.pid || ''), hash = String(body?.hash || ''), score = Number(body?.score);
+    if (!/^[a-z0-9]{6,24}$/.test(pid) || !/^[a-f0-9]{64}$/.test(hash) || !Number.isFinite(score)) return json({ error: 'Bad replay request.' }, 400);
+    await this.loadFriends();
+    const slots = ['board', 'pp'].map(slot => `replay:${pid}:${hash}:${slot}`);
+    if (!posting) {
+      if (this.presence.isBanned(pid) || this.presence.removedAt(pid, hash)) return json({ error: 'Replay unavailable.' }, 404);
+      for (const slot of slots) {
+        const meta = await this.state.storage.get(slot);
+        if (!meta || meta.score !== score) continue;
+        const parts = await Promise.all(Array.from({ length: meta.chunks }, (_, i) => this.state.storage.get(`${slot}:${meta.version}:${i}`)));
+        if (parts.some(p => typeof p !== 'string')) continue;
+        return json(JSON.parse(parts.join('')));
+      }
+      return json({ error: 'No shared replay is available for this score.' }, 404);
+    }
+    if (!this.presence.keyOk(pid, body.key) || this.presence.isBanned(pid)) return json({ error: 'Not signed in as that player.' }, 403);
+    await this.ensureBests(pid);
+    const board = this.presence.boards.get(hash) || await this.state.storage.get(`lb:${hash}`) || [];
+    const boardBest = board.find(x => x.pid === pid), ppBest = this.presence.ranks.get(pid)?.bests?.[hash];
+    const rep = body.replay;
+    if (!rep || rep.app !== 'Ashtonk!mania' || rep.kind !== 'replay' || rep.mapHash !== hash || !Array.isArray(rep.events) || rep.events.length > 600000 || rep.events.length % 3 ||
+        !rep.events.every(Number.isFinite) || !Array.isArray(rep.windows) || rep.windows.length !== 6 || !rep.windows.every(Number.isFinite) ||
+        !Number.isInteger(rep.keys) || rep.keys < 1 || rep.keys > 18 || !Array.isArray(rep.mods) || rep.mods.length > 40 ||
+        !rep.summary || (rep.summary.scoreStd ?? rep.summary.score) !== score) return json({ error: 'Invalid replay.' }, 400);
+    for (let i = 0; i < rep.events.length; i += 3) if (rep.events[i + 1] < 0 || rep.events[i + 1] >= rep.keys || !Number.isInteger(rep.events[i + 1]) || ![0, 1].includes(rep.events[i + 2]) || i && rep.events[i] < rep.events[i - 3]) return json({ error: 'Invalid replay inputs.' }, 400);
+    const text = JSON.stringify(rep);
+    if (text.length > 2000000) return json({ error: 'Replay too large.' }, 413);
+    let saved = false;
+    for (const [index, best] of [boardBest, ppBest].entries()) {
+      if (!best || best.score !== score) continue;
+      const slot = slots[index], version = crypto.randomUUID(), chunks = Math.ceil(text.length / 24000);
+      await this.state.storage.transaction(async storage => {
+        const old = await storage.get(slot);
+        for (let i = 0; i < chunks; i++) await storage.put(`${slot}:${version}:${i}`, text.slice(i * 24000, (i + 1) * 24000));
+        await storage.put(slot, { score, chunks, version });
+        if (old) await storage.delete(Array.from({ length: old.chunks }, (_, i) => `${slot}:${old.version}:${i}`));
+      });
+      saved = true;
+    }
+    return json({ ok: saved });
+  }
   async score(request) {
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object' || !body.r || typeof body.r !== 'object') return json({ error: 'Bad request.' }, 400);
@@ -3613,6 +3658,7 @@ export class Matchmaker {
       await this.loadFriends();
       return this.presenceSocket();
     }
+    if (url.pathname === '/shared-replay') return this.publicReplay(request);
     if (url.pathname === '/judged-score' && request.method === 'POST') return this.score(request);
     if (url.pathname === '/appeal' && request.method === 'POST') return this.appeal(request);
     if (url.pathname === '/judged-scores' && request.method === 'POST') return this.scores(request);
@@ -3797,6 +3843,13 @@ export async function handleMultiplayer(request, env, url) {
     if (text.length > 4000) return json({ error: 'Too long.' }, 413);
     const stub = env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
     return stub.fetch(new Request(new URL('/appeal', url), { method: 'POST', body: text, headers: { 'content-type': 'application/json' } }));
+  }
+  if (path === '/api/mp/replay' && ['GET', 'POST'].includes(request.method)) {
+    const stub = env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
+    if (request.method === 'GET') return stub.fetch(new Request(new URL('/shared-replay' + url.search, url)));
+    const text = await request.text();
+    if (text.length > 2100000) return json({ error: 'Replay too large.' }, 413);
+    return stub.fetch(new Request(new URL('/shared-replay', url), { method: 'POST', body: text, headers: { 'content-type': 'application/json' } }));
   }
   if (path === '/api/mp/score' && request.method === 'POST') {
     const j = await judgePlay(request, {});

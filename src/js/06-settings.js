@@ -119,6 +119,7 @@ const SETTINGS_SCHEMA = [
   { s: 'Audio', g: 'Volume', k: 'audio.effects', l: 'Effect', t: 'range', d: 0.7, min: 0, max: 1, step: 0.01, fmt: v => `${Math.round(v * 100)}%` },
   { x: 1, s: 'Audio', g: 'Volume', k: 'audio.ui', l: 'Interface sounds', t: 'range', d: 0.6, min: 0, max: 1, step: 0.01, fmt: v => `${Math.round(v * 100)}%` },
   { s: 'Audio', g: 'Offset', k: 'audio.offset', l: 'Audio offset', t: 'range', d: 0, min: -300, max: 300, step: 1, fmt: v => `${v > 0 ? '+' : ''}${v}ms`, hint: 'Positive if you hit late (notes will arrive later).', calibrate: true },
+  { s: 'Audio', g: 'Playback', k: 'audio.hitSounds', l: 'Hit sound effects', t: 'bool', d: false, hint: 'Play a sound when you hit a note.' },
   { s: 'Audio', g: 'Playback', k: 'audio.autoplay', l: 'Autoplay menu music and previews', t: 'bool', d: true, hint: 'Start songs automatically in menus and song select. Turn off to play music only when you choose Play; gameplay music is unchanged.' },
   { x: 1, s: 'Audio', g: 'Playback', k: 'audio.preservePitch', l: 'Preserve pitch for DT / HT / practice speed', t: 'bool', d: true },
   { x: 1, s: 'Audio', g: 'Playback', k: 'audio.previewAudio', l: 'Song select preview', t: 'bool', d: true },
@@ -219,7 +220,7 @@ const SETTINGS_SCHEMA = [
 ];
 // Appearance belongs to the skin and its editor; keep stored values compatible with existing skins.
 for (const it of SETTINGS_SCHEMA) {
-  if (['gameplay.laneWidth', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
+  if (['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
   if (it.g === 'Custom skin' && !it.when) it.when = customSkinOn;
   if (it.g === 'HUD' || ['input.keyOverlay', 'gameplay.showJudgements', 'gameplay.showMax', 'gameplay.earlyLate'].includes(it.k)) { it.x = 1; it.editor = 'hud'; }
   if (it.k === 'gameplay.hitPositionOffset') it.x = 1;

@@ -5584,6 +5584,11 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
   .sp-nb { flex-shrink: 0; }
   .sp-main { min-height: 0; }
 }
+
+/* Context menus use the app's coordinate space, including render and UI scaling. */
+.menu { position: absolute; overflow-x: hidden; }
+.menu button { min-height: 34px; overflow-wrap: anywhere; }
+.menu button > .i { flex: none; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -9231,6 +9236,7 @@ const SETTINGS_SCHEMA = [
   { s: 'Audio', g: 'Volume', k: 'audio.effects', l: 'Effect', t: 'range', d: 0.7, min: 0, max: 1, step: 0.01, fmt: v => `${Math.round(v * 100)}%` },
   { x: 1, s: 'Audio', g: 'Volume', k: 'audio.ui', l: 'Interface sounds', t: 'range', d: 0.6, min: 0, max: 1, step: 0.01, fmt: v => `${Math.round(v * 100)}%` },
   { s: 'Audio', g: 'Offset', k: 'audio.offset', l: 'Audio offset', t: 'range', d: 0, min: -300, max: 300, step: 1, fmt: v => `${v > 0 ? '+' : ''}${v}ms`, hint: 'Positive if you hit late (notes will arrive later).', calibrate: true },
+  { s: 'Audio', g: 'Playback', k: 'audio.hitSounds', l: 'Hit sound effects', t: 'bool', d: false, hint: 'Play a sound when you hit a note.' },
   { s: 'Audio', g: 'Playback', k: 'audio.autoplay', l: 'Autoplay menu music and previews', t: 'bool', d: true, hint: 'Start songs automatically in menus and song select. Turn off to play music only when you choose Play; gameplay music is unchanged.' },
   { x: 1, s: 'Audio', g: 'Playback', k: 'audio.preservePitch', l: 'Preserve pitch for DT / HT / practice speed', t: 'bool', d: true },
   { x: 1, s: 'Audio', g: 'Playback', k: 'audio.previewAudio', l: 'Song select preview', t: 'bool', d: true },
@@ -9331,7 +9337,7 @@ const SETTINGS_SCHEMA = [
 ];
 // Appearance belongs to the skin and its editor; keep stored values compatible with existing skins.
 for (const it of SETTINGS_SCHEMA) {
-  if (['gameplay.laneWidth', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
+  if (['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
   if (it.g === 'Custom skin' && !it.when) it.when = customSkinOn;
   if (it.g === 'HUD' || ['input.keyOverlay', 'gameplay.showJudgements', 'gameplay.showMax', 'gameplay.earlyLate'].includes(it.k)) { it.x = 1; it.editor = 'hud'; }
   if (it.k === 'gameplay.hitPositionOffset') it.x = 1;
@@ -14314,12 +14320,13 @@ const Toast = {
     const a = app.getBoundingClientRect(), k = a.width / (app.offsetWidth || a.width) || 1;
     box.style.top = Math.round((bottom - a.top) / k + 12) + 'px';
   },
-  show(title, body = '', { type = 'info', timeout = 4200, log = true, onClick = null, hold = false } = {}) {
+  show(title, body = '', { type = 'info', timeout = 4200, log = true, onClick = null, hold = false, valid = null } = {}) {
+    if (valid && !valid()) return () => {};
     // (as lazer holds notifications while you play: one that isn't about the play — a friend online, a download done —
     // waits for the song to be over to pop up, over the score; it's in the notifications straight away)
     if (hold && Toast.playing()) {
       if (log && typeof Notifications !== 'undefined') Notifications.add(title, body, type, { onClick });
-      const held = { title, body, opts: { type, timeout, onClick, log: false } };
+      const held = { title, body, opts: { type, timeout, onClick, log: false, valid } };
       Toast.later(held);
       return () => { held.gone = true; };
     }
@@ -14577,10 +14584,14 @@ function showMenu(x, y, items, { above = false } = {}) {
   const closer = e => { if (!menu.contains(e.target)) { o.close(); document.removeEventListener('pointerdown', closer, true); } };
   setTimeout(() => document.addEventListener('pointerdown', closer, true), 0);
   requestAnimationFrame(() => {
-    const r = menu.getBoundingClientRect();
-    menu.style.left = clamp(x, 8, innerWidth - r.width - 8) * Zoom.z + 'px';
-    menu.style.top = clamp(above ? y - r.height : y, 8, innerHeight - r.height - 8) * Zoom.z + 'px';
-    const f = menu.querySelector('button'); f && f.focus();
+    const root = o.el.getBoundingClientRect(), scale = root.width / o.el.offsetWidth || 1;
+    menu.style.maxWidth = Math.max(0, (innerWidth - 16) / scale) + 'px';
+    menu.style.minWidth = Math.min(220, (innerWidth - 16) / scale) + 'px';
+    menu.style.maxHeight = Math.max(0, (innerHeight - 16) / scale) + 'px';
+    const r = { width: menu.offsetWidth * scale, height: menu.offsetHeight * scale };
+    menu.style.left = (clamp(x, 8, Math.max(8, innerWidth - r.width - 8)) - root.left) / scale + 'px';
+    menu.style.top = (clamp(above ? y - r.height : y, 8, Math.max(8, innerHeight - r.height - 8)) - root.top) / scale + 'px';
+    const f = menu.querySelector('button'); f && f.focus({ preventScroll: true });
   });
   menu.addEventListener('keydown', e => {
     const btns = $$('button', menu); const i = btns.indexOf(document.activeElement);
@@ -19647,6 +19658,8 @@ const SongSelect = {
   rebuild(keepScroll = false, stay = false) {
     if (!this.el) return;
     if (this.convBtn) { this.convBtn.hidden = ![...BeatmapManager.maps.values()].some(m => m.mode === 0); this.convBtn.classList.toggle('on', Settings.get('songselect.converts') !== false); }
+    const oldScroll = stay ? this.scroller.scrollTop : null;
+    const oldIndex = stay ? Math.max(0, (this.results || []).findIndex(r => r.maps.some(m => m.id === this.selectedId))) : 0;
     const pq = this.parseQuery(this.query.trim());
     const keys = Settings.get('songselect.keys') || [];
     const sMin = +Settings.get('songselect.starsMin') || 0, sMax = +Settings.get('songselect.starsMax') || 10.1;
@@ -19716,7 +19729,7 @@ const SongSelect = {
     const allVisible = new Map();
     for (const r of shown) for (const m of r.maps) allVisible.set(m.id, r);
     if (!this.selectedId || !allVisible.has(this.selectedId)) {
-      const first = shown[0];
+      const first = shown[stay ? Math.min(oldIndex, shown.length - 1) : 0];
       // nothing matches: keep the current beatmap (as lazer does) so the wedge stays and clearing the search returns to it
       if (first) this.selectedId = this.pickDiff(first.maps).id;
       else if (this.selectedId && !BeatmapManager.maps.has(this.selectedId)) this.selectedId = null;
@@ -19732,7 +19745,7 @@ const SongSelect = {
     else this.updateInfo();
     // (the rows are built where the list ends up, once: built here and then again after the jump to the selected
     // beatmap, the browser laid the whole screen out twice — a long stall opening song select on a slow device)
-    if (stay) this.renderVisible(true);
+    if (stay) { this.scroller.scrollTop = oldScroll; this.renderVisible(true); }
     // the selected beatmap's song plays (arriving with nothing playing, or a filter that moved the selection)
     const sel = this.selectedId && BeatmapManager.maps.get(this.selectedId);
     // (back from that very song: it's loaded but stopped — it plays again, unless you paused the music yourself)
@@ -20588,7 +20601,7 @@ const SongSelect = {
     if (!fresh) { list.append(h('div.lb-empty.lb-loading', h('span.spinner'))); return list; }
     const sel = [...(Settings.get('songselect.mods') || [])].filter(x => x !== 'AT').sort().join();
     const me = Presence.pid(), who = ProfileManager.profile.name;
-    const asScore = e => ({ id: 'o-' + e.pid, online: true, own: e.pid === me, player: e.pid === me ? who : e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
+    const asScore = e => ({ id: 'o-' + e.pid, pid: e.pid, online: true, own: e.pid === me, player: e.pid === me ? who : e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
       grade: e.grade, mods: e.mods || [], counts: e.counts && e.counts.length === 6 ? e.counts : null, pp: e.pp, srVersion: SR_VERSION, passed: true, date: e.date, rank: e.rank, role: e.role || null,
       ...(e.stars > 0 ? { stars: e.stars } : {}) }); // (the play's own star rating — with its mods — when the server judged it)
     const scores = d.scores.map(asScore).filter(x => !modsOn || [...x.mods].sort().join() === sel);
@@ -20603,7 +20616,8 @@ const SongSelect = {
     const items = [];
     const mods = (s.mods || []).filter(x => x !== 'AT');
     if (mods.length) items.push({ label: 'Use these mods', icon: 'mods', onClick: () => { Settings.set('songselect.mods', mods); Bus.emit('mods:changed'); } });
-    if (s.replayId) items.push({ label: 'Watch replay', icon: 'play', onClick: async () => { const r = await ReplayManager.get(s.replayId); if (r) Game.launch({ mapId: m.id, mode: 'replay', replay: r, returnTo: { score: s, replay: r } }); else Toast.err('No replay available'); } });
+    if (s.online) items.push({ label: 'Watch replay', icon: 'play', onClick: async () => { try { const r = await PublicReplays.get({ ...s, mapHash: m.hash }); if (r) Game.launch({ mapId: m.id, mode: 'replay', replay: r, returnTo: { score: s, browse: true, watched: 'online' } }); else Toast.err('No shared replay available for this score'); } catch (e) { Toast.err('Replay unavailable', friendlyError(e)); } } });
+    if (!s.online && s.replayId) items.push({ label: 'Watch replay', icon: 'play', onClick: async () => { const r = await ReplayManager.get(s.replayId); if (r) Game.launch({ mapId: m.id, mode: 'replay', replay: r, returnTo: { score: s, replay: r } }); else Toast.err('No replay available'); } });
     if (!s.online) items.push({ label: 'Delete', icon: 'trash', danger: true, onClick: async () => { if (await Dialog.confirm('Delete this score?', 'It goes from your scores, profile and pp for good.', { ok: 'Delete', danger: true })) { await ScoreManager.remove(s.id); } } });
     if (items.length) showMenu(e.clientX, e.clientY, items);
   },
@@ -21140,6 +21154,7 @@ const GameplayScreen = {
     this.gpChatIn.placeholder = open ? kbHint('press Enter to chat', 'tap to chat') : 'chat is available when your song is over';
   },
   leave() {
+    if (this._failSound) { try { this._failSound.stop(); } catch {} this._failSound = null; }
     if (SkinEditor.on) SkinEditor.close({ leaving: true });
     if (this._quitO) { const o = this._quitO; this._quitO = null; o.close(); } // ("Quit match?" still up as the song ended)
     if (this._gpChatOff) { this._gpChatOff(); this._gpChatOff = null; } this.gpChatIn = null; this.gpChat = null; this._gpW = this._gpSx = null;
@@ -22427,6 +22442,10 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
     const realNow = performance.now();
     if (e.type === 'judgement') {
       this.renderer.onJudgement(e, realNow);
+      if (Settings.get('audio.hitSounds') && e.j !== J.MISS && !e.tail) {
+        const tok = this._tok;
+        SkinManager.sample('normal-hitnormal').then(b => { if (b && this.s === s && this._tok === tok && tok) AudioManager.play(b); });
+      }
       if (this.errMeter) this.errMeter.add(e.err, e.j, realNow);
       if (e.err != null) s.debug.lastErr = e.err / s.rate;
       if (s.adaptive) this.adaptHit(s, e);
@@ -22664,7 +22683,8 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
       Music.setVolume(0, FAIL_WIND_DOWN * 1000);
       setTimeout(() => { if (Music.source === src) Music.stop(0); }, FAIL_WIND_DOWN * 1000 + 100);
     }
-    SkinManager.sample('failsound').then(b => b && AudioManager.play(b));
+    const failToken = this._tok;
+    SkinManager.sample('failsound').then(b => { if (b && this.s === s && this._tok === failToken && failToken) this._failSound = AudioManager.play(b); });
     if (s.mode === 'play') {
       const { score } = await this.saveScore(false, { store: false }); // (not kept: only a play you finish is recorded)
       this.failedScore = score; this.failedReplay = this._unsavedReplay;
@@ -22697,7 +22717,7 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
       const { score, replay } = await this.saveScore(!s.mpFailed, { store: !s.mpFailed });
       try { Medals.check(score); } catch (e) { console.warn('medals', e); }
       // lazer's global leaderboard: a passed play goes up (the server keeps your best)
-      if (score.passed && !s.mods.includes('AT') && s.mode === 'play' && !s.practice) Verified.submit({ rec: s.rec, score, daily: this.params.daily ? { day: this.params.daily.day } : null });
+      if (score.passed && !s.mods.includes('AT') && s.mode === 'play' && !s.practice) Verified.submit({ rec: s.rec, score, replay, daily: this.params.daily ? { day: this.params.daily.day } : null });
       if (s.mp) { Multiplayer.finish(score); Verified.room({ rec: s.rec, score }); setTimeout(() => { if (this.s === s) this.mpAfter(score, replay); }, 900); return; }
       setTimeout(() => { if (this.s === s) Screens.go('results', { score, replay, fresh: true, back: this.params.back || null, daily: this.params.daily || null }, { replace: true, transition: 'zoom' }); }, 600);
     } else {
@@ -23554,7 +23574,7 @@ const SkinEditor = {
 
   // ── the layout
   appearanceRows(hud) {
-    return SETTINGS_SCHEMA.filter(it => hud ? it.editor === 'hud' && !HUD_PARTS.some(p => p.setting === it.k) : ['gameplay.laneWidth', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k));
+    return SETTINGS_SCHEMA.filter(it => hud ? it.editor === 'hud' && !HUD_PARTS.some(p => p.setting === it.k) : ['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k));
   },
   available(p) {
     if (!p.texture) return true;
@@ -24347,7 +24367,7 @@ const ResultsScreen = {
     // lazer's results footer: #333, 50px, the buttons centred — watch replay and retry (300 × 30, green), then the
     // small ones (75 × 30)
     bar.append(backButton(() => this.onBack()));
-    if (replay || s.replayId) bar.append(watch);
+    if (replay || s.replayId || s.online) bar.append(watch);
     // (after a multiplayer song: back to the room instead of retrying, as lazer's multiplayer results)
     if (p.mp) bar.append(h('button.res-ab.wide.green.labelled', { onclick: () => { UISounds.click(); this.onBack(); }, title: 'back to the room', 'aria-label': 'Back to the room' }, icon('multi'), h('span.res-abl', 'Back to the room')));
     // (lazer's AllowRetry: only after a play of your own — not on a score opened from a leaderboard or a profile)
@@ -24388,8 +24408,11 @@ const ResultsScreen = {
   },
   async watch() {
     const s = this.p.score;
-    const replay = this.p.replay || (s.replayId && await ReplayManager.get(s.replayId));
-    if (!replay) { Toast.err('No replay available'); return; }
+    let replay;
+    try { replay = this.p.replay || (s.replayId && await ReplayManager.get(s.replayId)) || (s.online && await PublicReplays.get(s)); }
+    catch (e) { Toast.err('Replay unavailable', friendlyError(e)); return; }
+    if (this.p.score !== s || Screens.current !== this) return;
+    if (!replay) { Toast.err('No replay available', s.online ? 'This older score has no shared replay. New scores share their replay when submitted.' : ''); return; }
     const map = BeatmapManager.mapByHash(replay.mapHash);
     if (!map) { Toast.err('Beatmap not found', 'Import the beatmap to watch this replay.'); return; }
     Game.launch({ mapId: map.id, mode: 'replay', replay, returnTo: { ...this.p, fresh: false } });
@@ -24827,7 +24850,7 @@ const BeatmapsScreen = {
   async refresh() {
     // (the cards are built again: a set's difficulties, favourite or status can have changed)
     this._cards = new Map(); this._details = new Map();
-    this.paintMine(); this.renderSummary(); this.renderList(); this.renderReport();
+    this.paintMine(); this.renderSummary(); this.renderList(true); this.renderReport();
   },
   /** "Your beatmaps (n)": the ones on your other devices that aren't here — shown only when there are any. */
   paintMine() {
@@ -24856,13 +24879,16 @@ const BeatmapsScreen = {
       h('div.lib-report-body', h('b', 'Last import: problems found'), h('ul', ...lines)),
       h('button.lib-report-x', { title: 'Dismiss', 'aria-label': 'Dismiss', onclick: () => { UISounds.click(); App.lastReport = null; this.renderReport(); } }, icon('x'))));
   },
-  renderList() {
+  renderList(keepScroll = false) {
+    const sc = this._scroller, top = sc?.scrollTop || 0;
+    if (keepScroll) this.list.style.minHeight = this.list.offsetHeight + 'px';
     clearEl(this.list);
     this.list.style.paddingTop = this.list.style.paddingBottom = '';
     const sets = BeatmapManager.sets.filter(s => !this.q || `${s.artist} ${s.title} ${s.creator} ${s.tags}`.toLowerCase().includes(this.q))
       .sort((a, b) => b.added - a.added);
     this._sets = sets; this._range = null;
     if (!sets.length) {
+      this.list.style.minHeight = '';
       const mine = AccountBeatmaps.list().length;
       this.list.append(BeatmapManager.sets.length ? stateCard('search', 'No matches', 'Nothing in your library matches that search.', { cls: '.plain', neru: true })
         : mine ? stateCard('beatmap', 'No beatmaps on this device yet', `You have ${plural(mine, 'beatmap')} on your other devices.`, { cls: '.plain', neru: true, action: h('button.btn.primary.off-act', { onclick: () => { UISounds.click(); AccountBeatmaps.open(); } }, icon('download'), 'Show your beatmaps') })
@@ -24871,6 +24897,7 @@ const BeatmapsScreen = {
     }
     this._mDirty = true;
     this.renderWindow();
+    if (keepScroll) { this.list.style.minHeight = ''; sc.scrollTop = top; this._range = null; this.renderWindow(); }
     // (once more after layout: the columns and the row height are only known then)
     requestAnimationFrame(() => requestAnimationFrame(() => { this._mDirty = true; this.renderWindow(); }));
   },
@@ -25629,6 +25656,14 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15b', title: 'Note spacing', sections: [
+    { icon: 'brush', title: 'Skin editor', items: ['Adjust lane spacing in Note appearance, saved separately for each skin and key count.'] },
+  ] },
+  { id: '2026.11.15a', title: 'Menus and replay fixes', sections: [
+    { icon: 'music', title: 'Gameplay', items: ['Optional hit sound effects in Audio settings, off by default.', 'The losing sound stops when you leave the fail screen.'] },
+    { icon: 'screen', title: 'Menus', items: ['Deleting maps preserves your position in the list.', 'Friend online notifications are skipped if they went offline before the song ended.', 'Collection and replay export menus fit the screen and use the game’s UI scale.'] },
+    { icon: 'play', title: 'Replays', items: ['Watch other players’ shared replays from their results or score menu. Newly submitted best scores share their replay; older scores may not have one.'] },
+  ] },
   { id: '2026.11.15', title: 'Bug Fixes -Sling', sections: [
     { icon: 'music', title: 'Music', items: ['The music player no longer shows play while the menu song is already playing after you open the game, so one click pauses it.'] },
   ] },
@@ -29417,7 +29452,7 @@ const Presence = {
         const settled = this._listed && now - (this._openAt || 0) > 20000;
         for (const x of this.players) {
           if (!x.pid || x.id === this.me) continue;
-          if (settled && !before.has(x.pid) && Friends.has(x.pid) && now - (seen.get(x.pid) || 0) > 180000) Toast.show(`${x.name} is online`, 'Your friend just came online.', { hold: true });
+          if (settled && !before.has(x.pid) && Friends.has(x.pid) && now - (seen.get(x.pid) || 0) > 180000) Toast.show(`${x.name} is online`, 'Your friend just came online.', { hold: true, valid: () => Friends.has(x.pid) && this.players.some(p => p.pid === x.pid && p.status !== 'offline') });
           seen.set(x.pid, now);
         }
         this._listed = true;
@@ -32822,7 +32857,7 @@ const MpResults = {
     const map = BeatmapManager.mapByHash(s.mapHash) || {};
     const me = typeof Presence !== 'undefined' ? Presence.pid() : null, board = this.boards.get(s.mapHash);
     // (someone else's best from the server, as a score the results screen can open)
-    const asScore = e => ({ id: 'o-' + e.pid, online: true, player: e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
+    const asScore = e => ({ id: 'o-' + e.pid, pid: e.pid, online: true, player: e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
       grade: e.grade, mods: e.mods || [], counts: e.counts && e.counts.length === 6 ? e.counts : [0, 0, 0, 0, 0, 0], pp: e.pp, srVersion: SR_VERSION, passed: true, date: e.date, replayId: null,
       mapHash: s.mapHash, onlineSetId: map.setId || s.onlineSetId, mapId: map.id || s.mapId, title: map.title || s.title, artist: map.artist || s.artist, version: map.version || s.version, creator: map.creator || s.creator, keys: map.keys || s.keys, stars: e.stars > 0 ? e.stars : map.stars || s.stars });
     const theirs = board ? board.scores.filter(e => e.pid !== me && 'o-' + e.pid !== s.id).map(asScore) : [];
@@ -33252,7 +33287,7 @@ const Verified = {
       await new Promise(res => { const t = setTimeout(done, Math.min(4000, 1000 * (i + 1))); function done() { clearTimeout(t); removeEventListener('online', done); res(); } addEventListener('online', done); });
     }
   },
-  async submit({ rec, score, mods, modConfig, seed, events, daily = null, background = false, patience = 120000 }) {
+  async submit({ rec, score, replay = null, mods, modConfig, seed, events, daily = null, background = false, patience = 120000 }) {
     if (!Multiplayer.available() || !Presence.pid()) return null; // (signed out: no scores go up)
     if (!background) this._lastOwn = Date.now(); // (a play just finished: the catch-up below waits its turn)
     const sent = Date.now(); // (which play an answer is for: the results screen only shows its own play's rank)
@@ -33280,6 +33315,7 @@ const Verified = {
       if (daily && d.daily === 'day') Toast.err('Your weekly challenge score wasn\'t counted', 'The weekly challenge changed to a new week while you played.');
       else if (daily && d.daily === 'map') Toast.err('Your weekly challenge score wasn\'t counted', 'That isn\'t the current weekly challenge beatmap.');
       if (d.rankStatus && rec) await BeatmapStatus.keepMapStatus(rec, d.rankStatus).catch(e => console.warn('beatmap status not saved locally', e));
+      if (replay && d.ok) PublicReplays.publish(rec.hash, score, replay).catch(e => console.warn('Replay sharing failed', e));
       if (background) return d;
       this.last = { d, at: Date.now(), sent };
       Bus.emit('verified', d, sent);
@@ -33455,6 +33491,25 @@ Bus.on('myBests', m => {
   Verified.onServer = have; Verified.floor = have.size >= keep ? Math.min(...have.values()) : 0;
   Bus.emit('verified:verdicts');
 });
+
+/** Shared game inputs only; account backups remain private. */
+const PublicReplays = {
+  async publish(hash, score, replay) {
+    const response = await fetch(Host.api('api/mp/replay'), { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pid: Presence.pid(), key: Presence.key(), hash, score: ScoreManager.value(score), replay }), signal: timeoutSignal(30000) });
+    if (!response.ok) throw new Error('Replay could not be shared.');
+  },
+  async get(score) {
+    const pid = score.pid || String(score.id || '').replace(/^o-/, '');
+    const query = new URLSearchParams({ pid, hash: score.mapHash, score: ScoreManager.value(score) });
+    const response = await fetch(Host.api('api/mp/replay?' + query), { signal: timeoutSignal(20000) });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error('Replay download failed. Please try again.');
+    const replay = await response.json(); ReplayManager.validate(replay);
+    if (replay.mapHash !== score.mapHash) throw new Error('Replay does not match this beatmap.');
+    return { ...replay, own: false };
+  },
+};
 
 /* ===== 19h-daily.js ===== */
 /* osu!lazer's weekly challenge: one beatmap for everyone each week (turning over at Monday midnight US Central time, decided by the server), with a leaderboard of each player's best score
@@ -36057,7 +36112,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '193feaaefc95';
+const APP_BUILD = '4d2f6244a360';
 
 const App = {
   lastReport: null,

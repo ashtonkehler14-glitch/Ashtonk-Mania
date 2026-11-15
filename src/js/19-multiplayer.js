@@ -840,7 +840,7 @@ const Presence = {
         const settled = this._listed && now - (this._openAt || 0) > 20000;
         for (const x of this.players) {
           if (!x.pid || x.id === this.me) continue;
-          if (settled && !before.has(x.pid) && Friends.has(x.pid) && now - (seen.get(x.pid) || 0) > 180000) Toast.show(`${x.name} is online`, 'Your friend just came online.', { hold: true });
+          if (settled && !before.has(x.pid) && Friends.has(x.pid) && now - (seen.get(x.pid) || 0) > 180000) Toast.show(`${x.name} is online`, 'Your friend just came online.', { hold: true, valid: () => Friends.has(x.pid) && this.players.some(p => p.pid === x.pid && p.status !== 'offline') });
           seen.set(x.pid, now);
         }
         this._listed = true;

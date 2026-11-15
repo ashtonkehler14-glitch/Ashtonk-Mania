@@ -436,7 +436,7 @@ const ResultsScreen = {
     // lazer's results footer: #333, 50px, the buttons centred — watch replay and retry (300 × 30, green), then the
     // small ones (75 × 30)
     bar.append(backButton(() => this.onBack()));
-    if (replay || s.replayId) bar.append(watch);
+    if (replay || s.replayId || s.online) bar.append(watch);
     // (after a multiplayer song: back to the room instead of retrying, as lazer's multiplayer results)
     if (p.mp) bar.append(h('button.res-ab.wide.green.labelled', { onclick: () => { UISounds.click(); this.onBack(); }, title: 'back to the room', 'aria-label': 'Back to the room' }, icon('multi'), h('span.res-abl', 'Back to the room')));
     // (lazer's AllowRetry: only after a play of your own — not on a score opened from a leaderboard or a profile)
@@ -477,8 +477,11 @@ const ResultsScreen = {
   },
   async watch() {
     const s = this.p.score;
-    const replay = this.p.replay || (s.replayId && await ReplayManager.get(s.replayId));
-    if (!replay) { Toast.err('No replay available'); return; }
+    let replay;
+    try { replay = this.p.replay || (s.replayId && await ReplayManager.get(s.replayId)) || (s.online && await PublicReplays.get(s)); }
+    catch (e) { Toast.err('Replay unavailable', friendlyError(e)); return; }
+    if (this.p.score !== s || Screens.current !== this) return;
+    if (!replay) { Toast.err('No replay available', s.online ? 'This older score has no shared replay. New scores share their replay when submitted.' : ''); return; }
     const map = BeatmapManager.mapByHash(replay.mapHash);
     if (!map) { Toast.err('Beatmap not found', 'Import the beatmap to watch this replay.'); return; }
     Game.launch({ mapId: map.id, mode: 'replay', replay, returnTo: { ...this.p, fresh: false } });

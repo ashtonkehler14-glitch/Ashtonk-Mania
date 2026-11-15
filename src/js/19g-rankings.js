@@ -51,7 +51,7 @@ const Verified = {
       await new Promise(res => { const t = setTimeout(done, Math.min(4000, 1000 * (i + 1))); function done() { clearTimeout(t); removeEventListener('online', done); res(); } addEventListener('online', done); });
     }
   },
-  async submit({ rec, score, mods, modConfig, seed, events, daily = null, background = false, patience = 120000 }) {
+  async submit({ rec, score, replay = null, mods, modConfig, seed, events, daily = null, background = false, patience = 120000 }) {
     if (!Multiplayer.available() || !Presence.pid()) return null; // (signed out: no scores go up)
     if (!background) this._lastOwn = Date.now(); // (a play just finished: the catch-up below waits its turn)
     const sent = Date.now(); // (which play an answer is for: the results screen only shows its own play's rank)
@@ -79,6 +79,7 @@ const Verified = {
       if (daily && d.daily === 'day') Toast.err('Your weekly challenge score wasn\'t counted', 'The weekly challenge changed to a new week while you played.');
       else if (daily && d.daily === 'map') Toast.err('Your weekly challenge score wasn\'t counted', 'That isn\'t the current weekly challenge beatmap.');
       if (d.rankStatus && rec) await BeatmapStatus.keepMapStatus(rec, d.rankStatus).catch(e => console.warn('beatmap status not saved locally', e));
+      if (replay && d.ok) PublicReplays.publish(rec.hash, score, replay).catch(e => console.warn('Replay sharing failed', e));
       if (background) return d;
       this.last = { d, at: Date.now(), sent };
       Bus.emit('verified', d, sent);
@@ -254,3 +255,22 @@ Bus.on('myBests', m => {
   Verified.onServer = have; Verified.floor = have.size >= keep ? Math.min(...have.values()) : 0;
   Bus.emit('verified:verdicts');
 });
+
+/** Shared game inputs only; account backups remain private. */
+const PublicReplays = {
+  async publish(hash, score, replay) {
+    const response = await fetch(Host.api('api/mp/replay'), { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pid: Presence.pid(), key: Presence.key(), hash, score: ScoreManager.value(score), replay }), signal: timeoutSignal(30000) });
+    if (!response.ok) throw new Error('Replay could not be shared.');
+  },
+  async get(score) {
+    const pid = score.pid || String(score.id || '').replace(/^o-/, '');
+    const query = new URLSearchParams({ pid, hash: score.mapHash, score: ScoreManager.value(score) });
+    const response = await fetch(Host.api('api/mp/replay?' + query), { signal: timeoutSignal(20000) });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error('Replay download failed. Please try again.');
+    const replay = await response.json(); ReplayManager.validate(replay);
+    if (replay.mapHash !== score.mapHash) throw new Error('Replay does not match this beatmap.');
+    return { ...replay, own: false };
+  },
+};
