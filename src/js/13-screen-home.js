@@ -39,7 +39,7 @@ onmessage = ({ data: m }) => {
   }
   if (m.tri && tris) {
     const TS = tris.width, sc = m.tri.sc, p = m.tri.pts, triW = 300 * sc, triH = 260 * sc, x = tris.getContext('2d');
-    if (!grad || gradFor !== TS) { grad = x.createLinearGradient(0, 0, 0, TS); grad.addColorStop(0, '#ff66ab'); grad.addColorStop(1, '#b6346f'); gradFor = TS; }
+    if (!grad || gradFor !== TS) { grad = x.createLinearGradient(0, 0, 0, TS); grad.addColorStop(0, '#f4dda0'); grad.addColorStop(1, '#a78d4b'); gradFor = TS; }
     x.clearRect(0, 0, TS, TS);
     x.strokeStyle = grad; x.lineWidth = 0.009 * 260 * sc * 2.6; x.lineJoin = 'round';
     x.beginPath();
@@ -392,19 +392,20 @@ const HomeScreen = {
     if (b) this.trigger(b);
   },
 
-  /** osu!lazer's OsuLogo, 512px at full size: the pink disc (Gray gradient #ff66ab → #cc5289 with outlined triangles
-   *  drifting up) at 94%, the white ring and wordmark over it, the music visualiser around it, and the hover (1.1×,
+  /** Lazer's 512px logo with a glass-wave face, the white ring and wordmark over it, the music visualiser around it, and the hover (1.1×,
    *  elastic), press (0.9×), drag (rubber band), beat (a 2% squeeze, a ripple, a white flash in kiai) and impact
    *  animations. */
   buildLogo() {
     this.vis = h('canvas.lz-vis');
     this.tris = h('canvas.lz-tris');
     this._off = LogoPainter.adopt(this.vis, this.tris); this._visW = this._triW = 0;
+    const wave = this.glassWave = h('span.lz-glass-wave', { 'aria-hidden': 'true' });
+    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none"><path d="M-24 395 C85 324 186 488 304 419 S452 335 540 394" stroke="#f0d06a" stroke-width="3.5"/><path d="M-24 441 C111 499 205 355 323 399 S469 474 540 410" stroke="#cfad50" stroke-width="2.5"/><path d="M-24 390 C85 319 186 483 304 414 S452 330 540 389" stroke="#fff1c1" stroke-opacity=".22" stroke-width="1"/></svg>';
     this.flashEl = h('span.lz-flash');
     this.impactEl = h('span.lz-impact');
     this.ripple = h('span.lz-ripple', h('span.lz-ring'));
     this.beatEl = h('div.lz-lbt', this.vis,
-      h('span.lz-cookie-disc.lz-home-disc', this.tris, this.flashEl),
+      h('span.lz-cookie-disc.lz-home-disc', this.tris, wave, this.flashEl),
       h('span.lz-ring', h('span.lz-cookie-text', 'ashtonk!', h('small', 'mania'))),
       this.impactEl);
     this.ampEl = h('div.lz-la', this.beatEl);
@@ -532,7 +533,7 @@ const HomeScreen = {
         this._szAt = now;
         const px = Math.min(2, window.devicePixelRatio || 1);
         this._visK = clamp(Math.ceil(cv.getBoundingClientRect().width * px / CW * 8) / 8, 0.25, lite ? 0.5 : 1);
-        this._triS = clamp(Math.ceil(this.tris.getBoundingClientRect().width * px / 32) * 32, 96, lite ? 192 : 384);
+        if (!this.glassWave) this._triS = clamp(Math.ceil(this.tris.getBoundingClientRect().width * px / 32) * 32, 96, lite ? 192 : 384);
       }
       const dpr = this._visK || 1, vsz = Math.round(CW * dpr), off = this._off;
       // (drawn in the painter's thread: what it's to draw this frame, sent as one message — LogoPainter)
@@ -561,7 +562,8 @@ const HomeScreen = {
       }
       x.fill();
       }
-      // ── the cookie's triangles (TrianglesV2: 14 outlines, 300 wide, drifting up at 50px/s × velocity)
+      // Legacy face only: the glass-wave logo uses a static vector instead of a second animated canvas.
+      if (!this.glassWave) {
       vel = playing ? vel + ((this._kiai ? 2 : 1) - vel) * (1 - Math.pow(0.995, dt)) : vel + (0.5 - vel) * (1 - Math.pow(0.9, dt));
       // (pushed on each beat — never past a steady drift, however fast the song)
       if (this._kick) { vel = Math.min(vel + this._kick, this._kiai ? 7 : 5); this._kick = 0; }
@@ -582,7 +584,7 @@ const HomeScreen = {
         (msg || (msg = {})).tri = { sc, pts };
       } else if (draw) {
         const tx = tc.getContext('2d');
-        if (!this._triGrad) { const g = tx.createLinearGradient(0, 0, 0, TS); g.addColorStop(0, '#ff66ab'); g.addColorStop(1, '#b6346f'); this._triGrad = g; }
+        if (!this._triGrad) { const g = tx.createLinearGradient(0, 0, 0, TS); g.addColorStop(0, '#f4dda0'); g.addColorStop(1, '#a78d4b'); this._triGrad = g; }
         tx.clearRect(0, 0, TS, TS);
         tx.strokeStyle = this._triGrad; tx.lineWidth = 0.009 * 260 * sc * 2.6; tx.lineJoin = 'round';
         tx.beginPath();
@@ -591,6 +593,7 @@ const HomeScreen = {
           tx.moveTo(lx + triW / 2, ty); tx.lineTo(lx + triW, ty + triH); tx.lineTo(lx, ty + triH); tx.closePath();
         }
         tx.stroke();
+      }
       }
       if (msg) LogoPainter.frame(msg);
       // ── beat (60ms early, as lazer's logo), from the playing track's red lines

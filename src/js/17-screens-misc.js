@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15d', title: 'After Hours home', sections: [
+    { icon: 'home', title: 'Home', items: ['Warm gold and charcoal menu styling with a glass-wave logo. The familiar buttons and triangle background stay in place.'] },
+  ] },
   { id: '2026.11.15c', title: 'Faster timing feedback', sections: [
     { icon: 'keyboard', title: 'Gameplay', items: ['Early/Late feedback appears at full opacity immediately instead of fading in with the judgement.'] },
   ] },
