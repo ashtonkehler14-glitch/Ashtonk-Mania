@@ -1,7 +1,7 @@
 /* Main menu (osu!lazer's MainMenu + ButtonSystem + OsuLogo). The 512px logo waits in the middle of the screen with the
  * toolbar hidden; clicking it (or pressing any key) shrinks it to half size 228px left of centre and opens the button
  * bar around it: settings on its left; play (→ solo / multi → lounge / ranked play), edit and browse on its right.
- * Six idle seconds bring the big logo back. Behind it is lazer's triangle artwork in the colour of the playing song. */
+ * Six idle seconds bring the big logo back. Behind it is lazer’s triangle artwork in the Sunlit Ivory palette. */
 
 /** The logo's two canvases — the music visualiser round it and the triangles drifting in it — drawn in a thread of
  *  their own. A canvas drawn on the page is handed to the compositor again on every frame it changes: on the menu, with
@@ -832,37 +832,14 @@ onmessage = async ({ data: m }) => {
   mount() {
     this.el = h('div.lz-tri', { 'aria-hidden': 'true' });
     this.running = true; this.col = null; this._drawn = null;
-    // (only while the menu's showing: in song select each new background was being read for a colour nobody saw —
-    // coming back, mount() reads the one there is then)
-    if (!this._sub) this._sub = Bus.on('bg:changed', url => { if (this.running) this.fromImage(url); });
     this._ro = new ResizeObserver(() => { clearTimeout(this._rt); this._rt = setTimeout(() => this.render(true), 120); });
     this._ro.observe(this.el);
     this.fromImage(Background.current);
     return this.el;
   },
   stop() { this.running = false; if (this._ro) this._ro.disconnect(); this._ro = null; clearTimeout(this._rt); },
-  /** Average colour of the background image → the picture's hue and saturation. */
-  async fromImage(url) {
-    let col = [42, 0.18];
-    if (url) {
-      const w = this.worker(), a = w && await w.ask({ avg: url });
-      if (a && a.col) col = a.col;
-      else try {
-        // (decoded straight to 12×12, off the main thread: decoding the whole background here stalled the menu)
-        const bm = await createImageBitmap(await (await fetch(url)).blob(), { resizeWidth: 12, resizeHeight: 12, resizeQuality: 'medium' });
-        const c = document.createElement('canvas'); c.width = c.height = 12;
-        const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bm, 0, 0); bm.close();
-        const d = x.getImageData(0, 0, 12, 12).data;
-        let r = 0, g = 0, b = 0, n = 0;
-        for (let i = 0; i < d.length; i += 4) { const w = 0.2 + Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]); r += d[i] * w; g += d[i + 1] * w; b += d[i + 2] * w; n += w; }
-        const [hh, ss] = rgbToHsl(r / n, g / n, b / n);
-        col = [hh, clamp(ss * 1.1 + 0.08, 0.16, 0.62)];
-      } catch (e) { /* unreadable image: the home palette’s warm neutral */ }
-    }
-    if (url !== Background.current && url) return;
-    this.col = col;
-    this.render();
-  },
+  /** The chosen ivory palette stays consistent when the menu song changes. */
+  fromImage() { this.col = [40, 0.25]; this.render(); },
   /** Draw the picture in the current colour and fade it in over the last one. */
   render(resized = false) {
     const el = this.el;
@@ -903,17 +880,16 @@ onmessage = async ({ data: m }) => {
     });
   },
   paint(x, W, H, [hue, sat]) {
-    // Keep the triangle artwork in the home palette; song colours only nudge its neutral undertone.
-    hue = 222 + Math.sin(hue * Math.PI / 180) * 2;
-    sat = clamp(sat * 0.18, 0.055, 0.09);
+    // Sunlit Ivory: use the same palette in the worker and fallback renderer.
+    hue = 40; sat = 0.25;
     const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(hue, sat, 0.40)); g.addColorStop(1, hsl(hue + 4, sat, 0.255));
+    g.addColorStop(0, hsl(hue, sat, 0.93)); g.addColorStop(1, hsl(hue + 4, sat, 0.81));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     const glow = x.createRadialGradient(W * .48, H * .38, 0, W * .48, H * .38, Math.max(W, H) * .65);
-    glow.addColorStop(0, 'rgba(255, 222, 143, .18)'); glow.addColorStop(1, 'rgba(255, 222, 143, 0)');
+    glow.addColorStop(0, 'rgba(255, 244, 205, .25)'); glow.addColorStop(1, 'rgba(255, 222, 143, 0)');
     x.fillStyle = glow; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
@@ -921,21 +897,21 @@ onmessage = async ({ data: m }) => {
     // faint outlines first (they sit behind the solid banks)
     x.lineWidth = 2.2; x.lineJoin = 'miter';
     for (const [ax, ay, s] of this.OUTLINE) {
-      const l = 0.33 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
+      const l = 0.78 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
       x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
     }
     // the solid banks, each a shade darker than the gradient behind it, with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
     x.shadowColor = 'rgba(0, 0, 0, .16)'; x.shadowBlur = 12 * k;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, 0.335)); sg.addColorStop(1, hsl(hue + 3, sat, 0.215));
+    sg.addColorStop(0, hsl(hue, sat, 0.87)); sg.addColorStop(1, hsl(hue + 3, sat, 0.75));
     x.fillStyle = sg;
     x.beginPath();
     for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
     x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
     x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
     // Champagne and amber outlines tie the original triangle composition to the gold menu.
-    const a1 = [44, 0.70, 0.67], a2 = [49, 0.72, 0.84], b1 = [35, 0.72, 0.61];
+    const a1 = [42, 0.80, 0.43], a2 = [45, 0.85, 0.58], b1 = [35, 0.85, 0.43];
     x.lineWidth = 2.6;
     for (const [ax, ay, s] of this.RING) {
       const t = clamp((ay + s * 0.43 - 170) / 720, 0, 1), left = ax < 1000;

@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15f', title: 'Sunlit Ivory home', sections: [
+    { icon: 'home', title: 'Home', items: ['Cream triangle artwork, golden outlines and charcoal controls bring the Sunlit Ivory look to the home screen.'] },
+  ] },
   { id: '2026.11.15e', title: 'A warmer welcome', sections: [
     { icon: 'home', title: 'Home', items: ['Brighter warm-grey triangles, champagne outlines and a soft golden glow complement the home menu.', 'Lighter menu panels and logo shading give the home screen a warmer feel.'] },
   ] },
