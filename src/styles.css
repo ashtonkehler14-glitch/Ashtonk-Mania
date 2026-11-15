@@ -2483,7 +2483,7 @@ input[type=range].slider::-moz-range-thumb { width: 20px; height: 9px; border-ra
 .pause-box h2 { margin-bottom: 30px; }
 
 /* main menu: triangles behind everything; lazer's sway-and-bounce on the hovered button's icon */
-.lz-tri { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: #1c1018; }
+.lz-tri { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: #626570; }
 .lz-tri img { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 900ms ease; user-select: none; }
 .lz-tri img.in { opacity: 0; transition: none; }
 
@@ -5578,12 +5578,12 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .menu button > .i { flex: none; }
 
 /* Home: After Hours palette, with the existing lazer ButtonSystem layout and motion. */
-.lz-menu .lz-area-bg { background: linear-gradient(90deg, #1e2029e6, #282a32f5 55%, #202129e6); border-block: 1px solid #ffffff0a; }
-.lz-menu .lz-btn { --c: #34353d !important; }
-.lz-menu .lz-btn[data-id="settings"], .lz-menu .lz-btn[data-id="back"] { --c: #30323b !important; }
-.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #eed06d !important; color: #29251a; }
-.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #54545b !important; }
-.lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #514b3c !important; }
+.lz-menu .lz-area-bg { background: linear-gradient(90deg, #35363de6, #414149f5 55%, #35363de6); border-block: 1px solid #ffffff0a; }
+.lz-menu .lz-btn { --c: #45464e !important; }
+.lz-menu .lz-btn[data-id="settings"], .lz-menu .lz-btn[data-id="back"] { --c: #3b3d46 !important; }
+.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #f5d677 !important; color: #29251a; }
+.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #64646b !important; }
+.lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #6a5b3f !important; }
 .lz-menu .lz-bg { background: linear-gradient(135deg, #ffffff0a, transparent 65%), var(--c); box-shadow: inset 0 1px #ffffff12, inset 0 -1px #00000026; }
 .lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border: 1px solid #f2d78b; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
 .lz-menu .lz-btn:hover .lz-bg::before, .lz-menu .lz-btn:focus-visible .lz-bg::before { opacity: .85; }
@@ -5591,7 +5591,7 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-btn[data-id="play"] .lz-label, .lz-menu .lz-btn[data-id="solo"] .lz-label { text-shadow: none; }
 .lz-menu .lz-btn[data-id="play"] .lz-ico .i, .lz-menu .lz-btn[data-id="solo"] .lz-ico .i { filter: none; }
 /* Glass-wave logo: a lightweight painted face; no live glass blur or extra animation. */
-.lz-menu .lz-home-disc { background: radial-gradient(ellipse at 27% 15%, #454650 0%, #2a2c35 48%, #1b1e26 100%); box-shadow: inset 0 2px 24px #ffffff05; }
+.lz-menu .lz-home-disc { background: radial-gradient(ellipse at 27% 15%, #55565d 0%, #393c45 48%, #292d36 100%); box-shadow: inset 0 2px 24px #ffffff05; }
 .lz-menu .lz-tris { display: none; }
 .lz-menu .lz-ring { border-width: 16px; box-shadow: 0 0 0 1px #ffffff18, 0 12px 36px #0000002b, inset 0 0 0 1px #ffffff12; }
 .lz-menu .lz-ripple .lz-ring { box-shadow: none; }

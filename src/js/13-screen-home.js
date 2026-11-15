@@ -843,7 +843,7 @@ onmessage = async ({ data: m }) => {
   stop() { this.running = false; if (this._ro) this._ro.disconnect(); this._ro = null; clearTimeout(this._rt); },
   /** Average colour of the background image → the picture's hue and saturation. */
   async fromImage(url) {
-    let col = [326, 0.38];
+    let col = [42, 0.18];
     if (url) {
       const w = this.worker(), a = w && await w.ask({ avg: url });
       if (a && a.col) col = a.col;
@@ -857,7 +857,7 @@ onmessage = async ({ data: m }) => {
         for (let i = 0; i < d.length; i += 4) { const w = 0.2 + Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]); r += d[i] * w; g += d[i + 1] * w; b += d[i + 2] * w; n += w; }
         const [hh, ss] = rgbToHsl(r / n, g / n, b / n);
         col = [hh, clamp(ss * 1.1 + 0.08, 0.16, 0.62)];
-      } catch (e) { /* unreadable image: lazer's own plum */ }
+      } catch (e) { /* unreadable image: the home palette’s warm neutral */ }
     }
     if (url !== Background.current && url) return;
     this.col = col;
@@ -903,33 +903,39 @@ onmessage = async ({ data: m }) => {
     });
   },
   paint(x, W, H, [hue, sat]) {
+    // Keep the triangle artwork in the home palette; song colours only nudge its neutral undertone.
+    hue = 222 + Math.sin(hue * Math.PI / 180) * 2;
+    sat = clamp(sat * 0.18, 0.055, 0.09);
     const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(hue, sat, 0.205)); g.addColorStop(1, hsl(hue + 4, sat * 1.05, 0.095));
+    g.addColorStop(0, hsl(hue, sat, 0.40)); g.addColorStop(1, hsl(hue + 4, sat, 0.255));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const glow = x.createRadialGradient(W * .48, H * .38, 0, W * .48, H * .38, Math.max(W, H) * .65);
+    glow.addColorStop(0, 'rgba(255, 222, 143, .18)'); glow.addColorStop(1, 'rgba(255, 222, 143, 0)');
+    x.fillStyle = glow; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
     const up = (ax, ay, s) => { x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); };
     // faint outlines first (they sit behind the solid banks)
     x.lineWidth = 2.2; x.lineJoin = 'miter';
     for (const [ax, ay, s] of this.OUTLINE) {
-      const l = 0.16 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
+      const l = 0.33 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
       x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
     }
     // the solid banks, each a shade darker than the gradient behind it, with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
-    x.shadowColor = 'rgba(0, 0, 0, .3)'; x.shadowBlur = 16 * k;
+    x.shadowColor = 'rgba(0, 0, 0, .16)'; x.shadowBlur = 12 * k;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat * 1.04, 0.152)); sg.addColorStop(1, hsl(hue + 3, sat * 1.04, 0.066));
+    sg.addColorStop(0, hsl(hue, sat, 0.335)); sg.addColorStop(1, hsl(hue + 3, sat, 0.215));
     x.fillStyle = sg;
     x.beginPath();
     for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
     x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
     x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
-    // the ring: bright outlines in two accent colours, top to bottom (lazer's orange → peach and pink → peach)
-    const a1 = [hue + 48, 0.82, 0.62], a2 = [hue + 62, 0.95, 0.83], b1 = [hue - 8, 0.95, 0.74];
+    // Champagne and amber outlines tie the original triangle composition to the gold menu.
+    const a1 = [44, 0.70, 0.67], a2 = [49, 0.72, 0.84], b1 = [35, 0.72, 0.61];
     x.lineWidth = 2.6;
     for (const [ax, ay, s] of this.RING) {
       const t = clamp((ay + s * 0.43 - 170) / 720, 0, 1), left = ax < 1000;
