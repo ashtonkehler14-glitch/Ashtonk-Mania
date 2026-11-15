@@ -116,7 +116,7 @@ const BeatmapsScreen = {
   async refresh() {
     // (the cards are built again: a set's difficulties, favourite or status can have changed)
     this._cards = new Map(); this._details = new Map();
-    this.paintMine(); this.renderSummary(); this.renderList(); this.renderReport();
+    this.paintMine(); this.renderSummary(); this.renderList(true); this.renderReport();
   },
   /** "Your beatmaps (n)": the ones on your other devices that aren't here — shown only when there are any. */
   paintMine() {
@@ -145,13 +145,16 @@ const BeatmapsScreen = {
       h('div.lib-report-body', h('b', 'Last import: problems found'), h('ul', ...lines)),
       h('button.lib-report-x', { title: 'Dismiss', 'aria-label': 'Dismiss', onclick: () => { UISounds.click(); App.lastReport = null; this.renderReport(); } }, icon('x'))));
   },
-  renderList() {
+  renderList(keepScroll = false) {
+    const sc = this._scroller, top = sc?.scrollTop || 0;
+    if (keepScroll) this.list.style.minHeight = this.list.offsetHeight + 'px';
     clearEl(this.list);
     this.list.style.paddingTop = this.list.style.paddingBottom = '';
     const sets = BeatmapManager.sets.filter(s => !this.q || `${s.artist} ${s.title} ${s.creator} ${s.tags}`.toLowerCase().includes(this.q))
       .sort((a, b) => b.added - a.added);
     this._sets = sets; this._range = null;
     if (!sets.length) {
+      this.list.style.minHeight = '';
       const mine = AccountBeatmaps.list().length;
       this.list.append(BeatmapManager.sets.length ? stateCard('search', 'No matches', 'Nothing in your library matches that search.', { cls: '.plain', neru: true })
         : mine ? stateCard('beatmap', 'No beatmaps on this device yet', `You have ${plural(mine, 'beatmap')} on your other devices.`, { cls: '.plain', neru: true, action: h('button.btn.primary.off-act', { onclick: () => { UISounds.click(); AccountBeatmaps.open(); } }, icon('download'), 'Show your beatmaps') })
@@ -160,6 +163,7 @@ const BeatmapsScreen = {
     }
     this._mDirty = true;
     this.renderWindow();
+    if (keepScroll) { this.list.style.minHeight = ''; sc.scrollTop = top; this._range = null; this.renderWindow(); }
     // (once more after layout: the columns and the row height are only known then)
     requestAnimationFrame(() => requestAnimationFrame(() => { this._mDirty = true; this.renderWindow(); }));
   },
@@ -918,6 +922,11 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15a', title: 'Menus and replay fixes', sections: [
+    { icon: 'music', title: 'Gameplay', items: ['Optional hit sound effects in Audio settings, off by default.', 'The losing sound stops when you leave the fail screen.'] },
+    { icon: 'screen', title: 'Menus', items: ['Deleting maps preserves your position in the list.', 'Friend online notifications are skipped if they went offline before the song ended.', 'Collection and replay export menus fit the screen and use the game’s UI scale.'] },
+    { icon: 'play', title: 'Replays', items: ['Watch other players’ shared replays from their results or score menu. Newly submitted best scores share their replay; older scores may not have one.'] },
+  ] },
   { id: '2026.11.11i', title: 'Mobile results layout', sections: [
     { icon: 'screen', title: 'Results', items: ['Mobile uses the normal results card, fitted to the screen without the extra shrink or sideways layout.'] },
   ] },

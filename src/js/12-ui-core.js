@@ -330,12 +330,13 @@ const Toast = {
     const a = app.getBoundingClientRect(), k = a.width / (app.offsetWidth || a.width) || 1;
     box.style.top = Math.round((bottom - a.top) / k + 12) + 'px';
   },
-  show(title, body = '', { type = 'info', timeout = 4200, log = true, onClick = null, hold = false } = {}) {
+  show(title, body = '', { type = 'info', timeout = 4200, log = true, onClick = null, hold = false, valid = null } = {}) {
+    if (valid && !valid()) return () => {};
     // (as lazer holds notifications while you play: one that isn't about the play — a friend online, a download done —
     // waits for the song to be over to pop up, over the score; it's in the notifications straight away)
     if (hold && Toast.playing()) {
       if (log && typeof Notifications !== 'undefined') Notifications.add(title, body, type, { onClick });
-      const held = { title, body, opts: { type, timeout, onClick, log: false } };
+      const held = { title, body, opts: { type, timeout, onClick, log: false, valid } };
       Toast.later(held);
       return () => { held.gone = true; };
     }
@@ -593,10 +594,14 @@ function showMenu(x, y, items, { above = false } = {}) {
   const closer = e => { if (!menu.contains(e.target)) { o.close(); document.removeEventListener('pointerdown', closer, true); } };
   setTimeout(() => document.addEventListener('pointerdown', closer, true), 0);
   requestAnimationFrame(() => {
-    const r = menu.getBoundingClientRect();
-    menu.style.left = clamp(x, 8, innerWidth - r.width - 8) * Zoom.z + 'px';
-    menu.style.top = clamp(above ? y - r.height : y, 8, innerHeight - r.height - 8) * Zoom.z + 'px';
-    const f = menu.querySelector('button'); f && f.focus();
+    const root = o.el.getBoundingClientRect(), scale = root.width / o.el.offsetWidth || 1;
+    menu.style.maxWidth = Math.max(0, (innerWidth - 16) / scale) + 'px';
+    menu.style.minWidth = Math.min(220, (innerWidth - 16) / scale) + 'px';
+    menu.style.maxHeight = Math.max(0, (innerHeight - 16) / scale) + 'px';
+    const r = { width: menu.offsetWidth * scale, height: menu.offsetHeight * scale };
+    menu.style.left = (clamp(x, 8, Math.max(8, innerWidth - r.width - 8)) - root.left) / scale + 'px';
+    menu.style.top = (clamp(above ? y - r.height : y, 8, Math.max(8, innerHeight - r.height - 8)) - root.top) / scale + 'px';
+    const f = menu.querySelector('button'); f && f.focus({ preventScroll: true });
   });
   menu.addEventListener('keydown', e => {
     const btns = $$('button', menu); const i = btns.indexOf(document.activeElement);

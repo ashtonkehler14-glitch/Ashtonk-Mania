@@ -354,6 +354,7 @@ const GameplayScreen = {
     this.gpChatIn.placeholder = open ? kbHint('press Enter to chat', 'tap to chat') : 'chat is available when your song is over';
   },
   leave() {
+    if (this._failSound) { try { this._failSound.stop(); } catch {} this._failSound = null; }
     if (SkinEditor.on) SkinEditor.close({ leaving: true });
     if (this._quitO) { const o = this._quitO; this._quitO = null; o.close(); } // ("Quit match?" still up as the song ended)
     if (this._gpChatOff) { this._gpChatOff(); this._gpChatOff = null; } this.gpChatIn = null; this.gpChat = null; this._gpW = this._gpSx = null;
@@ -1641,6 +1642,10 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
     const realNow = performance.now();
     if (e.type === 'judgement') {
       this.renderer.onJudgement(e, realNow);
+      if (Settings.get('audio.hitSounds') && e.j !== J.MISS && !e.tail) {
+        const tok = this._tok;
+        SkinManager.sample('normal-hitnormal').then(b => { if (b && this.s === s && this._tok === tok && tok) AudioManager.play(b); });
+      }
       if (this.errMeter) this.errMeter.add(e.err, e.j, realNow);
       if (e.err != null) s.debug.lastErr = e.err / s.rate;
       if (s.adaptive) this.adaptHit(s, e);
@@ -1878,7 +1883,8 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
       Music.setVolume(0, FAIL_WIND_DOWN * 1000);
       setTimeout(() => { if (Music.source === src) Music.stop(0); }, FAIL_WIND_DOWN * 1000 + 100);
     }
-    SkinManager.sample('failsound').then(b => b && AudioManager.play(b));
+    const failToken = this._tok;
+    SkinManager.sample('failsound').then(b => { if (b && this.s === s && this._tok === failToken && failToken) this._failSound = AudioManager.play(b); });
     if (s.mode === 'play') {
       const { score } = await this.saveScore(false, { store: false }); // (not kept: only a play you finish is recorded)
       this.failedScore = score; this.failedReplay = this._unsavedReplay;
@@ -1911,7 +1917,7 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
       const { score, replay } = await this.saveScore(!s.mpFailed, { store: !s.mpFailed });
       try { Medals.check(score); } catch (e) { console.warn('medals', e); }
       // lazer's global leaderboard: a passed play goes up (the server keeps your best)
-      if (score.passed && !s.mods.includes('AT') && s.mode === 'play' && !s.practice) Verified.submit({ rec: s.rec, score, daily: this.params.daily ? { day: this.params.daily.day } : null });
+      if (score.passed && !s.mods.includes('AT') && s.mode === 'play' && !s.practice) Verified.submit({ rec: s.rec, score, replay, daily: this.params.daily ? { day: this.params.daily.day } : null });
       if (s.mp) { Multiplayer.finish(score); Verified.room({ rec: s.rec, score }); setTimeout(() => { if (this.s === s) this.mpAfter(score, replay); }, 900); return; }
       setTimeout(() => { if (this.s === s) Screens.go('results', { score, replay, fresh: true, back: this.params.back || null, daily: this.params.daily || null }, { replace: true, transition: 'zoom' }); }, 600);
     } else {
