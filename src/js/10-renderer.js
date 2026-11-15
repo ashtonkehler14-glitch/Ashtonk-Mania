@@ -1041,9 +1041,9 @@ class ManiaRenderer {
     ctx.drawImage(img, cx - w / 2, y - h / 2, w, h);
     const thr = Settings.get('wom.earlyLate'), score = [320, 300, 200, 100, 50, 0][fx.j];
     if (fx.err != null && fx.j !== J.MISS && thr >= 0 && score <= thr && fx.err !== 0) {
-      const sz = 9 * this.s * (el < 300 ? 1.1 - 0.1 * ease : 1);
+      const sz = 9 * this.s;
       ctx.font = `400 ${sz}px WomRobotoMono, "Roboto Mono", monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.globalAlpha *= 0.5; ctx.fillStyle = fx.err < 0 ? '#26de63' : '#de8826';
+      ctx.globalAlpha = el > 800 ? 1 - (el - 800) / 300 : 1; ctx.fillStyle = fx.err < 0 ? '#26de63' : '#de8826';
       ctx.fillText(fx.err < 0 ? 'Early' : 'Late', cx, y - 13 * this.s);
     }
     ctx.globalAlpha = 1;
@@ -1186,6 +1186,8 @@ class ManiaRenderer {
     if (rot) { ctx.save(); ctx.translate(cx, yy); ctx.rotate(rot); ctx.drawImage(img, -w / 2, -hh / 2, w, hh); ctx.restore(); }
     else ctx.drawImage(img, cx - w / 2, yy - hh / 2, w, hh);
     if (fx.el) {
+      // Timing feedback is readable on the first frame, independently of the judgement fade-in.
+      ctx.globalAlpha = el < 180 ? 1 : alpha;
       const size = Math.round(6.5 * this.s);
       ctx.font = `900 ${size}px Torus, Outfit, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const y2 = this.up ? this.H - (y + t.h * k / 2 + size) : y + t.h * k / 2 + size * 0.9;

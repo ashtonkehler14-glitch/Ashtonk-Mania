@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15c', title: 'Faster timing feedback', sections: [
+    { icon: 'keyboard', title: 'Gameplay', items: ['Early/Late feedback appears at full opacity immediately instead of fading in with the judgement.'] },
+  ] },
   { id: '2026.11.15b', title: 'Note spacing', sections: [
     { icon: 'brush', title: 'Skin editor', items: ['Adjust lane spacing in Note appearance, saved separately for each skin and key count.'] },
   ] },

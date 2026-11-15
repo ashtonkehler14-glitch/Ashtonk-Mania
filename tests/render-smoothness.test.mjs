@@ -187,3 +187,29 @@ test('render frame scroll distances match lazer across speed, rate, BPM/SV segme
     assert.ok(Math.abs(actual - expected) <= Math.max(1e-5, Math.abs(expected) * 1e-7), JSON.stringify({ height, rate, speed, now, actual, expected }));
   }
 });
+
+test('early/late text is readable on the first frame without accelerating the judgement animation', () => {
+  const { R, values, ctx } = setup();
+  values['skin.scale'] = 1; values['gameplay.showMax'] = true; values['wom.earlyLate'] = 320;
+  const text = [], images = [], r = Object.create(R.prototype);
+  r.s = r.u = 1; r.stageW = 300; r.up = false; r.legacy = true;
+  r.ctx = { globalAlpha: 1, drawImage() { images.push(this.globalAlpha); }, strokeText() {}, fillText(label) { text.push({ label, alpha: this.globalAlpha }); } };
+  r.layout = { scorePosition: 200, judgement: { perfect: { w: 100, h: 30, frames: [{}] } } };
+  // Resolve the native judgement id instead of duplicating its display naming.
+  vm.runInContext('this.testJudgementId = JUDGEMENTS[1].id;', ctx);
+  r.layout.judgement[ctx.testJudgementId] = { w: 100, h: 30, frames: [{}] };
+  for (const label of ['EARLY', 'LATE']) {
+    r.judgementFx = { j: 1, t0: 100, el: label };
+    r._drawJudgementBase(100);
+    assert.equal(text.at(-1).label, label); assert.equal(text.at(-1).alpha, 1);
+    assert.equal(images.at(-1), 0, 'the native judgement still fades in normally');
+    r._drawJudgementBase(300); assert.ok(text.at(-1).alpha < 1, 'normal fade-out is retained');
+    r._drawJudgementBase(321); assert.equal(r.judgementFx, null);
+  }
+  ctx.WOM = { image: () => ({ naturalWidth: 100, naturalHeight: 30 }), judgementScale: () => 1 };
+  for (const err of [-40, 40]) {
+    r.judgementFx = { j: 1, t0: 100, err };
+    r._drawWomJudgementBase(100);
+    assert.equal(text.at(-1).label, err < 0 ? 'Early' : 'Late'); assert.equal(text.at(-1).alpha, 1);
+  }
+});

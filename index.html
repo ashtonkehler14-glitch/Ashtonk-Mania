@@ -12398,9 +12398,9 @@ class ManiaRenderer {
     ctx.drawImage(img, cx - w / 2, y - h / 2, w, h);
     const thr = Settings.get('wom.earlyLate'), score = [320, 300, 200, 100, 50, 0][fx.j];
     if (fx.err != null && fx.j !== J.MISS && thr >= 0 && score <= thr && fx.err !== 0) {
-      const sz = 9 * this.s * (el < 300 ? 1.1 - 0.1 * ease : 1);
+      const sz = 9 * this.s;
       ctx.font = `400 ${sz}px WomRobotoMono, "Roboto Mono", monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.globalAlpha *= 0.5; ctx.fillStyle = fx.err < 0 ? '#26de63' : '#de8826';
+      ctx.globalAlpha = el > 800 ? 1 - (el - 800) / 300 : 1; ctx.fillStyle = fx.err < 0 ? '#26de63' : '#de8826';
       ctx.fillText(fx.err < 0 ? 'Early' : 'Late', cx, y - 13 * this.s);
     }
     ctx.globalAlpha = 1;
@@ -12543,6 +12543,8 @@ class ManiaRenderer {
     if (rot) { ctx.save(); ctx.translate(cx, yy); ctx.rotate(rot); ctx.drawImage(img, -w / 2, -hh / 2, w, hh); ctx.restore(); }
     else ctx.drawImage(img, cx - w / 2, yy - hh / 2, w, hh);
     if (fx.el) {
+      // Timing feedback is readable on the first frame, independently of the judgement fade-in.
+      ctx.globalAlpha = el < 180 ? 1 : alpha;
       const size = Math.round(6.5 * this.s);
       ctx.font = `900 ${size}px Torus, Outfit, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const y2 = this.up ? this.H - (y + t.h * k / 2 + size) : y + t.h * k / 2 + size * 0.9;
@@ -25656,6 +25658,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15c', title: 'Faster timing feedback', sections: [
+    { icon: 'keyboard', title: 'Gameplay', items: ['Early/Late feedback appears at full opacity immediately instead of fading in with the judgement.'] },
+  ] },
   { id: '2026.11.15b', title: 'Note spacing', sections: [
     { icon: 'brush', title: 'Skin editor', items: ['Adjust lane spacing in Note appearance, saved separately for each skin and key count.'] },
   ] },
@@ -36112,7 +36117,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '4d2f6244a360';
+const APP_BUILD = 'e3789c54b1ae';
 
 const App = {
   lastReport: null,
