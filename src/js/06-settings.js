@@ -220,7 +220,7 @@ const SETTINGS_SCHEMA = [
 ];
 // Appearance belongs to the skin and its editor; keep stored values compatible with existing skins.
 for (const it of SETTINGS_SCHEMA) {
-  if (['gameplay.laneWidth', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
+  if (['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
   if (it.g === 'Custom skin' && !it.when) it.when = customSkinOn;
   if (it.g === 'HUD' || ['input.keyOverlay', 'gameplay.showJudgements', 'gameplay.showMax', 'gameplay.earlyLate'].includes(it.k)) { it.x = 1; it.editor = 'hud'; }
   if (it.k === 'gameplay.hitPositionOffset') it.x = 1;

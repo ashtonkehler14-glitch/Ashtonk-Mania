@@ -9326,7 +9326,7 @@ const SETTINGS_SCHEMA = [
 ];
 // Appearance belongs to the skin and its editor; keep stored values compatible with existing skins.
 for (const it of SETTINGS_SCHEMA) {
-  if (['gameplay.laneWidth', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
+  if (['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k)) { it.s = 'Skin'; it.g = 'Custom skin'; it.when = customSkinOn; }
   if (it.g === 'Custom skin' && !it.when) it.when = customSkinOn;
   if (it.g === 'HUD' || ['input.keyOverlay', 'gameplay.showJudgements', 'gameplay.showMax', 'gameplay.earlyLate'].includes(it.k)) { it.x = 1; it.editor = 'hud'; }
   if (it.k === 'gameplay.hitPositionOffset') it.x = 1;
@@ -23563,7 +23563,7 @@ const SkinEditor = {
 
   // ── the layout
   appearanceRows(hud) {
-    return SETTINGS_SCHEMA.filter(it => hud ? it.editor === 'hud' && !HUD_PARTS.some(p => p.setting === it.k) : ['gameplay.laneWidth', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k));
+    return SETTINGS_SCHEMA.filter(it => hud ? it.editor === 'hud' && !HUD_PARTS.some(p => p.setting === it.k) : ['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k));
   },
   available(p) {
     if (!p.texture) return true;
@@ -25645,6 +25645,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15b', title: 'Note spacing', sections: [
+    { icon: 'brush', title: 'Skin editor', items: ['Adjust lane spacing in Note appearance, saved separately for each skin and key count.'] },
+  ] },
   { id: '2026.11.15a', title: 'Menus and replay fixes', sections: [
     { icon: 'music', title: 'Gameplay', items: ['Optional hit sound effects in Audio settings, off by default.', 'The losing sound stops when you leave the fail screen.'] },
     { icon: 'screen', title: 'Menus', items: ['Deleting maps preserves your position in the list.', 'Friend online notifications are skipped if they went offline before the song ended.', 'Collection and replay export menus fit the screen and use the game’s UI scale.'] },
@@ -36090,7 +36093,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '6173c1b36f28';
+const APP_BUILD = '1e4fcfc050a4';
 
 const App = {
   lastReport: null,

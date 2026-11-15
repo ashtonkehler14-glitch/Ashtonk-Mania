@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.15b', title: 'Note spacing', sections: [
+    { icon: 'brush', title: 'Skin editor', items: ['Adjust lane spacing in Note appearance, saved separately for each skin and key count.'] },
+  ] },
   { id: '2026.11.15a', title: 'Menus and replay fixes', sections: [
     { icon: 'music', title: 'Gameplay', items: ['Optional hit sound effects in Audio settings, off by default.', 'The losing sound stops when you leave the fail screen.'] },
     { icon: 'screen', title: 'Menus', items: ['Deleting maps preserves your position in the list.', 'Friend online notifications are skipped if they went offline before the song ended.', 'Collection and replay export menus fit the screen and use the game’s UI scale.'] },
