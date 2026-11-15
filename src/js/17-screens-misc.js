@@ -918,7 +918,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
-  { id: '2026.11.13', title: 'One entry per player online', sections: [
+  { id: '2026.11.15', title: 'Bug Fixes -Sling', sections: [
+    { icon: 'music', title: 'Music', items: ['The music player no longer shows play while the menu song is already playing after you open the game, so one click pauses it.'] },
+  ] },
+  { id: '2026.11.13', title: 'One entry per player online -Sling', sections: [
     { icon: 'user', title: 'Online', items: ['With the game open on more than one tab or device, you show up once in the online list, with the same picture everywhere.'] },
   ] },
   { id: '2026.11.11i', title: 'Mobile results layout', sections: [

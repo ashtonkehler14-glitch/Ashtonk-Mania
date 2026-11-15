@@ -8844,6 +8844,14 @@ const Music = {
     el.src = this.elUrl;
     if (oldUrl) URL.revokeObjectURL(oldUrl);
     el.onended = () => { if (this.el === el && this.playing) { this.playing = false; this.pausedPos = this.duration; this.onEnded && this.onEnded(); } };
+    // (Firefox can refuse play() before the first click and then start the song anyway: the element is what's heard,
+    // so when it starts, the player shows it playing instead of a play button over a song you can hear)
+    el.onplaying = () => {
+      if (this.el !== el || this.playing) return;
+      this.playing = true; this.gen++;
+      if (typeof MenuMusic !== 'undefined') MenuMusic.paused = false;
+      Bus.emit('music:changed', typeof MenuMusic !== 'undefined' ? MenuMusic.current : null);
+    };
     this.el = el; this.buffer = null; this.stretched = null; this.key = key; this.meta = meta || null;
     this.rate = 1; this.preservePitch = false; this.pausedPos = 0;
     el.playbackRate = el.defaultPlaybackRate = 1; this._streamPitch(true);
@@ -8944,7 +8952,10 @@ const Music = {
     g.gain.cancelScheduledValues(t);
     if (fadeIn > 0) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(volume, t + fadeIn / 1000); } else g.gain.setValueAtTime(volume, t);
     this.playing = true; this.loop = loop; this.gain = g; this.source = null;
-    el.play().catch(() => { if (this.el === el) this.playing = false; });
+    // (the element is reused from track to track: a play() cut short by a newer song or play() rejects late, and
+    // mustn't mark that newer one as stopped while it plays — only this call's own failure counts)
+    const tok = this._playTok = {};
+    el.play().catch(() => { if (this.el === el && this._playTok === tok) this.playing = false; });
   },
   pause() {
     if (!this.playing) return;
@@ -25618,7 +25629,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
-  { id: '2026.11.13', title: 'One entry per player online', sections: [
+  { id: '2026.11.15', title: 'Bug Fixes -Sling', sections: [
+    { icon: 'music', title: 'Music', items: ['The music player no longer shows play while the menu song is already playing after you open the game, so one click pauses it.'] },
+  ] },
+  { id: '2026.11.13', title: 'One entry per player online -Sling', sections: [
     { icon: 'user', title: 'Online', items: ['With the game open on more than one tab or device, you show up once in the online list, with the same picture everywhere.'] },
   ] },
   { id: '2026.11.11i', title: 'Mobile results layout', sections: [
@@ -36043,7 +36057,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '47ad497f77db';
+const APP_BUILD = '193feaaefc95';
 
 const App = {
   lastReport: null,

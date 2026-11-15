@@ -311,6 +311,14 @@ const Music = {
     el.src = this.elUrl;
     if (oldUrl) URL.revokeObjectURL(oldUrl);
     el.onended = () => { if (this.el === el && this.playing) { this.playing = false; this.pausedPos = this.duration; this.onEnded && this.onEnded(); } };
+    // (Firefox can refuse play() before the first click and then start the song anyway: the element is what's heard,
+    // so when it starts, the player shows it playing instead of a play button over a song you can hear)
+    el.onplaying = () => {
+      if (this.el !== el || this.playing) return;
+      this.playing = true; this.gen++;
+      if (typeof MenuMusic !== 'undefined') MenuMusic.paused = false;
+      Bus.emit('music:changed', typeof MenuMusic !== 'undefined' ? MenuMusic.current : null);
+    };
     this.el = el; this.buffer = null; this.stretched = null; this.key = key; this.meta = meta || null;
     this.rate = 1; this.preservePitch = false; this.pausedPos = 0;
     el.playbackRate = el.defaultPlaybackRate = 1; this._streamPitch(true);
@@ -411,7 +419,10 @@ const Music = {
     g.gain.cancelScheduledValues(t);
     if (fadeIn > 0) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(volume, t + fadeIn / 1000); } else g.gain.setValueAtTime(volume, t);
     this.playing = true; this.loop = loop; this.gain = g; this.source = null;
-    el.play().catch(() => { if (this.el === el) this.playing = false; });
+    // (the element is reused from track to track: a play() cut short by a newer song or play() rejects late, and
+    // mustn't mark that newer one as stopped while it plays — only this call's own failure counts)
+    const tok = this._playTok = {};
+    el.play().catch(() => { if (this.el === el && this._playTok === tok) this.playing = false; });
   },
   pause() {
     if (!this.playing) return;
