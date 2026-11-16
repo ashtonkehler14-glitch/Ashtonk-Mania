@@ -5749,12 +5749,33 @@ button.chat-avatar:disabled { cursor: default; }
   padding-top: var(--toolbar-h);
 }
 .screen.rkm-on { padding-top: 0; }
-/* Settings keeps its compact, centred panel rather than becoming a full-screen destination. */
+/* Settings stays a compact sidebar rather than becoming a full-screen destination. */
 .settings-panel {
-  left: 0; right: 0; margin-inline: auto;
+  left: var(--menu-gutter); right: auto; margin-inline: 0;
   width: min(620px, calc(100 * var(--vw) - 2 * var(--menu-gutter)));
   max-width: calc(100 * var(--vw) - 2 * var(--menu-gutter));
 }
+
+/* Settings shades the surrounding screen, with Neru peeking from behind the sidebar. */
+:root { --settings-width: min(620px, calc(100 * var(--vw) - 2 * var(--menu-gutter))); }
+.settings-panel { width: var(--settings-width); z-index: 1; }
+#overlay-root > .sp-wrap > .backdrop { background: rgba(12, 9, 18, .48); animation: fadeIn var(--t-med) ease both; }
+#overlay-root > .sp-wrap > .backdrop.out { animation: fadeOut var(--t-fast) ease both; }
+.sp-wrap > .neru-cameo.sp-neru-peek {
+  left: calc(var(--menu-gutter) + var(--settings-width) - 48px); top: calc(var(--toolbar-h) + 100px);
+  bottom: auto; height: calc(min(240px, calc(34 * var(--vh))) * var(--nc-s, 1)); width: auto;
+  z-index: 0; rotate: 10deg; transform-origin: 25% 100%; pointer-events: none;
+  mask-image: linear-gradient(#000 65%, transparent 100%); -webkit-mask-image: linear-gradient(#000 65%, transparent 100%);
+}
+.sp-neru-peek.in .nc-body { animation: settingsNeruIn calc(420ms * var(--anim)) var(--ease-out) both; }
+@keyframes settingsNeruIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+.sp-wrap.closing > .sp-neru-peek { opacity: 0; transition: opacity 180ms ease; }
+body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-settings > .nc-peek { opacity: 0; pointer-events: none; }
+/* Temporary peeks live outside the scaled app, so size them in real viewport units. */
+.neru-cameo.nc-peek { height: calc(clamp(120px, 30dvh, 220px) * var(--nc-s, 1)); max-height: 34dvh; left: clamp(12px, 4vw, 64px); }
+.neru-cameo.nc-peek.right { left: auto; right: clamp(12px, 4vw, 64px); }
+@media (prefers-reduced-motion: reduce) { .sp-neru-peek.in .nc-body { animation: none; } }
+.sp-wrap { isolation: isolate; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -17450,12 +17471,14 @@ const NeruCameo = {
       if (!el.offsetWidth) return; // (her picture's still loading)
       const room = (host.clientWidth - dlg.offsetWidth) / 2 - el.offsetLeft - 12;
       const f = clamp(room / (el.offsetWidth / fit), 0, 1);
-      if (Math.abs(f - fit) < 0.01) return;
-      fit = f;
-      el.style.setProperty('--nc-fit', f.toFixed(3));
       el.classList.toggle('nc-cramped', f < 0.6);
+      // Keep measurable geometry while hidden, so widening the window can bring her back.
+      const next = Math.max(0.6, f);
+      if (Math.abs(next - fit) < 0.01) return;
+      fit = next;
+      el.style.setProperty('--nc-fit', next.toFixed(3));
     });
-    ro.observe(el); ro.observe(host);
+    ro.observe(el); ro.observe(host); ro.observe(dlg);
   },
   /** Neru at the screen's left edge with `row`'s panels beside her (the results' cards, the other scores' too): kept
    *  clear of the nearest — shrunk into the room left of it, and with too little to look like herself not there at all
@@ -17463,6 +17486,7 @@ const NeruCameo = {
    *  scroll and its cards change, until she's gone. (In the screen's own pixels: the cards are zoomed to fit.) */
   clearOf(el, row) {
     if (!el || !row) return;
+    if (el._clearOfStop) el._clearOfStop();
     let fit = parseFloat(el.style.getPropertyValue('--nc-fit')) || 1, t = 0; // (watched again after another score was picked: as she is)
     const check = () => {
       if (!el.isConnected || !row.isConnected) { stop(); return; }
@@ -17477,13 +17501,19 @@ const NeruCameo = {
         left = Math.min(left, Math.max(r.left, rr.left));
       }
       const f = clamp((left - me.left - 12) / (me.width / fit), 0, 1);
-      if (Math.abs(f - fit) < 0.01) return;
-      fit = f;
-      el.style.setProperty('--nc-fit', f.toFixed(3));
       el.classList.toggle('nc-cramped', f < 0.6);
+      const next = Math.max(0.6, f);
+      if (Math.abs(next - fit) < 0.01) return;
+      fit = next;
+      el.style.setProperty('--nc-fit', next.toFixed(3));
     };
-    const ro = new ResizeObserver(check), stop = () => { ro.disconnect(); clearInterval(t); row.removeEventListener('scroll', check); };
+    const ro = new ResizeObserver(check), stop = () => {
+      ro.disconnect(); clearInterval(t); row.removeEventListener('scroll', check);
+      if (el._clearOfStop === stop) el._clearOfStop = null;
+    };
+    el._clearOfStop = stop;
     ro.observe(el); ro.observe(row);
+    const grid = row.querySelector?.('.res-grid'); if (grid) ro.observe(grid);
     row.addEventListener('scroll', check, { passive: true });
     // (and now and then: the cards slide about — the statistics opened and closed, another score picked)
     t = setInterval(check, 700);
@@ -17600,10 +17630,11 @@ const NeruCameo = {
    *  makes any other change that goes with it (its size) at the moment it swaps; `still()` says whether it's still wanted
    *  once the new picture is ready. */
   async swap(img, src, apply = null, still = () => true) {
+    const token = img._swapToken = {};
     const pre = new Image(); pre.src = src;
     try { await pre.decode(); } catch { /* checked below */ }
     // (a picture that couldn't be loaded — offline — never replaces the one she has)
-    if (!still() || !pre.naturalWidth) return;
+    if (img._swapToken !== token || !still() || !pre.naturalWidth) return;
     if (img._flopEnd) img._flopEnd(); // (a fish flopping on her line: over, the picture's changing)
     const box = img.parentElement, anim = neruAnim() && !document.documentElement.classList.contains('slow');
     if (anim && box && img.isConnected && img.complete && img.naturalWidth && img.getAttribute('src') !== src) {
@@ -18260,6 +18291,7 @@ const NeruEggs = {
       if (done) return;
       if (el.isConnected && el.querySelector(':scope > .neru-photo, :scope > .neru-bread')) { setTimeout(away, 100); return; } // (a photo she's holding up, or a thought, goes first)
       done = true;
+      window.removeEventListener('resize', place);
       el.animate([{ transform: 'translateY(42%)' }, { transform: 'translateY(105%)' }], { duration: 420, easing: 'cubic-bezier(.55, 0, .75, .2)', fill: 'forwards' }).onfinish = () => el.remove();
     };
     // (once her picture's in: up, a look, and back down)
@@ -18268,11 +18300,12 @@ const NeruEggs = {
     let waits = 0;
     const settling = () => { const scr = document.querySelector('.screen.enter'); return !!scr && scr.getAnimations().some(a => a.playState === 'running'); };
     const go = () => {
-      if (el.hidden || (settling() && waits++ < 20)) { if (el.isConnected) setTimeout(go, 60); return; }
+      if (el.hidden || (settling() && waits++ < 20)) { if (el.isConnected) setTimeout(go, 60); else window.removeEventListener('resize', place); return; }
       place();
       el.animate(up, { duration: 650, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'forwards' }); setTimeout(away, 3200); if (then) setTimeout(() => el.isConnected && then(el), 520);
     };
     el.style.transform = 'translateY(105%)';
+    window.addEventListener('resize', place);
     go();
     return el;
   },
@@ -25404,6 +25437,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16t', title: 'Weekly cover and settings sidebar', sections: [
+    { title: 'Interface', items: ['Settings is back in the left sidebar, with a dimmed background and Neru peeking around its edge.', 'Neru’s side appearances recover properly after resizing, and rapid pose changes no longer show an older pose.', 'The weekly challenge’s cover is now saved on this device for return visits and offline viewing.'] }
+  ] },
   { id: '2026.11.16s', title: 'Menu and room layouts', sections: [
     { title: 'Interface', items: ['Large menus extend to the bottom of the screen.', 'Active lounge rooms and ranked matches use the full screen; settings stays a compact floating panel.'] }
   ] },
@@ -26129,11 +26165,11 @@ const OnlineBeatmaps = {
     return this.fill(tpl, id, kind);
   },
   /** Load a set's cover into `el` as its background, trying each size in turn (older sets lack the @2x ones). */
-  loadCover(el, id, kinds, done, queue = null, failed = null) {
+  loadCover(el, id, kinds, done, queue = null, failed = null, persist = null) {
     const urls = [...new Set(kinds.map(k => this.coverURL(id, k)))]; // (sources with one cover size give one URL)
     // a cover that has loaded before goes straight in, so rebuilt cards don't fade in again
     const known = this._covers.get(urls.join('|'));
-    if (known) { this.saveDefaultCover(id, known); el.style.transition = 'none'; el.style.backgroundImage = `url("${known}")`; done && done(null); return; }
+    if (known) { if (persist) this.cacheCover(known, persist, 4); this.saveDefaultCover(id, known); el.style.transition = 'none'; el.style.backgroundImage = `url("${known}")`; done && done(null); return; }
     PicWait.add(el); // (a list scrolled with the wheel waits for it — see PicWait)
     const next = i => {
       if (i >= urls.length) { PicWait.done(el); failed && failed(); return; }
@@ -26141,21 +26177,25 @@ const OnlineBeatmaps = {
       // (decoded off the main thread before it's shown, so a card scrolling in doesn't stall a frame decoding it)
       // (`queue`: the picture goes on in the page's next frame along with everything else, not the moment it's decoded —
       // a change between frames made the next scroll wait while the browser worked the page out again)
-      img.onload = () => { this.saveDefaultCover(id, img.src); const put = () => { el.style.backgroundImage = `url("${img.src}")`; PicWait.done(el); done && done(img); }; const show = () => { this._covers.set(urls.join('|'), img.src); if (queue) queue(put); else put(); }; (img.decode ? img.decode() : Promise.resolve()).then(show, show); };
+      img.onload = () => { if (persist) this.cacheCover(img.src, persist, 4); this.saveDefaultCover(id, img.src); const put = () => { el.style.backgroundImage = `url("${img.src}")`; PicWait.done(el); done && done(img); }; const show = () => { this._covers.set(urls.join('|'), img.src); if (queue) queue(put); else put(); }; (img.decode ? img.decode() : Promise.resolve()).then(show, show); };
       img.onerror = () => next(i + 1);
       img.src = urls[i];
     };
     next(0);
   },
   async saveDefaultCover(id, url) {
-    if (!this._savedCoverIds?.has(id) || typeof caches === 'undefined') return;
+    if (!this._savedCoverIds?.has(id)) return;
+    return this.cacheCover(url, 'am-explorer-covers-v1', 120);
+  },
+  async cacheCover(url, name, limit) {
+    if (typeof caches === 'undefined') return;
     try {
-      const cache = await caches.open('am-explorer-covers-v1');
+      const cache = await caches.open(name);
       if (await cache.match(url)) return;
       const response = await fetch(url, { mode: 'no-cors', cache: 'force-cache' });
       if (response.ok || response.type === 'opaque') await cache.put(url, response);
       const keys = await cache.keys();
-      for (const key of keys.slice(0, Math.max(0, keys.length - 120))) await cache.delete(key);
+      for (const key of keys.slice(0, Math.max(0, keys.length - limit))) await cache.delete(key);
     } catch { /* A full disk or unavailable cache must not break covers. */ }
   },
   previewURL(id) {
@@ -27036,7 +27076,15 @@ const SettingsPanel = {
     // picking another skin shows or hides the Custom skin's options
     const offSkin = Bus.on('skin:changed', () => { if (this.o && this.scrollEl) { const st = this.scrollEl.scrollTop; this.build(this.q || ''); this.scrollEl.scrollTop = st; } });
     const offPerformance = Bus.on('settings:changed', k => { if (k === 'graphics.performanceMode' && this.o && this.scrollEl) { const st = this.scrollEl.scrollTop; this.build(this.q || ''); this.scrollEl.scrollTop = st; } });
-    this.o = makeOverlay(panel, { cls: 'sp-wrap', flags: ['settings'], onClose: () => { offSkin(); offPerformance(); this.o = null; KeyConfig.stop(); window.removeEventListener('keydown', this._type, true); Toolbar.sync(); } });
+    this.o = makeOverlay(panel, { cls: 'sp-wrap', flags: ['settings'], onClose: () => { offSkin(); offPerformance(); offPeek(); this.o = null; KeyConfig.stop(); window.removeEventListener('keydown', this._type, true); Toolbar.sync(); } });
+    const paintPeek = () => {
+      if (!this.o) return;
+      this.o.el.querySelector('.sp-neru-peek')?.remove();
+      const peek = typeof NeruCameo !== 'undefined' && NeruCameo.make('setup', 'sp-neru-peek', { delay: 0 });
+      if (peek) { peek.disabled = true; peek.setAttribute('aria-hidden', 'true'); this.o.el.insertBefore(peek, panel); }
+    };
+    const offPeek = Bus.on('settings:changed', k => { if (k === 'ui.mascot') paintPeek(); });
+    paintPeek();
     Toolbar.sync();
     requestAnimationFrame(() => { if (section) this.scrollTo(section); else this.syncNav(); });
     // like lazer, the search box has focus as soon as the panel opens, and typing anywhere else in it goes there too
@@ -33195,7 +33243,7 @@ const Daily = {
       if (!(map.onlineSetId > 0)) return;
       // Load into a temporary element so an older week's image cannot overwrite a newer one.
       const cover = h('div');
-      OnlineBeatmaps.loadCover(cover, map.onlineSetId, ['cover@2x', 'cover', 'card@2x', 'card'], () => apply(cover.style.backgroundImage));
+      OnlineBeatmaps.loadCover(cover, map.onlineSetId, ['cover@2x', 'cover', 'card@2x', 'card'], () => apply(cover.style.backgroundImage), null, null, 'am-weekly-covers-v1');
     })().catch(() => {});
   },
   remaining(ms) {
@@ -34890,7 +34938,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '8023574f24d0';
+const APP_BUILD = '711efc93c8c5';
 
 const App = {
   lastReport: null,

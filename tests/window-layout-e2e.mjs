@@ -47,7 +47,7 @@ try {
     }
     await page.evaluate(()=>SettingsPanel.open());await page.waitForTimeout(350);
     const settings=await page.locator('.settings-panel').boundingBox(),toolbar=await page.locator('#toolbar').boundingBox();
-    assert.ok(Math.abs(settings.x+settings.width/2-viewport.width/2)<1,'Settings stays centred');
+    assert.ok(Math.abs(settings.x-toolbar.x)<1,'Settings stays anchored to the left sidebar');
     assert.ok(settings.width<=toolbar.width+1,'Settings fits within the floating frame');
     assert.ok(await page.evaluate(()=>document.querySelector('.settings-panel').offsetWidth<=621),'Settings remains compact');
     assert.ok(Math.abs(settings.y+settings.height-viewport.height)<1,'Settings meets the bottom edge');

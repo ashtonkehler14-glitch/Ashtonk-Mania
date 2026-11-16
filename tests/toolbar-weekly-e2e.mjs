@@ -70,6 +70,8 @@ try {
   await page.evaluate(()=>document.querySelector('#fixture-weekly-card').remove());
   await page.evaluate(()=>{Daily.data.map={onlineSetId:9876503,onlineId:9876504};HomeScreen.paintDaily();});
   await page.waitForFunction(()=>document.querySelector('.lz-cover').style.backgroundImage.includes('/test-covers/9876503'),null,{timeout:5000});
+  await page.waitForFunction(async()=>{const cache=await caches.open('am-weekly-covers-v1');return (await cache.keys()).some(r=>r.url.includes('/test-covers/9876503'));});
+  assert.ok(await page.evaluate(async()=>{const cache=await caches.open('am-weekly-covers-v1');const keys=await cache.keys();return !!(await cache.match(keys.find(r=>r.url.includes('/test-covers/9876503'))));}),'Weekly artwork is saved in its persistent device cache');
   // A slow earlier lookup must never replace the current week's artwork.
   const race=await page.evaluate(async()=>{
     const el=document.createElement('div');let release;

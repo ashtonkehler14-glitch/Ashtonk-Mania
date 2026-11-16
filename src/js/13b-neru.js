@@ -330,12 +330,14 @@ const NeruCameo = {
       if (!el.offsetWidth) return; // (her picture's still loading)
       const room = (host.clientWidth - dlg.offsetWidth) / 2 - el.offsetLeft - 12;
       const f = clamp(room / (el.offsetWidth / fit), 0, 1);
-      if (Math.abs(f - fit) < 0.01) return;
-      fit = f;
-      el.style.setProperty('--nc-fit', f.toFixed(3));
       el.classList.toggle('nc-cramped', f < 0.6);
+      // Keep measurable geometry while hidden, so widening the window can bring her back.
+      const next = Math.max(0.6, f);
+      if (Math.abs(next - fit) < 0.01) return;
+      fit = next;
+      el.style.setProperty('--nc-fit', next.toFixed(3));
     });
-    ro.observe(el); ro.observe(host);
+    ro.observe(el); ro.observe(host); ro.observe(dlg);
   },
   /** Neru at the screen's left edge with `row`'s panels beside her (the results' cards, the other scores' too): kept
    *  clear of the nearest — shrunk into the room left of it, and with too little to look like herself not there at all
@@ -343,6 +345,7 @@ const NeruCameo = {
    *  scroll and its cards change, until she's gone. (In the screen's own pixels: the cards are zoomed to fit.) */
   clearOf(el, row) {
     if (!el || !row) return;
+    if (el._clearOfStop) el._clearOfStop();
     let fit = parseFloat(el.style.getPropertyValue('--nc-fit')) || 1, t = 0; // (watched again after another score was picked: as she is)
     const check = () => {
       if (!el.isConnected || !row.isConnected) { stop(); return; }
@@ -357,13 +360,19 @@ const NeruCameo = {
         left = Math.min(left, Math.max(r.left, rr.left));
       }
       const f = clamp((left - me.left - 12) / (me.width / fit), 0, 1);
-      if (Math.abs(f - fit) < 0.01) return;
-      fit = f;
-      el.style.setProperty('--nc-fit', f.toFixed(3));
       el.classList.toggle('nc-cramped', f < 0.6);
+      const next = Math.max(0.6, f);
+      if (Math.abs(next - fit) < 0.01) return;
+      fit = next;
+      el.style.setProperty('--nc-fit', next.toFixed(3));
     };
-    const ro = new ResizeObserver(check), stop = () => { ro.disconnect(); clearInterval(t); row.removeEventListener('scroll', check); };
+    const ro = new ResizeObserver(check), stop = () => {
+      ro.disconnect(); clearInterval(t); row.removeEventListener('scroll', check);
+      if (el._clearOfStop === stop) el._clearOfStop = null;
+    };
+    el._clearOfStop = stop;
     ro.observe(el); ro.observe(row);
+    const grid = row.querySelector?.('.res-grid'); if (grid) ro.observe(grid);
     row.addEventListener('scroll', check, { passive: true });
     // (and now and then: the cards slide about — the statistics opened and closed, another score picked)
     t = setInterval(check, 700);
@@ -480,10 +489,11 @@ const NeruCameo = {
    *  makes any other change that goes with it (its size) at the moment it swaps; `still()` says whether it's still wanted
    *  once the new picture is ready. */
   async swap(img, src, apply = null, still = () => true) {
+    const token = img._swapToken = {};
     const pre = new Image(); pre.src = src;
     try { await pre.decode(); } catch { /* checked below */ }
     // (a picture that couldn't be loaded — offline — never replaces the one she has)
-    if (!still() || !pre.naturalWidth) return;
+    if (img._swapToken !== token || !still() || !pre.naturalWidth) return;
     if (img._flopEnd) img._flopEnd(); // (a fish flopping on her line: over, the picture's changing)
     const box = img.parentElement, anim = neruAnim() && !document.documentElement.classList.contains('slow');
     if (anim && box && img.isConnected && img.complete && img.naturalWidth && img.getAttribute('src') !== src) {
@@ -1140,6 +1150,7 @@ const NeruEggs = {
       if (done) return;
       if (el.isConnected && el.querySelector(':scope > .neru-photo, :scope > .neru-bread')) { setTimeout(away, 100); return; } // (a photo she's holding up, or a thought, goes first)
       done = true;
+      window.removeEventListener('resize', place);
       el.animate([{ transform: 'translateY(42%)' }, { transform: 'translateY(105%)' }], { duration: 420, easing: 'cubic-bezier(.55, 0, .75, .2)', fill: 'forwards' }).onfinish = () => el.remove();
     };
     // (once her picture's in: up, a look, and back down)
@@ -1148,11 +1159,12 @@ const NeruEggs = {
     let waits = 0;
     const settling = () => { const scr = document.querySelector('.screen.enter'); return !!scr && scr.getAnimations().some(a => a.playState === 'running'); };
     const go = () => {
-      if (el.hidden || (settling() && waits++ < 20)) { if (el.isConnected) setTimeout(go, 60); return; }
+      if (el.hidden || (settling() && waits++ < 20)) { if (el.isConnected) setTimeout(go, 60); else window.removeEventListener('resize', place); return; }
       place();
       el.animate(up, { duration: 650, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'forwards' }); setTimeout(away, 3200); if (then) setTimeout(() => el.isConnected && then(el), 520);
     };
     el.style.transform = 'translateY(105%)';
+    window.addEventListener('resize', place);
     go();
     return el;
   },

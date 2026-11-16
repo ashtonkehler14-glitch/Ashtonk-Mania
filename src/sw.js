@@ -3,7 +3,7 @@
  *  - Bundled files (Neru pictures, avatars, icons, the Kori skin): served from the cache and refreshed in the
  *    background (requests that ask for a fresh copy, like the Kori upgrade check, go to the network first).
  *  - Google Fonts: cached, so the text looks right offline.
- *  - /api/* (downloads, multiplayer) and previews stay online; default explorer cover art is saved separately.
+ *  - /api/* (downloads, multiplayer) and previews stay online; default explorer and weekly challenge cover art are saved separately.
  *  Beatmaps, skins, scores and settings live in IndexedDB, not in these caches. */
 const VERSION = '__VERSION__'; // (changes with every build, so browsers pick up a new service worker after a deploy)
 const PAGES = 'ashtonk-pages', ASSETS = 'ashtonk-assets', FONTS = 'ashtonk-fonts', SHARED = 'ashtonk-shared';
@@ -42,10 +42,14 @@ self.addEventListener('fetch', e => {
     e.respondWith(req.cache === 'no-cache' || req.cache === 'reload' || req.cache === 'no-store' ? networkFirst(req, ASSETS) : cacheFirst(req, ASSETS, e));
     return;
   }
-  // Only artwork explicitly saved from the default explorer page is persisted here.
+  // Only artwork explicitly saved from the default explorer page or weekly challenge is persisted here.
   if (req.destination === 'image') {
     e.respondWith((async () => {
-      try { const hit = await (await caches.open('am-explorer-covers-v1')).match(req); if (hit) return hit; } catch {}
+      try {
+        for (const name of ['am-explorer-covers-v1', 'am-weekly-covers-v1']) {
+          const hit = await (await caches.open(name)).match(req); if (hit) return hit;
+        }
+      } catch {}
       return fetch(req);
     })());
     return;

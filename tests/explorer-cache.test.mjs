@@ -36,10 +36,10 @@ test('only the saved default page writes artwork to the device cache',async()=>{
 test('service worker serves saved explorer cover art offline and fetches uncached art normally',async()=>{
   const listeners={},saved={type:'opaque'},requests=[];
   const ctx=vm.createContext({URL,self:{location:{origin:'https://game.test'},addEventListener(t,fn){listeners[t]=fn;}},
-    caches:{async open(name){assert.equal(name,'am-explorer-covers-v1');return {async match(req){return req.url.endsWith('/saved.jpg')?saved:null;}};}},
+    caches:{async open(name){assert.ok(['am-explorer-covers-v1','am-weekly-covers-v1'].includes(name));return {async match(req){return (name==='am-explorer-covers-v1' && req.url.endsWith('/saved.jpg')) || (name==='am-weekly-covers-v1' && req.url.endsWith('/weekly.jpg'))?saved:null;}};}},
     fetch:async req=>{requests.push(req.url);return {network:true};}});
   vm.runInContext(readFileSync(new URL('../src/sw.js',import.meta.url),'utf8'),ctx);
   async function request(file){let response;listeners.fetch({request:{method:'GET',headers:{has:()=>false},url:'https://covers.test/'+file,destination:'image'},respondWith(p){response=p;}});return await response;}
-  assert.equal(await request('saved.jpg'),saved);assert.equal(requests.length,0);
+  assert.equal(await request('saved.jpg'),saved);assert.equal(await request('weekly.jpg'),saved);assert.equal(requests.length,0);
   assert.equal((await request('new.jpg')).network,true);assert.equal(requests.length,1);
 });

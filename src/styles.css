@@ -5738,9 +5738,30 @@ button.chat-avatar:disabled { cursor: default; }
   padding-top: var(--toolbar-h);
 }
 .screen.rkm-on { padding-top: 0; }
-/* Settings keeps its compact, centred panel rather than becoming a full-screen destination. */
+/* Settings stays a compact sidebar rather than becoming a full-screen destination. */
 .settings-panel {
-  left: 0; right: 0; margin-inline: auto;
+  left: var(--menu-gutter); right: auto; margin-inline: 0;
   width: min(620px, calc(100 * var(--vw) - 2 * var(--menu-gutter)));
   max-width: calc(100 * var(--vw) - 2 * var(--menu-gutter));
 }
+
+/* Settings shades the surrounding screen, with Neru peeking from behind the sidebar. */
+:root { --settings-width: min(620px, calc(100 * var(--vw) - 2 * var(--menu-gutter))); }
+.settings-panel { width: var(--settings-width); z-index: 1; }
+#overlay-root > .sp-wrap > .backdrop { background: rgba(12, 9, 18, .48); animation: fadeIn var(--t-med) ease both; }
+#overlay-root > .sp-wrap > .backdrop.out { animation: fadeOut var(--t-fast) ease both; }
+.sp-wrap > .neru-cameo.sp-neru-peek {
+  left: calc(var(--menu-gutter) + var(--settings-width) - 48px); top: calc(var(--toolbar-h) + 100px);
+  bottom: auto; height: calc(min(240px, calc(34 * var(--vh))) * var(--nc-s, 1)); width: auto;
+  z-index: 0; rotate: 10deg; transform-origin: 25% 100%; pointer-events: none;
+  mask-image: linear-gradient(#000 65%, transparent 100%); -webkit-mask-image: linear-gradient(#000 65%, transparent 100%);
+}
+.sp-neru-peek.in .nc-body { animation: settingsNeruIn calc(420ms * var(--anim)) var(--ease-out) both; }
+@keyframes settingsNeruIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+.sp-wrap.closing > .sp-neru-peek { opacity: 0; transition: opacity 180ms ease; }
+body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-settings > .nc-peek { opacity: 0; pointer-events: none; }
+/* Temporary peeks live outside the scaled app, so size them in real viewport units. */
+.neru-cameo.nc-peek { height: calc(clamp(120px, 30dvh, 220px) * var(--nc-s, 1)); max-height: 34dvh; left: clamp(12px, 4vw, 64px); }
+.neru-cameo.nc-peek.right { left: auto; right: clamp(12px, 4vw, 64px); }
+@media (prefers-reduced-motion: reduce) { .sp-neru-peek.in .nc-body { animation: none; } }
+.sp-wrap { isolation: isolate; }

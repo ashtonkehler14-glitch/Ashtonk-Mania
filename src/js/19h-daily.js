@@ -22,7 +22,7 @@ const Daily = {
       if (!(map.onlineSetId > 0)) return;
       // Load into a temporary element so an older week's image cannot overwrite a newer one.
       const cover = h('div');
-      OnlineBeatmaps.loadCover(cover, map.onlineSetId, ['cover@2x', 'cover', 'card@2x', 'card'], () => apply(cover.style.backgroundImage));
+      OnlineBeatmaps.loadCover(cover, map.onlineSetId, ['cover@2x', 'cover', 'card@2x', 'card'], () => apply(cover.style.backgroundImage), null, null, 'am-weekly-covers-v1');
     })().catch(() => {});
   },
   remaining(ms) {

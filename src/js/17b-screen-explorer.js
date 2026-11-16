@@ -282,11 +282,11 @@ const OnlineBeatmaps = {
     return this.fill(tpl, id, kind);
   },
   /** Load a set's cover into `el` as its background, trying each size in turn (older sets lack the @2x ones). */
-  loadCover(el, id, kinds, done, queue = null, failed = null) {
+  loadCover(el, id, kinds, done, queue = null, failed = null, persist = null) {
     const urls = [...new Set(kinds.map(k => this.coverURL(id, k)))]; // (sources with one cover size give one URL)
     // a cover that has loaded before goes straight in, so rebuilt cards don't fade in again
     const known = this._covers.get(urls.join('|'));
-    if (known) { this.saveDefaultCover(id, known); el.style.transition = 'none'; el.style.backgroundImage = `url("${known}")`; done && done(null); return; }
+    if (known) { if (persist) this.cacheCover(known, persist, 4); this.saveDefaultCover(id, known); el.style.transition = 'none'; el.style.backgroundImage = `url("${known}")`; done && done(null); return; }
     PicWait.add(el); // (a list scrolled with the wheel waits for it — see PicWait)
     const next = i => {
       if (i >= urls.length) { PicWait.done(el); failed && failed(); return; }
@@ -294,21 +294,25 @@ const OnlineBeatmaps = {
       // (decoded off the main thread before it's shown, so a card scrolling in doesn't stall a frame decoding it)
       // (`queue`: the picture goes on in the page's next frame along with everything else, not the moment it's decoded —
       // a change between frames made the next scroll wait while the browser worked the page out again)
-      img.onload = () => { this.saveDefaultCover(id, img.src); const put = () => { el.style.backgroundImage = `url("${img.src}")`; PicWait.done(el); done && done(img); }; const show = () => { this._covers.set(urls.join('|'), img.src); if (queue) queue(put); else put(); }; (img.decode ? img.decode() : Promise.resolve()).then(show, show); };
+      img.onload = () => { if (persist) this.cacheCover(img.src, persist, 4); this.saveDefaultCover(id, img.src); const put = () => { el.style.backgroundImage = `url("${img.src}")`; PicWait.done(el); done && done(img); }; const show = () => { this._covers.set(urls.join('|'), img.src); if (queue) queue(put); else put(); }; (img.decode ? img.decode() : Promise.resolve()).then(show, show); };
       img.onerror = () => next(i + 1);
       img.src = urls[i];
     };
     next(0);
   },
   async saveDefaultCover(id, url) {
-    if (!this._savedCoverIds?.has(id) || typeof caches === 'undefined') return;
+    if (!this._savedCoverIds?.has(id)) return;
+    return this.cacheCover(url, 'am-explorer-covers-v1', 120);
+  },
+  async cacheCover(url, name, limit) {
+    if (typeof caches === 'undefined') return;
     try {
-      const cache = await caches.open('am-explorer-covers-v1');
+      const cache = await caches.open(name);
       if (await cache.match(url)) return;
       const response = await fetch(url, { mode: 'no-cors', cache: 'force-cache' });
       if (response.ok || response.type === 'opaque') await cache.put(url, response);
       const keys = await cache.keys();
-      for (const key of keys.slice(0, Math.max(0, keys.length - 120))) await cache.delete(key);
+      for (const key of keys.slice(0, Math.max(0, keys.length - limit))) await cache.delete(key);
     } catch { /* A full disk or unavailable cache must not break covers. */ }
   },
   previewURL(id) {
