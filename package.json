@@ -2,6 +2,7 @@
   "name": "ashtonkmania",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.10.0",
   "description": "Ashtonk!mania - an osu!mania-style rhythm game.",
   "type": "module",
   "engines": {
