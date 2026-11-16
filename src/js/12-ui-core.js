@@ -70,9 +70,13 @@ function chatAvatar(from = {}, size = 28) {
   const pid = from.pid || (player && player.pid);
   const online = (Presence.players || []).find(p => p.pid === pid);
   const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || '';
-  const el = Presence.avatarEl({ name: from.name || (player && player.name), avatar }, size);
-  el.classList.add('chat-avatar'); el.title = from.name || '';
-  return el;
+  const name = from.name || (player && player.name) || 'Player';
+  const picture = Presence.avatarEl({ name, avatar }, size);
+  // A real button provides keyboard access and keeps the link intact if an image fails to load.
+  return h('button.chat-avatar', { type: 'button', disabled: !pid, title: `Open ${name}'s profile`, 'aria-label': `Open ${name}'s profile`,
+    style: { width: size + 'px', height: size + 'px' },
+    onclick: e => { e.preventDefault(); e.stopPropagation(); if (!pid) return; UISounds.click(); UserPanels.profile({ ...(online || {}), pid, name, avatar }); }
+  }, picture);
 }
 function compactChatLine(cls, from, text) {
   return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
@@ -336,7 +340,7 @@ const Toast = {
     // waits for the song to be over to pop up, over the score; it's in the notifications straight away)
     if (hold && Toast.playing()) {
       if (log && typeof Notifications !== 'undefined') Notifications.add(title, body, type, { onClick });
-      const held = { title, body, opts: { type, timeout, onClick, log: false, valid } };
+      const held = { title, body, opts: { type, timeout, onClick, log: false, valid, hold: true } };
       Toast.later(held);
       return () => { held.gone = true; };
     }

@@ -103,7 +103,30 @@ try {
   assert.equal(await page.locator('.ch-lines .ch-name').evaluate(el=>getComputedStyle(el).color),'rgb(255, 204, 34)');
   assert.ok(await page.locator('.ch-lines').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Long messages wrap without horizontal overflow');
   await page.screenshot({path:'/tmp/chat-portraits-mobile.png'});
+  const clicked = await page.evaluate(() => {
+    const original = UserPanels.profile; let user;
+    UserPanels.profile = u => { user = u; };
+    try { Chat.lines.querySelector('button.chat-avatar').click(); return user; }
+    finally { UserPanels.profile = original; }
+  });
+  assert.equal(clicked.pid,'friend-id');
   await page.evaluate(()=>Chat.close());
+  const deferred = await page.evaluate(() => {
+    const name = Screens.currentName, popup = Dialog.popup; let popups = 0;
+    const id = 'test-after-song-' + Date.now();
+    Dialog.popup = () => { popups++; };
+    try {
+      Screens.currentName = 'gameplay';
+      Announcements.set([{id,text:'Read this after the song',popup:true}]);
+      const during = popups, rememberedDuring = Announcements.closed().has('p'+id);
+      const held = Toast._held.length;
+      Chat.on({t:'say',from:{pid:'another-player',name:'Friend'},text:ProfileManager.profile.name + ' hello',at:Date.now()});
+      const mentionsHeld = Toast._held.length > held;
+      Screens.currentName = name; Bus.emit('screen:changed',name);
+      return {during,rememberedDuring,after:popups,mentionsHeld};
+    } finally { Screens.currentName=name;Dialog.popup=popup;Announcements.set([]); }
+  });
+  assert.deepEqual(deferred,{during:0,rememberedDuring:false,after:1,mentionsHeld:true});
   assert.deepEqual(errors,[]);
   console.log('PASS floating settings, exclusive menus, beatmap defaults/fallback, real beatmap backup round trip and spectator gameplay chat');
 } finally {if(browser)await browser.close();server.close();}

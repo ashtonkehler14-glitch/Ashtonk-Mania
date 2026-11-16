@@ -35,8 +35,8 @@ const Chat = {
     if (m.t === 'say') {
       this.add('#lobby', m);
       // lazer's MentionNotification: your name in #lobby while you're not looking at it (not in Do not disturb)
-      if (this.mentions(m.text) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd' && Screens.currentName !== 'gameplay')
-        Toast.show(`${m.from.name} mentioned you in #lobby`, m.text.length > 80 ? m.text.slice(0, 80) + '…' : m.text, { onClick: () => this.open('#lobby') });
+      if (this.mentions(m.text) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd')
+        Toast.show(`${m.from.name} mentioned you in #lobby`, m.text.length > 80 ? m.text.slice(0, 80) + '…' : m.text, { onClick: () => this.open('#lobby'), hold: true });
     }
     else if (m.t === 'pm' && m.with && m.with.pid) {
       const key = 'pm:' + m.with.pid;

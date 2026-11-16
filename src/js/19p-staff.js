@@ -16,9 +16,13 @@ const Announcements = {
   set(list) {
     this.list = (Array.isArray(list) ? list : []).filter(a => a && a.id && a.text).slice(0, 5);
     this.paint();
+    this.showPopups();
+  },
+  showPopups() {
+    if (Screens.currentName === 'gameplay') return;
     // (a pop-up one: a notice to read and close, once — then its banner stays until closed too)
     const seen = this.closed();
-    for (const a of this.list) if (a.popup && !seen.has('p' + a.id)) {
+    for (const a of this.list) if (a.popup && (!a.until || a.until > Date.now()) && !seen.has(a.id) && !seen.has('p' + a.id)) {
       this.remember('p' + a.id);
       const [ic, label] = this.STYLE[a.kind] || this.STYLE.info;
       Dialog.popup(a.title || label, this.body(a), [{ label: 'OK', colour: '#66ccff', cls: 'cancel', cancel: true }], { icon: ic });
@@ -40,7 +44,7 @@ const Announcements = {
     if (!this.chip) this.chip = h('button.ann-chip', { onclick: () => { UISounds.click(); this.showAll(); } });
     const host = document.querySelector('#toolbar .tb-spacer') || app;
     if (this.chip.parentNode !== host) host.append(this.chip);
-    if (!this._scr) this._scr = Bus.on('screen:changed', () => this.paint());
+    if (!this._scr) this._scr = Bus.on('screen:changed', () => { this.paint(); this.showPopups(); });
     const shut = this.closed(), now = Date.now();
     const show = this.list.filter(a => !shut.has(a.id) && (!a.until || a.until > now));
     // the main menu has room for them in full (on a phone on its side, for one: more would run into the logo); anywhere

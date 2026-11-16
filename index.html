@@ -5669,6 +5669,12 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .chat-copy > span { white-space: pre-wrap; }
 .gp-chat-l .chat-avatar { width: 24px; height: 24px; border-radius: 6px; }
 .gp-chat-list { gap: 0; }
+
+button.chat-avatar { display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+button.chat-avatar .avatar { border-radius: inherit; }
+button.chat-avatar:hover { box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
+button.chat-avatar:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button.chat-avatar:disabled { cursor: default; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -14126,9 +14132,13 @@ function chatAvatar(from = {}, size = 28) {
   const pid = from.pid || (player && player.pid);
   const online = (Presence.players || []).find(p => p.pid === pid);
   const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || '';
-  const el = Presence.avatarEl({ name: from.name || (player && player.name), avatar }, size);
-  el.classList.add('chat-avatar'); el.title = from.name || '';
-  return el;
+  const name = from.name || (player && player.name) || 'Player';
+  const picture = Presence.avatarEl({ name, avatar }, size);
+  // A real button provides keyboard access and keeps the link intact if an image fails to load.
+  return h('button.chat-avatar', { type: 'button', disabled: !pid, title: `Open ${name}'s profile`, 'aria-label': `Open ${name}'s profile`,
+    style: { width: size + 'px', height: size + 'px' },
+    onclick: e => { e.preventDefault(); e.stopPropagation(); if (!pid) return; UISounds.click(); UserPanels.profile({ ...(online || {}), pid, name, avatar }); }
+  }, picture);
 }
 function compactChatLine(cls, from, text) {
   return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
@@ -14392,7 +14402,7 @@ const Toast = {
     // waits for the song to be over to pop up, over the score; it's in the notifications straight away)
     if (hold && Toast.playing()) {
       if (log && typeof Notifications !== 'undefined') Notifications.add(title, body, type, { onClick });
-      const held = { title, body, opts: { type, timeout, onClick, log: false, valid } };
+      const held = { title, body, opts: { type, timeout, onClick, log: false, valid, hold: true } };
       Toast.later(held);
       return () => { held.gone = true; };
     }
@@ -25317,6 +25327,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16m', title: 'Chat profiles and quieter gameplay', sections: [
+    { title: 'Chat', items: ['Click a chat profile picture to open that player’s profile.', 'Mentions and announcement pop-ups now wait until after your song.'] }
+  ] },
   { id: '2026.11.16l', title: 'Clearer chat', sections: [
     { title: 'Chat', items: ['Profile pictures now appear beside chat messages, with cleaner spacing and wrapping to make conversations easier to follow.'] }
   ] },
@@ -32574,8 +32587,8 @@ const Chat = {
     if (m.t === 'say') {
       this.add('#lobby', m);
       // lazer's MentionNotification: your name in #lobby while you're not looking at it (not in Do not disturb)
-      if (this.mentions(m.text) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd' && Screens.currentName !== 'gameplay')
-        Toast.show(`${m.from.name} mentioned you in #lobby`, m.text.length > 80 ? m.text.slice(0, 80) + '…' : m.text, { onClick: () => this.open('#lobby') });
+      if (this.mentions(m.text) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd')
+        Toast.show(`${m.from.name} mentioned you in #lobby`, m.text.length > 80 ? m.text.slice(0, 80) + '…' : m.text, { onClick: () => this.open('#lobby'), hold: true });
     }
     else if (m.t === 'pm' && m.with && m.with.pid) {
       const key = 'pm:' + m.with.pid;
@@ -34456,9 +34469,13 @@ const Announcements = {
   set(list) {
     this.list = (Array.isArray(list) ? list : []).filter(a => a && a.id && a.text).slice(0, 5);
     this.paint();
+    this.showPopups();
+  },
+  showPopups() {
+    if (Screens.currentName === 'gameplay') return;
     // (a pop-up one: a notice to read and close, once — then its banner stays until closed too)
     const seen = this.closed();
-    for (const a of this.list) if (a.popup && !seen.has('p' + a.id)) {
+    for (const a of this.list) if (a.popup && (!a.until || a.until > Date.now()) && !seen.has(a.id) && !seen.has('p' + a.id)) {
       this.remember('p' + a.id);
       const [ic, label] = this.STYLE[a.kind] || this.STYLE.info;
       Dialog.popup(a.title || label, this.body(a), [{ label: 'OK', colour: '#66ccff', cls: 'cancel', cancel: true }], { icon: ic });
@@ -34480,7 +34497,7 @@ const Announcements = {
     if (!this.chip) this.chip = h('button.ann-chip', { onclick: () => { UISounds.click(); this.showAll(); } });
     const host = document.querySelector('#toolbar .tb-spacer') || app;
     if (this.chip.parentNode !== host) host.append(this.chip);
-    if (!this._scr) this._scr = Bus.on('screen:changed', () => this.paint());
+    if (!this._scr) this._scr = Bus.on('screen:changed', () => { this.paint(); this.showPopups(); });
     const shut = this.closed(), now = Date.now();
     const show = this.list.filter(a => !shut.has(a.id) && (!a.until || a.until > now));
     // the main menu has room for them in full (on a phone on its side, for one: more would run into the logo); anywhere
@@ -35665,7 +35682,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'cf819174a86f';
+const APP_BUILD = '8aa58ea70647';
 
 const App = {
   lastReport: null,

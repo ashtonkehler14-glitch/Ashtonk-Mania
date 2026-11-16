@@ -5658,3 +5658,9 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .chat-copy > span { white-space: pre-wrap; }
 .gp-chat-l .chat-avatar { width: 24px; height: 24px; border-radius: 6px; }
 .gp-chat-list { gap: 0; }
+
+button.chat-avatar { display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+button.chat-avatar .avatar { border-radius: inherit; }
+button.chat-avatar:hover { box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
+button.chat-avatar:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button.chat-avatar:disabled { cursor: default; }
