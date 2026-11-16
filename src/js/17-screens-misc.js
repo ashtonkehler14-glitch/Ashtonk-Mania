@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16d', title: 'Lazer Punch home', sections: [
+    { icon: 'home', title: 'Home', items: ['Vivid gold, rose and violet buttons stand out against a simpler graphite triangle background that picks up a subtle tint from the song artwork.', 'The logo waves now bend and swell with the music instead of sliding sideways.'] },
+  ] },
   { id: '2026.11.16c', title: 'A clearer home menu', sections: [
     { icon: 'home', title: 'Home', items: ['Quieter background triangles and stronger button edges, shadows and labels make the home menu easier to focus on.'] },
   ] },

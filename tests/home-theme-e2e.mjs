@@ -52,15 +52,42 @@ try {
       console.log(viewport.width,state,result);
     }
   }
-  const wave=page.locator('.lz-glass-wave svg');
-  const waveBefore=await wave.evaluate(el=>getComputedStyle(el).transform);
+  const wave=page.locator('.lz-glass-wave path').first();
+  const waveBefore=await wave.getAttribute('d');
   await page.waitForTimeout(180);
-  assert.notEqual(await wave.evaluate(el=>getComputedStyle(el).transform),waveBefore,'Logo waves should flow');
+  assert.notEqual(await wave.getAttribute('d'),waveBefore,'Logo waves should deform');
+  assert.equal(await page.locator('.lz-glass-wave svg').evaluate(el=>getComputedStyle(el).transform),'none','Waves do not slide sideways');
   await page.evaluate(()=>Settings.set('graphics.performanceMode',true));
-  assert.equal(await wave.evaluate(el=>getComputedStyle(el).animationName),'none','Performance mode stops waves');
+  let frozen=await wave.getAttribute('d'); await page.waitForTimeout(180);
+  assert.equal(await wave.getAttribute('d'),frozen,'Performance mode stops waves');
   await page.evaluate(()=>{Settings.set('graphics.performanceMode',false);Settings.set('ui.animSpeed',0);});
-  assert.equal(await wave.evaluate(el=>getComputedStyle(el).animationName),'none','Disabled animations stop waves');
+  frozen=await wave.getAttribute('d'); await page.waitForTimeout(180);
+  assert.equal(await wave.getAttribute('d'),frozen,'Disabled animations stop waves');
   await page.evaluate(()=>Settings.set('ui.animSpeed',1));
+  const musicResponse=await page.evaluate(()=>{
+    const playing=Music.playing, analyser=AudioManager.analyser;
+    try {
+      Music.playing=true; HomeScreen._waveLevel=0;
+      AudioManager.analyser={fftSize:512,getFloatTimeDomainData:data=>data.fill(.3)};
+      HomeScreen.moveWaves(performance.now()+100);
+      return HomeScreen._waveLevel;
+    } finally {Music.playing=playing; AudioManager.analyser=analyser;}
+  });
+  assert.ok(musicResponse>0,'Song volume feeds the wave amplitude');
+  const tint=await page.evaluate(async()=>{
+    const art=colour=>{const c=document.createElement('canvas');c.width=c.height=12;const x=c.getContext('2d');x.fillStyle=colour;x.fillRect(0,0,12,12);return c.toDataURL();};
+    const first=MenuTriangles.fromImage(art('#0066ff'));
+    const last=MenuTriangles.fromImage(art('#ff3300'));
+    await Promise.all([first,last]);
+    const warm=[...MenuTriangles.col];
+    await MenuTriangles.fromImage(art('#0066ff'));
+    const cool=[...MenuTriangles.col];
+    await MenuTriangles.fromImage(null);
+    return {warm,cool,base:MenuTriangles.col};
+  });
+  assert.ok(tint.warm[0]>255 && tint.cool[0]<255,'Artwork changes the background tint and stale samples cannot win');
+  for(const colour of [tint.warm,tint.cool])assert.ok(Math.abs(colour[0]-255)<=33 && colour[1]<=.16,'Song tint stays subtle');
+  assert.deepEqual(tint.base,[255,.14],'No artwork restores graphite');
   assert.deepEqual(errors,[]);
   console.log('PASS unchanged home navigation and reachable buttons on desktop/mobile');
 } finally {if(browser)await browser.close();server.close();}

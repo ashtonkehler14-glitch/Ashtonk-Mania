@@ -398,7 +398,8 @@ const HomeScreen = {
     this.tris = h('canvas.lz-tris');
     this._off = false; this._visW = this._triW = 0;
     const wave = this.glassWave = h('span.lz-glass-wave', { 'aria-hidden': 'true' });
-    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" fill="none" aria-hidden="true"><path d="M-512 410 q128 -82 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#ffe699" stroke-width="3"/><path d="M-512 427 q128 65 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#fff4dd" stroke-width="2.5"/><path d="M-512 422 q128 -48 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#ffd0e7" stroke-width="2"/></svg>';
+    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" aria-hidden="true"><path d="M-512 410 q128 -82 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#ffe699" stroke-width="3"/><path d="M-512 427 q128 65 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#fff4dd" stroke-width="2.5"/><path d="M-512 422 q128 -48 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#ffd0e7" stroke-width="2"/></svg>';
+    this._wavePaths = [...wave.querySelectorAll('path')]; this._waveAt = 0; this._wavePhase = 0; this._waveLevel = 0;
     this.flashEl = h('span.lz-flash');
     this.impactEl = h('span.lz-impact');
     this.ripple = h('span.lz-ripple', h('span.lz-ring'));
@@ -447,6 +448,38 @@ const HomeScreen = {
     this.impactEl.getAnimations().forEach(a => a.cancel());
     this.impactEl.animate([{ opacity: 1, scale: 0.94 }, { opacity: 0, scale: 1.12 }], { duration: 250, easing: 'linear' });
   },
+  /** Small vector waves deform in place; no spectrum canvas or endless sideways translation. */
+  moveWaves(now) {
+    if (!Settings.get('ui.animSpeed') || matchMedia('(prefers-reduced-motion: reduce)').matches) { this._waveAt = now; return; }
+    if (now - this._waveAt < 33) return;
+    const dt = Math.min(100, now - (this._waveAt || now)) / 1000; this._waveAt = now;
+    const playing = Music.playing, tm = Music.meta && Music.meta.timing;
+    const tp = tm && tm.length ? tm[Math.max(0, bsearchLE(tm, Music.time, 'time'))] : null;
+    const beatMs = tp ? menuBeatLength(tp.beatLength) : 600;
+    const beat = playing ? (Music.time - (tp ? tp.time : 0)) / beatMs : 0;
+    let level = 0;
+    const an = AudioManager.analyser;
+    if (playing && an) {
+      const data = this._waveAudio && this._waveAudio.length === an.fftSize ? this._waveAudio : (this._waveAudio = new Float32Array(an.fftSize));
+      an.getFloatTimeDomainData(data);
+      let sum = 0; for (let i = 0; i < data.length; i += 8) sum += data[i] * data[i];
+      level = Math.min(1, Math.sqrt(sum / Math.ceil(data.length / 8)) * 3);
+    }
+    this._waveLevel += (level - this._waveLevel) * (1 - Math.exp(-dt * 5));
+    this._wavePhase += dt * (playing ? 0.7 + 500 / beatMs : .35);
+    const pulse = playing ? Math.pow(.5 + .5 * Math.cos(beat * Math.PI * 2), 3) : 0;
+    const phase = this._wavePhase, amplitude = 10 + 19 * this._waveLevel + 5 * pulse;
+    this._wavePaths.forEach((path, j) => {
+      const points = [];
+      for (let i = 0; i <= 32; i++) {
+        const x = -8 + i * 16.5, u = x / 512;
+        const y = 416 + j * 9 + amplitude * Math.sin(u * Math.PI * 2 + j * 1.6 + Math.sin(phase * .47) * .8) * Math.cos(phase * .63 + j * .7)
+          + 7 * Math.sin(u * Math.PI * 3 - phase * .45 + j);
+        points.push(`${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(2)}`);
+      }
+      path.setAttribute('d', points.join(' '));
+    });
+  },
   /** Keep menu beats and idle navigation without spectrum reads or visualiser canvas uploads. */
   loop() {
     let lastBeat = -1;
@@ -454,6 +487,7 @@ const HomeScreen = {
       if (!this.el || !this.el.isConnected) return;
       const perf = Settings.get('graphics.performanceMode');
       if (!perf) {
+        this.moveWaves(now);
         const tm = Music.meta && Music.meta.timing;
         if (tm && tm.length && Music.playing) {
           const t = Music.time + 60, i = Math.max(0, bsearchLE(tm, t, 'time')), tp = tm[i], L = menuBeatLength(tp.beatLength);
@@ -642,12 +676,35 @@ onmessage = async ({ data: m }) => {
     this.running = true; this.col = null; this._drawn = null;
     this._ro = new ResizeObserver(() => { clearTimeout(this._rt); this._rt = setTimeout(() => this.render(true), 120); });
     this._ro.observe(this.el);
+    this._offBg = Bus.on('bg:changed', url => this.fromImage(url));
     this.fromImage(Background.current);
     return this.el;
   },
-  stop() { this.running = false; if (this._ro) this._ro.disconnect(); this._ro = null; clearTimeout(this._rt); },
-  /** The chosen Zako palette stays consistent when the menu song changes. */
-  fromImage() { this.col = [290, 0.16]; this.render(); },
+  stop() { this.running = false; this._sampleSeq = (this._sampleSeq || 0) + 1; if (this._offBg) this._offBg(); this._offBg = null; if (this._ro) this._ro.disconnect(); this._ro = null; clearTimeout(this._rt); },
+  /** Keep the graphite base; song artwork only nudges its hue and saturation. */
+  async fromImage(url) {
+    const seq = this._sampleSeq = (this._sampleSeq || 0) + 1;
+    if (!this.col || !url) { this.col = [255, .14]; this.render(); }
+    if (!url) return;
+    try {
+      let col;
+      const worker = this.worker();
+      if (worker) col = (await worker.ask({ avg: url })).col;
+      if (!col) {
+        const img = new Image(); img.crossOrigin = 'anonymous'; img.src = url; await img.decode();
+        const cv = document.createElement('canvas'); cv.width = cv.height = 12;
+        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, 12, 12);
+        const data = ctx.getImageData(0, 0, 12, 12).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < data.length; i += 4) { const w = .2 + Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2]); r += data[i] * w; g += data[i + 1] * w; b += data[i + 2] * w; n += w; }
+        col = rgbToHsl(r / n, g / n, b / n);
+      }
+      if (!this.running || seq !== this._sampleSeq) return;
+      const delta = ((col[0] - 255 + 540) % 360) - 180;
+      this.col = [255 + delta * .18, .12 + Math.min(.04, col[1] * .06)];
+      this.render();
+    } catch { /* Artwork unavailable: keep the quiet graphite background. */ }
+  },
   /** Draw the picture in the current colour and fade it in over the last one. */
   render(resized = false) {
     const el = this.el;
@@ -689,39 +746,39 @@ onmessage = async ({ data: m }) => {
   },
   paint(x, W, H, [hue, sat]) {
     // Zako: use the same palette in the worker and fallback renderer.
-    hue = 290; sat = 0.16;
+    hue = Number.isFinite(hue) ? hue : 255; sat = clamp(sat || .14, .12, .16);
     const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(285, .08, .59)); g.addColorStop(1, hsl(290, .08, .52));
+    g.addColorStop(0, hsl(hue, sat, .23)); g.addColorStop(1, hsl(hue, sat, .18));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
     const up = (ax, ay, s) => { x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); };
     // faint outlines first (they sit behind the solid banks)
     x.lineWidth = 2.2; x.lineJoin = 'miter';
-    for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 3 === 0)) {
+    for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 7 === 0)) {
       const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
-      x.strokeStyle = hsl(hue, sat, l, 0.20); up(ax, ay, s); x.stroke();
+      x.strokeStyle = hsl(hue, sat, .42, .10); up(ax, ay, s); x.stroke();
     }
     // the solid banks pick out the edges with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
     x.shadowColor = 'transparent'; x.shadowBlur = 0;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, 0.70, .22)); sg.addColorStop(1, hsl(hue + 3, sat, 0.51, .22));
+    sg.addColorStop(0, hsl(hue, sat, .34, .09)); sg.addColorStop(1, hsl(hue + 3, sat, .24, .09));
     x.fillStyle = sg;
     x.beginPath();
-    for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
+    for (const [ax, ay, s] of this.SOLID.filter((_, i) => i % 5 === 0)) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
     x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
     x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
     // Separate pink, blonde-gold and lilac rings keep the original triangle composition colourful.
     const accents = [[333, 1, .77], [45, 1, .70], [255, 1, .80]];
     x.lineWidth = 2.6;
     for (let i = 0; i < this.RING.length; i++) {
-      if (i % 2) continue;
+      if (i % 5) continue;
       const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
-      x.strokeStyle = hsl(c[0], c[1] * .65, c[2], .30); up(ax, ay, s); x.stroke();
+      x.strokeStyle = hsl(c[0], c[1] * .65, c[2], .17); up(ax, ay, s); x.stroke();
     }
     x.setTransform(1, 0, 0, 1, 0, 0);
   },
