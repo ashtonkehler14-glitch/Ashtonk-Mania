@@ -5815,6 +5815,42 @@ body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-set
 .explorer .ex-statuspill, .explorer .ex-keys { transform: skewX(-8deg); }
 .explorer .ex-statuspill > span, .explorer .ex-keys > span { display: inline-block; transform: skewX(8deg); }
 .explorer .ex-keys { padding: 2px 5px; border-radius: 5px; background: #ffffff0d; }
+
+
+/* Explorer controls share the home's plum surfaces and rose/violet accents. */
+.explorer.ov .ov-titlebar { background: #292331; border-bottom: 1px solid #ffffff0c; }
+.explorer.ov .ov-head h1 { font-weight: 650; }
+.explorer.ov .ov-icon { border-radius: 10px; background: linear-gradient(#ed4099, #bd206e); color: #fff; box-shadow: inset 0 1px #ffffff26; }
+.explorer.ov .ex-header { margin: 0 0 22px; padding: 0 10px 18px; background: transparent; box-shadow: none; clip-path: none; border-bottom: 1px solid #d781b526; }
+.explorer.ov .ex-searchwrap { isolation: isolate; }
+.explorer.ov .ex-searchwrap::before { content: ''; position: absolute; inset: 0; z-index: -1; border: 1px solid #cfa7d337; border-radius: 14px; transform: skewX(-8deg); background: linear-gradient(#ffffff08, #00000008), #352d3e; box-shadow: inset 0 1px #ffffff0d; pointer-events: none; transition: border-color 150ms, background 150ms; }
+.explorer.ov .ex-searchwrap:focus-within::before { border-color: #f185ba; background-color: #403147; }
+.explorer.ov .ex-search { background: transparent; border: 0; border-radius: 14px; color: #fff; padding-right: 18px; }
+.explorer.ov .ex-search:focus { box-shadow: none; outline: none; }
+.explorer.ov .ex-search::placeholder { color: #cbbdd1; }
+.explorer.ov .ex-searchwrap > .i { color: #fff; pointer-events: none; }
+.explorer.ov .ex-filters { padding: 0; gap: 8px; margin-top: 16px; }
+.explorer.ov .ex-flabel { color: #cbbdd1; padding-top: 6px; width: 86px; flex-shrink: 0; }
+.explorer.ov .ex-chips { gap: 4px; margin-left: 0; }
+.explorer.ov .ex-chip { padding: 5px 8px; border-radius: 7px; color: #ded4e5; transition: background 120ms, color 120ms; }
+.explorer.ov .ex-chip:hover { background: #ffffff0d; color: #fff; }
+.explorer.ov .ex-chip.on { background: #8d285f; color: #fff; box-shadow: inset 0 1px #ffffff12; }
+.explorer .ex-side { background: #2c2035f5; border-left: 1px solid #d781b530; }
+.explorer .ex-side-btn { color: #fff; }
+.explorer .ex-side-btn + .ex-side-btn { border-top-color: #d781b52b; }
+.explorer .ex-side-btn.like:hover, .explorer .ex-side-btn.like.on { color: #ff91c4; background: #ed40991a; }
+.explorer .ex-side-btn.dl:hover, .explorer .ex-side-btn.dl:focus-visible { background: #694180; color: #fff; box-shadow: inset 0 0 0 1px #d495d666; }
+.explorer .ex-side-btn:focus-visible { outline: 2px solid #f6b3d5; outline-offset: -3px; }
+.explorer .ex-side-btn.busy { background: linear-gradient(0deg, #a875dc66 var(--p), transparent var(--p)); }
+html.touch .explorer.ov .ex-filters { gap: 6px; }
+html.touch .explorer.ov .ex-chips { gap: 4px; margin-left: 0; }
+html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
+@media (orientation: portrait) and (max-width: 700px) {
+  .explorer.ov .ex-header { padding-inline: 6px; }
+  .explorer.ov .ex-filter { flex-direction: column; gap: 3px; }
+  .explorer.ov .ex-flabel { width: auto; padding-top: 0; }
+  .explorer.ov .ex-flabel:empty { display: none; }
+}
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -25480,6 +25516,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16y', title: 'Explorer colours and controls', sections: [
+    { title: 'Beatmap explorer', items: ['A rose header, slanted search field and clearer selected filters match the home menu.', 'Favourite and download buttons use soft pink and violet highlights while keeping their fitted shape.'] }
+  ] },
   { id: '2026.11.16x', title: 'Better-fitting beatmap actions', sections: [
     { title: 'Beatmap explorer', items: ['Favourite and download buttons now follow the slanted card edge, with upright icons and matching corners.'] }
   ] },
@@ -26293,12 +26332,12 @@ const ExplorerScreen = {
 
   enter(params = {}) {
     this._active = true;
-    const el = h('div.explorer.ov', { style: { '--o-h': OVERLAY_HUES.blue } });
+    const el = h('div.explorer.ov', { style: { '--o-h': OVERLAY_HUES.pink } });
     const st = this.state;
     // opened from a multiplayer room: every card picks (host) or suggests (other players) a difficulty for the room
     this.mpPick = !!params.mpPick && typeof Multiplayer !== 'undefined' && Multiplayer.inRoom();
     this.mpQueue = this.mpPick && !!params.mpQueue && Multiplayer.canQueue(); // (onto the room's queue)
-    this.searchInput = h('input.input.ex-search', { type: 'search', value: st.q, placeholder: 'Search osu!mania beatmaps — title, artist, mapper, tags…', 'aria-label': 'Search online beatmaps' });
+    this.searchInput = h('input.input.ex-search', { type: 'search', value: st.q, placeholder: 'Search songs, artists, mappers, tags…', 'aria-label': 'Search online beatmaps' });
     let t = 0;
     // (lazer's listing: a new search sorts by relevance, and clearing it goes back to ranked — another sort can be
     // picked after)
@@ -26348,7 +26387,7 @@ const ExplorerScreen = {
         h('button.btn.sm', { onclick: () => Screens.go('multiplayer', {}, { replace: true }) }, icon('back'), 'Back to room')) : null,
       h('div.ex-searchwrap', icon('search'), this.searchInput),
       this.filters);
-    const scroller = h('div.screen-body.ex-body', overlayHeader('Beatmap listing', { icon: 'beatmap', sub: 'osu!mania beatmaps, downloaded straight into your library' }),
+    const scroller = h('div.screen-body.ex-body', overlayHeader('Beatmap explorer', { icon: 'beatmap', sub: 'osu!mania beatmaps, downloaded straight into your library' }),
       h('div.ov-content', h('div.page', header, this.grid, this.status, this.sentinel, this.shield = h('div.ex-shield'))));
     // "back to top" appears once you've scrolled a good way down
     // (a ring around it fills as you near the bottom of what's loaded, as lazer's does)
@@ -34998,7 +35037,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '9b5437d03bfa';
+const APP_BUILD = 'f36cc730f1da';
 
 const App = {
   lastReport: null,

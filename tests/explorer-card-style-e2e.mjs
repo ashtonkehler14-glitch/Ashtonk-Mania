@@ -14,7 +14,7 @@ const server = createServer((req, res) => {
 await new Promise(r => server.once('listening', r)); let browser;
 try {
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 591 }, isMobile: process.env.CARD_TOUCH==='1', hasTouch: process.env.CARD_TOUCH==='1', deviceScaleFactor: 1 }), errors = [];
+  const page = await browser.newPage({ viewport: process.env.CARD_PORTRAIT==='1' ? { width: 390, height: 844 } : { width: 1280, height: 591 }, isMobile: process.env.CARD_TOUCH==='1', hasTouch: process.env.CARD_TOUCH==='1', deviceScaleFactor: 1 }), errors = [];
   await page.addInitScript(() => localStorage.setItem('am.noInstallPrompt', '1'));
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}`); await page.waitForFunction(() => document.querySelector('#loading-screen.done'));
@@ -40,6 +40,11 @@ try {
   });
   await page.evaluate(async()=>Screens.go('explore'));await page.waitForFunction(()=>!Screens.busy && document.querySelector('.ex-cardbg.loaded'));await page.waitForTimeout(500);
   const first=page.locator('.explorer .ex-card').first(),side=first.locator('.ex-side');
+  if(process.env.CARD_PORTRAIT==='1') {
+    assert.ok(await page.locator('.ex-search').isVisible());
+    assert.ok(await page.locator('.explorer').evaluate(el=>el.scrollWidth<=el.clientWidth),'Explorer stays within portrait width');
+    await page.screenshot({path:'/tmp/explorer-portrait-controls.png'});
+  }
   if(process.env.CARD_TOUCH!=='1') {
     await page.mouse.move(0,0);await page.waitForTimeout(250);
     assert.equal(await side.evaluate(el=>getComputedStyle(el).visibility),'hidden','Actions are hidden while idle');
@@ -64,7 +69,8 @@ try {
     await first.getByRole('button',{name:'Download',exact:true}).click();assert.equal(await page.evaluate(()=>window._downloadPick),1);
     assert.equal(await page.locator('.bso').count(),0,'Action clicks do not open the beatmap details');
     await page.screenshot({path:'/tmp/explorer-artwork-cards-hover.png'});
-    await page.mouse.move(0,0);await page.waitForTimeout(300);
+    await page.mouse.move(0,0);
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.explorer .ex-card .ex-side')).visibility==='hidden');
     assert.equal(await side.evaluate(el=>getComputedStyle(el).visibility),'hidden','Actions disappear when hover ends');
     await first.focus();await page.keyboard.press('Tab');await page.waitForTimeout(250);assert.ok(await page.locator('.ex-card:focus-visible .ex-side, .ex-card:focus-within .ex-side').first().isVisible(),'Keyboard focus reveals actions too');
     const focusedCard=page.locator('.ex-card:focus-visible, .ex-card:focus-within').first();

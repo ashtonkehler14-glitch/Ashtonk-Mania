@@ -355,12 +355,12 @@ const ExplorerScreen = {
 
   enter(params = {}) {
     this._active = true;
-    const el = h('div.explorer.ov', { style: { '--o-h': OVERLAY_HUES.blue } });
+    const el = h('div.explorer.ov', { style: { '--o-h': OVERLAY_HUES.pink } });
     const st = this.state;
     // opened from a multiplayer room: every card picks (host) or suggests (other players) a difficulty for the room
     this.mpPick = !!params.mpPick && typeof Multiplayer !== 'undefined' && Multiplayer.inRoom();
     this.mpQueue = this.mpPick && !!params.mpQueue && Multiplayer.canQueue(); // (onto the room's queue)
-    this.searchInput = h('input.input.ex-search', { type: 'search', value: st.q, placeholder: 'Search osu!mania beatmaps — title, artist, mapper, tags…', 'aria-label': 'Search online beatmaps' });
+    this.searchInput = h('input.input.ex-search', { type: 'search', value: st.q, placeholder: 'Search songs, artists, mappers, tags…', 'aria-label': 'Search online beatmaps' });
     let t = 0;
     // (lazer's listing: a new search sorts by relevance, and clearing it goes back to ranked — another sort can be
     // picked after)
@@ -410,7 +410,7 @@ const ExplorerScreen = {
         h('button.btn.sm', { onclick: () => Screens.go('multiplayer', {}, { replace: true }) }, icon('back'), 'Back to room')) : null,
       h('div.ex-searchwrap', icon('search'), this.searchInput),
       this.filters);
-    const scroller = h('div.screen-body.ex-body', overlayHeader('Beatmap listing', { icon: 'beatmap', sub: 'osu!mania beatmaps, downloaded straight into your library' }),
+    const scroller = h('div.screen-body.ex-body', overlayHeader('Beatmap explorer', { icon: 'beatmap', sub: 'osu!mania beatmaps, downloaded straight into your library' }),
       h('div.ov-content', h('div.page', header, this.grid, this.status, this.sentinel, this.shield = h('div.ex-shield'))));
     // "back to top" appears once you've scrolled a good way down
     // (a ring around it fills as you near the bottom of what's loaded, as lazer's does)

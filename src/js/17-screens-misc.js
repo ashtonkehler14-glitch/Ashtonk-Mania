@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16y', title: 'Explorer colours and controls', sections: [
+    { title: 'Beatmap explorer', items: ['A rose header, slanted search field and clearer selected filters match the home menu.', 'Favourite and download buttons use soft pink and violet highlights while keeping their fitted shape.'] }
+  ] },
   { id: '2026.11.16x', title: 'Better-fitting beatmap actions', sections: [
     { title: 'Beatmap explorer', items: ['Favourite and download buttons now follow the slanted card edge, with upright icons and matching corners.'] }
   ] },
