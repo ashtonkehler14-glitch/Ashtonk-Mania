@@ -54,44 +54,22 @@ function fxName(el, role) {
   return el;
 }
 
-// (every icon is one of lazer's: 12-icons.js)
-const ICONS = {};
+/** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
-  // (each icon is parsed once and copied after that: lists build hundreds of them, and parsing the markup every
-  // time was a good part of what a long list cost to draw)
   const key = name + '|' + cls;
   let t = icon.cache.get(key);
   if (!t) {
     t = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    t.setAttribute('aria-hidden', 'true');
-    // lazer's own icons first (12-icons.js): the filled version where there is one ("heart" / "heart-fill")
-    const src = (/\bfill\b/.test(cls) && ICON_SRC[name + '-fill']) || ICON_SRC[name];
-    if (src && src[0] === 'L') {
-      // an osu!lazer icon texture, drawn as a mask in the text colour (like lazer tints its white icons)
-      t.setAttribute('viewBox', '0 0 24 24'); t.setAttribute('class', `i lzi lzi-${icon.img(src[1])} ${cls}`);
-    } else if (src) {
-      // Font Awesome 5, as osu!framework draws it: the glyph filling its box
-      t.setAttribute('viewBox', `0 0 ${src[1]} ${src[2]}`); t.setAttribute('class', `i fai ${cls}`);
-      t.innerHTML = `<path d="${src[3]}" style="fill:currentColor;stroke:none"/>`;
-    } else {
-      t.setAttribute('viewBox', '0 0 24 24'); t.setAttribute('class', `i ${cls}`);
-      t.innerHTML = (ICONS[name] || '').replace(/class="fillme"/g, 'fill="currentColor" stroke="none"');
-    }
+    t.setAttribute('aria-hidden', 'true'); t.setAttribute('focusable', 'false');
+    t.setAttribute('viewBox', '0 0 256 256'); t.setAttribute('class', `i phi ${cls}`);
+    t.dataset.icon = name;
+    const src = (/\bfill\b/.test(cls) && ICON_SRC[name + '-fill']) || ICON_SRC[name] || ICON_SRC.question;
+    t.innerHTML = src[1];
     icon.cache.set(key, t);
   }
   return t.cloneNode(true);
 }
 icon.cache = new Map();
-/** One CSS rule per lazer icon picture (the picture isn't repeated in every element) — all made in one go the first
- *  time any is used: adding them one by one as icons first appeared made the browser restyle the page each time. */
-icon.img = n => {
-  if (!icon.sheet) {
-    icon.sheet = document.createElement('style');
-    icon.sheet.textContent = Object.keys(ICON_IMG).map(k => `svg.lzi-${k.replace(/[^a-zA-Z0-9-]/g, '_')} { --lzi: url("${ICON_IMG[k]}"); }`).join('\n');
-    document.head.appendChild(icon.sheet);
-  }
-  return n.replace(/[^a-zA-Z0-9-]/g, '_');
-};
 
 /** A small icon in white (at the given strength) drawn as a picture rather than as an SVG of its own — for the cards
  *  of the long lists. An inline SVG brings its own scale, clip and colour mask, and each of those split every card into
@@ -100,10 +78,8 @@ function flatIcon(name, alpha = 1) {
   const key = name + '|' + alpha;
   let cls = flatIcon.cls.get(key);
   if (!cls) {
-    const src = ICON_SRC[name];
-    const svg = !src ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="color:#fff" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="${alpha}">${(ICONS[name] || '').replace(/class="fillme"/g, 'fill="currentColor" stroke="none"')}</svg>`
-      : src[0] === 'L' ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><image href="${ICON_IMG[src[1]]}" width="24" height="24" opacity="${alpha}"/></svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${src[1]} ${src[2]}"><path fill="#fff" fill-opacity="${alpha}" d="${src[3]}"/></svg>`;
+    const src = ICON_SRC[name] || ICON_SRC.question;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="#fff" stroke="none" opacity="${alpha}">${src[1]}</svg>`;
     cls = 'fi' + flatIcon.cls.size;
     flatIcon.cls.set(key, cls);
     if (!flatIcon.sheet) { flatIcon.sheet = document.createElement('style'); document.head.appendChild(flatIcon.sheet); }

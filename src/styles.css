@@ -79,8 +79,8 @@ a { color: var(--accent); }
 i.fi { display: inline-block; flex: none; width: 1.15em; height: 1.15em; vertical-align: -0.2em; background-position: center; background-size: contain; background-repeat: no-repeat; }
 svg.i { width: 1.15em; height: 1.15em; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.2em; }
 svg.i.fill { fill: currentColor; stroke: none; }
-/* lazer's own icons (12-icons.js): its white icon pictures as masks, in the text colour */
-svg.i.lzi { background: currentColor; -webkit-mask: var(--lzi) center / contain no-repeat; mask: var(--lzi) center / contain no-repeat; stroke: none; }
+/* Phosphor assets use filled vector paths, rather than inherited outline strokes. */
+svg.i.phi { fill: currentColor; stroke: none; }
 
 /* (inside the phone's safe area: not under a notch, a rounded corner or the gesture bar) */
 /* edge to edge, as lazer draws on phones: no black bars kept clear for a camera cutout */
@@ -5589,13 +5589,19 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 /* Home: Zako colour families, with the existing lazer ButtonSystem layout and motion. */
 .lz-menu .lz-area-bg { display: none; }
 .lz-menu .lz-btn { --c: #3d3745 !important; }
-.lz-menu .lz-btn[data-id="settings"], .lz-menu .lz-btn[data-id="back"] { --c: #3d3745 !important; }
-.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #d59400 !important; color: #fff; }
-.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #e01880 !important; color: #fff; }
-.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8c32ed !important; color: #fff; }
-.lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #3d3745 !important; }
-.lz-menu .lz-bg { background: linear-gradient(#ffffff14, #00000008), var(--c); border-radius: 16px; box-shadow: inset 0 0 0 1px #ffffff30, inset 0 2px #ffffff1c, 0 5px 14px #21172b50; }
+.lz-menu .lz-btn[data-id="settings"] { --c: #565064 !important; }
+.lz-menu .lz-btn[data-id="back"] { --c: #6450a5 !important; }
+.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #d59400 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="multi"], .lz-menu .lz-btn[data-id="lounge"] { --c: #e01880 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"], .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #8c32ed !important; color: #fff; }
+.lz-menu .lz-bg { background: linear-gradient(#ffffff14, #00000008), var(--c); border-radius: 0; box-shadow: inset 0 0 0 1px #ffffff30, inset 0 2px #ffffff1c, 0 5px 14px #21172b50; }
 .lz-menu .lz-btn { color: #fff; }
+/* Only the outside ends are rounded; neighbouring slanted faces meet without notches. */
+.lz-menu .lz-left .lz-bg { border-radius: 16px 0 0 16px; }
+.lz-menu[data-state="top"] .lz-btn[data-id="browse"] .lz-bg,
+.lz-menu[data-state="play"] .lz-btn[data-id="daily"] .lz-bg,
+.lz-menu[data-state="multi"] .lz-btn[data-id="ranked"] .lz-bg,
+.lz-menu[data-state="edit"] .lz-btn[data-id="skin"] .lz-bg { border-radius: 0 16px 16px 0; }
 .lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
 .lz-menu .lz-btn:hover .lz-bg::before, .lz-menu .lz-btn:focus-visible .lz-bg::before { opacity: .85; }
 .lz-menu .lz-label { font-weight: 700; letter-spacing: .015em; text-shadow: 0 1px 3px #00000040; }

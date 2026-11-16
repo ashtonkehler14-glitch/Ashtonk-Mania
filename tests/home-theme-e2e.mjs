@@ -45,7 +45,12 @@ try {
         for(const b of buttons){
           if(getComputedStyle(b).color !== 'rgb(255, 255, 255)')throw Error('Home label is not white: '+b.dataset.id);
           const bg=getComputedStyle(b.querySelector('.lz-bg'));
-          if(parseFloat(bg.borderTopLeftRadius)<8 || bg.transform==='none')throw Error('Missing rounded slanted button: '+b.dataset.id);
+          const isLeft=b.parentElement.classList.contains('lz-left');
+          const isEnd=b===buttons.filter(x=>x.parentElement.classList.contains('lz-right')).at(-1);
+          if((parseFloat(bg.borderTopLeftRadius)>0)!==isLeft || (parseFloat(bg.borderTopRightRadius)>0)!==isEnd || bg.transform==='none')throw Error('Wrong outer-end rounding: '+b.dataset.id);
+          const base=getComputedStyle(b).getPropertyValue('--c').trim();
+          if(!isLeft && base==='#3d3745')throw Error('Uncoloured submenu button: '+b.dataset.id);
+          if(!b.querySelector('svg.phi path'))throw Error('Missing Phosphor button icon: '+b.dataset.id);
         }
         return actual;
       },state);
@@ -53,6 +58,19 @@ try {
       console.log(viewport.width,state,result);
     }
   }
+  const icons=await page.evaluate(()=>{
+    const holder=document.createElement('div');document.body.append(holder);
+    try {
+      for(const name of Object.keys(ICON_SRC)){
+        const svg=icon(name);holder.append(svg);
+        if(svg.getAttribute('viewBox')!=='0 0 256 256' || !svg.querySelector('path') || getComputedStyle(svg).stroke!=='none')throw Error('Broken icon '+name);
+      }
+      if(icon('heart').innerHTML===icon('heart','fill').innerHTML)throw Error('Selected favourite does not change');
+      const flat=flatIcon('star',.5);holder.append(flat);
+      return {count:holder.querySelectorAll('svg').length,flat:getComputedStyle(flat).backgroundImage};
+    }finally{holder.remove();}
+  });
+  assert.ok(icons.count>=100 && icons.flat.includes('data:image/svg+xml'),'All curated vectors and cached list icons render');
   const clearCentre=await page.evaluate(()=>{
     for(const [width,height] of [[1280,591],[591,1280]]) {
       const cv=document.createElement('canvas');cv.width=width;cv.height=height;

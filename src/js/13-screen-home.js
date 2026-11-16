@@ -410,7 +410,7 @@ const HomeScreen = {
     this.ampEl = h('div.lz-la', this.beatEl);
     this.bounceEl = h('div.lz-lb', this.ripple, this.ampEl);
     this.hoverEl = h('div.lz-lh', this.bounceEl);
-    this.cookie = h('button.lz-cookie', { 'aria-label': 'osu! logo', onclick: e => { if (this._dragged) { this._dragged = false; return; } this.logoClick(); } });
+    this.cookie = h('button.lz-cookie', { 'aria-label': 'Ashtonk!mania logo', onclick: e => { if (this._dragged) { this._dragged = false; return; } this.logoClick(); } });
     this.cookie.addEventListener('pointerenter', () => { UISounds.hover(); this.hoverEl.classList.add('hover'); });
     this.cookie.addEventListener('pointerleave', () => this.hoverEl.classList.remove('hover'));
     this.cookie.addEventListener('pointerdown', e => {

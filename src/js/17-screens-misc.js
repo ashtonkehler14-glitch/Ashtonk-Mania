@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16f', title: 'Fresh icons and connected menus', sections: [
+    { icon: 'home', title: 'Appearance', items: ['Phosphor icons give the toolbar, menus and controls a consistent new look.', 'Every home submenu now has coloured buttons. Only the outside ends of each row are rounded, keeping the inner joins clean.'] },
+  ] },
   { id: '2026.11.16e', title: 'A clearer frame', sections: [
     { icon: 'home', title: 'Appearance', items: ['Home triangles now frame the outer edges, leaving the centre clear around the main buttons.', 'Sora brings a new geometric font to the menus and interface.'] },
   ] },
