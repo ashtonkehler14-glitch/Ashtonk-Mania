@@ -1609,6 +1609,7 @@ const Screens = {
       $('#screens').appendChild(el);
       Toolbar.setActive(next.tab || name);
       $('#app').classList.toggle('in-game', !!next.inGame);
+      $('#app').classList.toggle('full-screen-menu', name !== 'home' && !next.inGame && !el.classList.contains('menu-surface'));
       Bus.emit('screen:changed', name);
     } finally { this.busy = false; }
   },

@@ -5733,6 +5733,12 @@ button.chat-avatar:disabled { cursor: default; }
   left: var(--menu-gutter); right: var(--menu-gutter); width: auto; max-width: none;
   top: calc(var(--toolbar-h) + 10px); bottom: var(--menu-gutter);
 }
+
+/* Full-screen pages meet the toolbar at the window edges; floating menus keep their inset frame. */
+#app.full-screen-menu #toolbar {
+  left: 0; right: 0; border-radius: 0;
+  padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right));
+}
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -15729,6 +15735,7 @@ const Screens = {
       $('#screens').appendChild(el);
       Toolbar.setActive(next.tab || name);
       $('#app').classList.toggle('in-game', !!next.inGame);
+      $('#app').classList.toggle('full-screen-menu', name !== 'home' && !next.inGame && !el.classList.contains('menu-surface'));
       Bus.emit('screen:changed', name);
     } finally { this.busy = false; }
   },
@@ -25375,6 +25382,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16r', title: 'Full-width toolbar', sections: [
+    { title: 'Interface', items: ['The top bar now fills the screen width on full-screen menus such as song select.'] }
+  ] },
   { id: '2026.11.16q', title: 'Consistent menu alignment', sections: [
     { title: 'Interface', items: ['Large menus, including settings, now stay centred and match the top bar’s width as the window changes size.'] }
   ] },
@@ -34853,7 +34863,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'b0d8904281b5';
+const APP_BUILD = 'c2f408bba80c';
 
 const App = {
   lastReport: null,

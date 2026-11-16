@@ -43,6 +43,17 @@ try {
   assert.ok(await page.evaluate(()=>window._coverRequests.size<150),'Scrolling does not preload the whole result list');
   await page.evaluate(async()=>Screens.go('songselect'));await page.waitForFunction(()=>!Screens.busy);
   assert.equal(await page.locator('.ss.menu-surface').count(),0,'Song select keeps its original full-screen layout');
+  for(const viewport of [{width:1280,height:591},{width:844,height:390},{width:650,height:1000}]) {
+    await page.setViewportSize(viewport);await page.waitForTimeout(150);
+    const toolbar=await page.locator('#toolbar').boundingBox();
+    assert.ok(Math.abs(toolbar.x)<1 && Math.abs(toolbar.width-viewport.width)<1,'Full-screen toolbar fills the window');
+    assert.equal(await page.locator('#toolbar').evaluate(el=>getComputedStyle(el).borderRadius),'0px');
+  }
+  await page.setViewportSize({width:1280,height:591});
+  await page.evaluate(async()=>Screens.go('explore'));await page.waitForFunction(()=>!Screens.busy);
+  assert.ok((await page.locator('#toolbar').boundingBox()).x>0,'Floating menus restore the inset toolbar');
+  await page.evaluate(async()=>Screens.go('home'));await page.waitForFunction(()=>!Screens.busy);
+  assert.ok((await page.locator('#toolbar').boundingBox()).x>0,'Home keeps the inset toolbar');
   await page.evaluate(()=>NowPlaying.show());const music=await page.locator('.np-player').boundingBox();
   await page.mouse.move(music.x+20,music.y+20);await page.mouse.down();await page.mouse.move(music.x+100,music.y+40);
   assert.equal(await page.locator('.np-panel').evaluate(el=>el.style.translate),'','Music panel stays anchored');await page.mouse.up();
