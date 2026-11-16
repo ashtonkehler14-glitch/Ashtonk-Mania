@@ -39,13 +39,28 @@ try {
         const actual=buttons.map(b=>b.dataset.id);
         if(JSON.stringify(actual)!==JSON.stringify(expected[state]))throw Error('Menu buttons changed '+state+': '+actual);
         for(const b of buttons){const r=b.getBoundingClientRect();if(r.left<0||r.right>innerWidth+2||r.top<0||r.bottom>innerHeight+2)throw Error('Button clipped '+b.dataset.id);}
-        if(!document.querySelector('.menu-triangles, .menu-tri, .mt-bg, canvas'))throw Error('Missing background');
+        if(!document.querySelector('.lz-tri img'))throw Error('Missing triangle background');
+        if(document.querySelector('.lz-tipbox, .lz-vis'))throw Error('Removed tips or spectrum bars returned');
+        for(const b of buttons){
+          if(getComputedStyle(b).color !== 'rgb(255, 255, 255)')throw Error('Home label is not white: '+b.dataset.id);
+          const bg=getComputedStyle(b.querySelector('.lz-bg'));
+          if(parseFloat(bg.borderTopLeftRadius)<8 || bg.transform==='none')throw Error('Missing rounded slanted button: '+b.dataset.id);
+        }
         return actual;
       },state);
       if(['initial','top'].includes(state))await page.screenshot({path:`/tmp/${shotPrefix}-${viewport.width}-${state}.png`});
       console.log(viewport.width,state,result);
     }
   }
+  const wave=page.locator('.lz-glass-wave svg');
+  const waveBefore=await wave.evaluate(el=>getComputedStyle(el).transform);
+  await page.waitForTimeout(180);
+  assert.notEqual(await wave.evaluate(el=>getComputedStyle(el).transform),waveBefore,'Logo waves should flow');
+  await page.evaluate(()=>Settings.set('graphics.performanceMode',true));
+  assert.equal(await wave.evaluate(el=>getComputedStyle(el).animationName),'none','Performance mode stops waves');
+  await page.evaluate(()=>{Settings.set('graphics.performanceMode',false);Settings.set('ui.animSpeed',0);});
+  assert.equal(await wave.evaluate(el=>getComputedStyle(el).animationName),'none','Disabled animations stop waves');
+  await page.evaluate(()=>Settings.set('ui.animSpeed',1));
   assert.deepEqual(errors,[]);
   console.log('PASS unchanged home navigation and reachable buttons on desktop/mobile');
 } finally {if(browser)await browser.close();server.close();}

@@ -5596,12 +5596,13 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-area-bg { display: none; }
 .lz-menu .lz-btn { --c: #3d3745 !important; }
 .lz-menu .lz-btn[data-id="settings"], .lz-menu .lz-btn[data-id="back"] { --c: #3d3745 !important; }
-.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #eeaa00 !important; color: #231b08; }
-.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #df679e !important; color: #281421; }
-.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8c66cf !important; color: #fff; }
+.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #a57000 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #bc3978 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8054bf !important; color: #fff; }
 .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #3d3745 !important; }
-.lz-menu .lz-bg { background: var(--c); box-shadow: none; }
-.lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
+.lz-menu .lz-bg { background: linear-gradient(#ffffff09, #00000008), var(--c); border-radius: 16px; box-shadow: inset 0 1px #ffffff26, 0 3px 8px #23172d20; }
+.lz-menu .lz-btn { color: #fff; }
+.lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
 .lz-menu .lz-btn:hover .lz-bg::before, .lz-menu .lz-btn:focus-visible .lz-bg::before { opacity: .85; }
 .lz-menu .lz-label { font-weight: 600; letter-spacing: .015em; }
 .lz-menu .lz-btn[data-id="play"] .lz-label, .lz-menu .lz-btn[data-id="solo"] .lz-label { text-shadow: none; }
@@ -5614,7 +5615,10 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-ring .lz-cookie-text { color: #f8f7f3; text-shadow: 0 3px 14px #00000025; }
 .lz-menu .lz-cookie-text small { color: #fff1d6; font-weight: 500; letter-spacing: .22em; }
 .lz-glass-wave { position: absolute; inset: 0; pointer-events: none; }
-.lz-glass-wave svg { display: block; width: 100%; height: 100%; }
+.lz-glass-wave svg { display: block; width: 200%; height: 100%; animation: home-wave calc(12s * var(--anim)) linear infinite; }
+@keyframes home-wave { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .lz-glass-wave svg { animation: none; } }
+:root.no-anim .lz-glass-wave svg, :root.perf .lz-glass-wave svg { animation: none; }
 
 /* Solid tips keep text readable over the colourful artwork. */
 .lz-menu .lz-tipbox { background: #3d3745f2; color: #f8f7f3; }
@@ -16246,10 +16250,9 @@ const HomeScreen = {
     this.flashL = h('div.msf.l'); this.flashR = h('div.msf.r');
     // lazer's SongTicker: the new song's title and artist at the top right for a few seconds
     this.ticker = h('div.lz-ticker', this.tkTitle = h('div.lz-tk-t'), this.tkArtist = h('div.lz-tk-a'));
-    this.tip = h('div.lz-tipbox');
     // lazer's background source: the skin's menu background (the triangles) or the beatmap's
     const el = h('div.home.lz-menu', { dataset: { state: 'initial' } }, Settings.get('ui.menuBackground') === 'beatmap' ? null : MenuTriangles.mount(), this.flashL, this.flashR,
-      h('div.lz-stage', this.area, this.logo), this.ticker, h('div.lz-bottom', this.tip), NeruMascot.build(),
+      h('div.lz-stage', this.area, this.logo), this.ticker, NeruMascot.build(),
       this.fountainCv = h('canvas.lz-fountain', { style: { visibility: 'hidden' } }));
     this._parts = []; this._spewers = [];
     this.el = el;
@@ -16269,7 +16272,6 @@ const HomeScreen = {
       });
     }
     this.startMenuMusic();
-    this.showTip();
     this._idleAt = performance.now();
     this._poke = () => { this._idleAt = performance.now(); };
     for (const ev of ['pointermove', 'pointerdown', 'keydown', 'wheel']) window.addEventListener(ev, this._poke, { passive: true });
@@ -16512,13 +16514,13 @@ const HomeScreen = {
   buildLogo() {
     this.vis = h('canvas.lz-vis');
     this.tris = h('canvas.lz-tris');
-    this._off = LogoPainter.adopt(this.vis, this.tris); this._visW = this._triW = 0;
+    this._off = false; this._visW = this._triW = 0;
     const wave = this.glassWave = h('span.lz-glass-wave', { 'aria-hidden': 'true' });
-    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none"><path d="M-24 395 C85 324 186 488 304 419 S452 335 540 394" stroke="#ffe699" stroke-width="3.5"/><path d="M-24 441 C111 499 205 355 323 399 S469 474 540 410" stroke="#fff4dd" stroke-width="2.5"/><path d="M-24 390 C85 319 186 483 304 414 S452 330 540 389" stroke="#fff1c1" stroke-opacity=".22" stroke-width="1"/></svg>';
+    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" fill="none" aria-hidden="true"><path d="M-512 410 q128 -82 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#ffe699" stroke-width="3"/><path d="M-512 427 q128 65 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#fff4dd" stroke-width="2.5"/><path d="M-512 422 q128 -48 256 0 t256 0 t256 0 t256 0 t256 0 t256 0" stroke="#ffd0e7" stroke-width="2"/></svg>';
     this.flashEl = h('span.lz-flash');
     this.impactEl = h('span.lz-impact');
     this.ripple = h('span.lz-ripple', h('span.lz-ring'));
-    this.beatEl = h('div.lz-lbt', this.vis,
+    this.beatEl = h('div.lz-lbt',
       h('span.lz-cookie-disc.lz-home-disc', this.tris, wave, this.flashEl),
       h('span.lz-ring', h('span.lz-cookie-text', 'ashtonk!', h('small', 'mania'))),
       this.impactEl);
@@ -16563,181 +16565,33 @@ const HomeScreen = {
     this.impactEl.getAnimations().forEach(a => a.cancel());
     this.impactEl.animate([{ opacity: 1, scale: 0.94 }, { opacity: 0, scale: 1.12 }], { duration: 250, easing: 'linear' });
   },
-  /** One frame of the logo: lazer's LogoVisualisation (200 bars × 5 rounds around the disc, fed from the music's
-   *  spectrum every 50ms and decaying smoothly), the cookie's triangles and the beat. */
+  /** Keep menu beats and idle navigation without spectrum reads or visualiser canvas uploads. */
   loop() {
-    const freq = new Float32Array(200), N = 200;
-    let indexOffset = 0, lastUpd = 0, lastBeat = -1, lastT = performance.now(), triY = null, vel = 0.5, visA = 0.5;
-    const S = 512, R = S * 0.47, M = 300, CW = S * 0.94 + M * 2;
-    const tris = [];
-    const spawn = (randomY) => ({ x: Math.random(), y: randomY ? -260 / (S * 0.94) + Math.random() * (1 + 260 / (S * 0.94)) : 1, sp: Math.max(0.5, Math.max(0.1, 0.5 + 0.16 * Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.sin(2 * Math.PI * Math.random()))) });
-    for (let i = 0; i < 14; i++) tris.push(spawn(true));
-    const bw = S * 0.94 * Math.sqrt(2 * (1 - Math.cos(2 * Math.PI / N))) / 2;
-    const cosA = new Float32Array(N * 5), sinA = new Float32Array(N * 5);
-    for (let j = 0; j < 5; j++) for (let i = 0; i < N; i++) { const a = (i / N * 360 + j * 72) * Math.PI / 180; cosA[j * N + i] = Math.cos(a); sinA[j * N + i] = Math.sin(a); }
-    let visClear = false, winMs = 0, winN = 0, winLate = 0, lastDraw = 0;
-    const t0 = performance.now();
-    LogoPainter.geometry({ R, M, CW, N, bw, cosA, sinA });
+    let lastBeat = -1;
     const tick = now => {
-      this._raf = requestAnimationFrame(tick);
-      let cv = this.vis;
-      if (!cv.isConnected) return;
-      // (the painter's thread ready, or — never yet seen — gone: new canvases for whichever draws them now)
-      if (this._off ? LogoPainter.broken : LogoPainter.ready && !LogoPainter.broken) {
-        this.swapCanvases(); cv = this.vis; visClear = true; this._perfClear = false;
-        this._off = LogoPainter.adopt(this.vis, this.tris);
-      }
-      const dt = Math.min(100, now - lastT); lastT = now;
-      // Performance mode: no visualiser, triangles, fountains or beat — the logo sits still (only the idle return runs)
-      if (Settings.get('graphics.performanceMode')) {
-        if (!this._perfClear) {
-          this._perfClear = true;
-          if (this._off) { this._visW = this._triW = 1; LogoPainter.frame({ vsize: 1, tsize: 1 }); } else { cv.width = cv.height = 1; this.tris.width = this.tris.height = 1; }
-          if (this.ampEl) this.ampEl.style.scale = '';
-        }
-        if (this.menuState !== 'initial' && this.menuState !== 'entering' && now - this._idleAt > this.IDLE_MS && !Overlays.stack.length && !SettingsPanel.o && !NowPlaying.open) this.setState('initial');
-        // (nothing drawn: looked in on a few times a second, not every frame)
-        cancelAnimationFrame(this._raf); clearTimeout(this._perfT); this._perfT = setTimeout(() => { this._raf = requestAnimationFrame(tick); }, 400);
-        return;
-      }
-      if (this._perfClear) { this._perfClear = false; this._szAt = 0; this._ampS = null; }
-      // a slow device (under 55fps over two seconds, once the menu has settled): from then on the lighter drawing of
-      // Performance mode, by itself — the visualiser at half resolution, both canvases at ~30fps, lighter menus (.slow)
-      if (this._slow === undefined) this._slow = document.documentElement.classList.contains('slow') || undefined;
-      if (!this._slow && now - t0 > 1500) {
-        // (a hidden tab isn't the device; a hitch counts as one late frame, not its whole length — every frame of a
-        // device too slow for 10fps is one of those, and leaving them out it was never found slow at all)
-        if (document.hidden) { winMs = winN = winLate = 0; }
-        else if ((winMs += Math.min(dt, 100), ++winN, dt > 25 && winLate++, winMs >= 2000)) {
-          // (or stuttering: more than 5% of frames late keeps the average up but looks like a slow device)
-          if (winMs / winN > 18.2 || winLate / winN > 0.05) { this._slow = true; LowEnd.mark(); }
-          winMs = winN = winLate = 0;
-        }
-      }
-      // (Performance mode is about gameplay: the menus keep their looks unless this device is actually too slow for them)
-      const lite = !!this._slow;
-      const draw = !lite || now - lastDraw > 30;
-      if (draw) lastDraw = now;
-      const an = AudioManager.analyser, playing = an && Music.playing;
-      // ── amplitudes (lazer: every 50ms, the spectrum shifted 5 bars round each time; half as tall outside kiai)
-      let peak = 0;
-      if (now - lastUpd >= 50) {
-        lastUpd = now;
-        if (playing) {
-          const d = this._fft || (this._fft = new Float32Array(an.frequencyBinCount));
-          an.getFloatFrequencyData(d);
-          const td = this._td || (this._td = new Float32Array(an.fftSize));
-          an.getFloatTimeDomainData(td);
-          for (let i = 0; i < td.length; i += 4) { const v = Math.abs(td[i]); if (v > peak) peak = v; }
-          this._peak = peak;
-          const kiaiMul = this._kiai ? 1 : 0.5;
-          for (let i = 0; i < N; i++) {
-            const db = d[(i + indexOffset) % N];
-            const target = (db > -200 ? Math.pow(10, db / 20) * 2 : 0) * kiaiMul;
-            if (target > freq[i]) freq[i] = target;
+      if (!this.el || !this.el.isConnected) return;
+      const perf = Settings.get('graphics.performanceMode');
+      if (!perf) {
+        const tm = Music.meta && Music.meta.timing;
+        if (tm && tm.length && Music.playing) {
+          const t = Music.time + 60, i = Math.max(0, bsearchLE(tm, t, 'time')), tp = tm[i], L = menuBeatLength(tp.beatLength);
+          const beat = Math.floor((t - tp.time) / L), key = i * 100000 + beat;
+          this._nextBeatIn = tp.time + (beat + 1) * L - 60 - Music.time;
+          if (key !== lastBeat && t >= tp.time && beat >= 0) {
+            lastBeat = key;
+            const kp = tm.kiai && tm.kiai.length ? tm.kiai[Math.max(0, bsearchLE(tm.kiai, t, 'time'))] : null;
+            this._kiai = !!(kp && kp.on && t >= kp.time);
+            this.logoBeat(L, 0.6, this._kiai);
+            setTimeout(() => { if (this.el && this.el.isConnected) this.onBeat(L); }, 60);
           }
-        } else this._peak = 0;
-        indexOffset = (indexOffset + 5) % N;
-      }
-      const decay = dt * 0.0024;
-      for (let i = 0; i < N; i++) { freq[i] -= decay * (freq[i] + 0.03); if (freq[i] < 0) freq[i] = 0; }
-      // ── visualiser canvas: logo-local units, the disc's edge at radius 0.47 × 512
-      // (drawn at the size it's shown — the logo is often half size or less — measured twice a second, in 1/8 steps)
-      if (now - this._szAt > 500 || !this._szAt) {
-        this._szAt = now;
-        const px = Math.min(2, window.devicePixelRatio || 1);
-        this._visK = clamp(Math.ceil(cv.getBoundingClientRect().width * px / CW * 8) / 8, 0.25, lite ? 0.5 : 1);
-        if (!this.glassWave) this._triS = clamp(Math.ceil(this.tris.getBoundingClientRect().width * px / 32) * 32, 96, lite ? 192 : 384);
-      }
-      const dpr = this._visK || 1, vsz = Math.round(CW * dpr), off = this._off;
-      // (drawn in the painter's thread: what it's to draw this frame, sent as one message — LogoPainter)
-      let msg = null;
-      if (off) { if (this._visW !== vsz) { this._visW = vsz; visClear = true; msg = { vsize: vsz }; } }
-      else if (cv.width !== vsz) { cv.width = cv.height = vsz; visClear = true; }
-      // (no bars and nothing on the canvas: nothing to draw, and nothing for the compositor to upload)
-      let any = false;
-      for (let i = 0; i < N; i++) if (freq[i] >= 1 / 600) { any = true; break; }
-      if (draw && (any || !visClear) && off) { visClear = !any; (msg || (msg = {})).vis = { k: dpr, freq: any ? freq.slice() : null }; }
-      else if (draw && (any || !visClear)) {
-      visClear = !any;
-      const x = cv.getContext('2d');
-      x.setTransform(dpr, 0, 0, dpr, 0, 0);
-      x.clearRect(0, 0, CW, CW);
-      x.globalCompositeOperation = 'lighter';
-      x.fillStyle = 'rgba(255,255,255,0.2)';
-      x.beginPath();
-      const c = CW / 2;
-      for (let k = 0; k < N * 5; k++) {
-        const i = k % N, v = freq[i];
-        if (v < 1 / 600) continue;
-        const len = Math.min(M, 600 * v), co = cosA[k], si = sinA[k];
-        const px = c + co * R, py = c + si * R, ox = -si * bw / 2, oy = co * bw / 2, ax = co * len, ay = si * len;
-        x.moveTo(px - ox, py - oy); x.lineTo(px - ox + ax, py - oy + ay); x.lineTo(px + ox + ax, py + oy + ay); x.lineTo(px + ox, py + oy); x.closePath();
-      }
-      x.fill();
-      }
-      // Legacy face only: the glass-wave logo uses a static vector instead of a second animated canvas.
-      if (!this.glassWave) {
-      vel = playing ? vel + ((this._kiai ? 2 : 1) - vel) * (1 - Math.pow(0.995, dt)) : vel + (0.5 - vel) * (1 - Math.pow(0.9, dt));
-      // (pushed on each beat — never past a steady drift, however fast the song)
-      if (this._kick) { vel = Math.min(vel + this._kick, this._kiai ? 7 : 5); this._kick = 0; }
-      const tc = this.tris, TS = this._triS || (lite ? 192 : 384);
-      if (off) { if (this._triW !== TS) { this._triW = TS; (msg || (msg = {})).tsize = TS; } }
-      else if (tc.width !== TS) { tc.width = tc.height = TS; this._triGrad = null; }
-      const D = S * 0.94, sc = TS / D, triW = 300 * sc, triH = 260 * sc;
-      const moved = dt / 1000 * vel * 50 / D;
-      for (let i = tris.length - 1; i >= 0; i--) {
-        const t = tris[i];
-        t.y -= Math.max(0.5, t.sp) * moved;
-        if (t.y + 260 / D < 0) tris.splice(i, 1);
-      }
-      while (tris.length < 14) tris.push(spawn(false));
-      if (draw && off) {
-        const pts = new Float32Array(tris.length * 2);
-        tris.forEach((t, i) => { pts[i * 2] = t.x * TS; pts[i * 2 + 1] = t.y * TS; });
-        (msg || (msg = {})).tri = { sc, pts };
-      } else if (draw) {
-        const tx = tc.getContext('2d');
-        if (!this._triGrad) { const g = tx.createLinearGradient(0, 0, 0, TS); g.addColorStop(0, '#f4dda0'); g.addColorStop(1, '#a78d4b'); this._triGrad = g; }
-        tx.clearRect(0, 0, TS, TS);
-        tx.strokeStyle = this._triGrad; tx.lineWidth = 0.009 * 260 * sc * 2.6; tx.lineJoin = 'round';
-        tx.beginPath();
-        for (const t of tris) {
-          const lx = t.x * TS, ty = t.y * TS;
-          tx.moveTo(lx + triW / 2, ty); tx.lineTo(lx + triW, ty + triH); tx.lineTo(lx, ty + triH); tx.closePath();
+        } else {
+          this._kiai = false; this._nextBeatIn = 300;
+          if (now - (this._idleBeat || 0) > 600) { this._idleBeat = now; this.onBeat(600); }
         }
-        tx.stroke();
       }
-      }
-      if (msg) LogoPainter.frame(msg);
-      // ── beat (60ms early, as lazer's logo), from the playing track's red lines
-      const tm = Music.meta && Music.meta.timing;
-      if (tm && Music.playing) {
-        const t = Music.time + 60, i = Math.max(0, bsearchLE(tm, t, 'time')), tp = tm[i], L = menuBeatLength(tp.beatLength);
-        const beat = Math.floor((t - tp.time) / L), key = i * 100000 + beat;
-        this._nextBeatIn = tp.time + (beat + 1) * L - 60 - Music.time;
-        if (key !== lastBeat && t >= tp.time && beat >= 0) {
-          lastBeat = key;
-          const kp = tm.kiai && tm.kiai.length ? tm.kiai[Math.max(0, bsearchLE(tm.kiai, t, 'time'))] : null;
-          const kiai = !!(kp && kp.on && t >= kp.time);
-          // lazer's KiaiMenuFountains: stars burst from both bottom corners as kiai starts (not when joining mid-kiai)
-          if (kiai && !this._kiai && Math.abs(t - kp.time) < 500 && !lite) this.shootFountains();
-          this._kiai = kiai;
-          const adj = Math.min(1, 0.4 + (this._peak || 0));
-          this.logoBeat(L, adj, kiai);
-          setTimeout(() => this.onBeat(L), 60);
-          let a = 0; for (let j = 0; j < 8; j++) a = Math.max(a, freq[j] * 4);
-          this.sideFlash(beat, L, tp.meter, kiai, a);
-        }
-      } else { this._kiai = false; this._nextBeatIn = 300; if (now - (this._idleBeat || 0) > 600) { this._idleBeat = now; this.onBeat(600); } }
-      this.drawFountains(now);
-      // the logo's amplitude breathing: 4% smaller as the music gets loud (lazer's Damp(0.9)) — written as the level's
-      // read (20 times a second), the browser easing it there (.lz-la's transition): written every frame, it restyled
-      // the menu on every frame of every song
-      const ampS = (1 - Math.max(0, (this._peak || 0) - 0.4) * 0.04).toFixed(3);
-      if (ampS !== this._ampS) { this._ampS = ampS; this.ampEl.style.scale = ampS; }
-      // idle for a while: back to the big logo, as when the game opens
       if (this.menuState !== 'initial' && this.menuState !== 'entering' && now - this._idleAt > this.IDLE_MS && !Overlays.stack.length && !SettingsPanel.o && !NowPlaying.open) this.setState('initial');
+      if (perf) this._perfT = setTimeout(() => { this._raf = requestAnimationFrame(tick); }, 400);
+      else this._raf = requestAnimationFrame(tick);
     };
     this._raf = requestAnimationFrame(tick);
   },
@@ -16825,48 +16679,6 @@ const HomeScreen = {
     this.tkTitle.textContent = m.title; this.tkArtist.textContent = m.artist;
     this.ticker.getAnimations().forEach(a => a.cancel());
     this.ticker.animate([{ opacity: 0 }, { opacity: 1, offset: 400 / 5200 }, { opacity: 1, offset: 4400 / 5200 }, { opacity: 0 }], { duration: 5200 });
-  },
-  /** lazer's MenuTipDisplay: a tip at the bottom each time you come back to the menu — it pops in after 0.6s and
-   *  fades out once there's been time to read it. */
-  TIPS: [
-    'Press Ctrl+O anywhere in the game to access settings!',
-    'If you find the UI too large or small, try adjusting UI scaling in settings!',
-    'Press F6 anywhere to see what\'s playing, skip songs or open the playlist!',
-    'Scroll over the note in the top bar to change the volume from any screen!',
-    'Press ? on any screen to see its keyboard shortcuts!',
-    'Use F3 and F4 (or Ctrl − and Ctrl +) while playing to change your scroll speed!',
-    'Press Tab while playing to show or hide the leaderboard!',
-    'Get more options for a beatmap by right-clicking on its panel at song select!',
-    'Press F2 at song select for a random beatmap; Shift+F2 goes back to the one before!',
-    'Drop .osz, .osk and .osr files anywhere on the game to import them!',
-    'Ranked Play matches you 1v1 with someone at the difficulty you pick!',
-    'Press Ctrl+B anywhere to browse for new beatmaps!',
-    'Press F12 to take a screenshot!',
-    'Press Ctrl+Shift+S to move the score, health and the rest of the HUD where you like them!',
-  ],
-  // (on a phone or tablet: no keyboard, so tips about the screen instead)
-  TOUCH_TIPS: [
-    'Tap the gear in the top left to change any setting!',
-    'Tap the note in the top bar to see what\'s playing and skip songs!',
-    'Long-press a beatmap at song select for more options!',
-    'Each column of the screen is a key while you play — the whole height of it!',
-    'Ranked Play matches you 1v1 with someone at the difficulty you pick!',
-    'Find new beatmaps under Browse on the main menu!',
-    'Edit → skin lets you move the score, health and the rest of the HUD where you like them!',
-  ],
-  showTip() {
-    if (Settings.get('ui.menuTips') === false || !this.tip) return;
-    const list = typeof Mobile !== 'undefined' && Mobile.touch ? this.TOUCH_TIPS : this.TIPS;
-    let i; do { i = Math.floor(Math.random() * list.length); } while (list.length > 1 && i === this._lastTip);
-    this._lastTip = i;
-    const tip = list[i];
-    clearEl(this.tip).append(h('div.lz-tip-t', icon('bulb'), h('b', 'Menu tip')), h('div.lz-tip-b', tip));
-    const hold = 1000 + 80 * tip.length, total = 600 + 800 + hold + 2000;
-    this.tip.getAnimations().forEach(a => a.cancel());
-    this.tip.animate([
-      { opacity: 0, scale: 0.9 }, { opacity: 0, scale: 0.9, offset: 600 / total, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-      { opacity: 1, scale: 1, offset: 1400 / total }, { opacity: 1, scale: 1, offset: (1400 + hold) / total, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-      { opacity: 0, scale: 1 }], { duration: total, fill: 'both' });
   },
   async startMenuMusic() {
     const id = Settings.get('last.map');
@@ -17000,25 +16812,22 @@ onmessage = async ({ data: m }) => {
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(hue, sat, 0.55)); g.addColorStop(1, hsl(hue + 4, sat, 0.43));
+    g.addColorStop(0, hsl(285, .14, .65)); g.addColorStop(1, hsl(290, .13, .56));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
-    const glow = x.createRadialGradient(W * .48, H * .38, 0, W * .48, H * .38, Math.max(W, H) * .65);
-    glow.addColorStop(0, 'rgba(255, 204, 166, .74)'); glow.addColorStop(1, 'rgba(255, 222, 143, 0)');
-    x.fillStyle = glow; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
     const up = (ax, ay, s) => { x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); };
     // faint outlines first (they sit behind the solid banks)
     x.lineWidth = 2.2; x.lineJoin = 'miter';
-    for (const [ax, ay, s] of this.OUTLINE) {
+    for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 3 === 0)) {
       const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
       x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
     }
     // the solid banks pick out the edges with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
-    x.shadowColor = 'rgba(0, 0, 0, .16)'; x.shadowBlur = 12 * k;
+    x.shadowColor = 'transparent'; x.shadowBlur = 0;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, 0.62)); sg.addColorStop(1, hsl(hue + 3, sat, 0.48));
+    sg.addColorStop(0, hsl(hue, sat, 0.70)); sg.addColorStop(1, hsl(hue + 3, sat, 0.51));
     x.fillStyle = sg;
     x.beginPath();
     for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
@@ -17028,6 +16837,7 @@ onmessage = async ({ data: m }) => {
     const accents = [[333, 1, .77], [45, 1, .70], [255, 1, .80]];
     x.lineWidth = 2.6;
     for (let i = 0; i < this.RING.length; i++) {
+      if (i % 2) continue;
       const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
       x.strokeStyle = hsl(...c); up(ax, ay, s); x.stroke();
     }
@@ -25672,6 +25482,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16b', title: 'A softer home screen', sections: [
+    { icon: 'home', title: 'Home', items: ['Slanted home buttons now have rounded corners and white labels, with a calmer triangle background.', 'Flowing waves replace the music-reactive bars around the logo. Home menu tips have been removed.'] },
+  ] },
   { id: '2026.11.16a', title: 'Cleaner home colours', sections: [
     { icon: 'home', title: 'Home', items: ['Restored the pink Ashtonk!mania logo, removed the full-width strip behind the home buttons, and refined the three button accents with solid pause-menu-style colours.'] },
   ] },
@@ -36146,7 +35959,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '3c4aaafadc1d';
+const APP_BUILD = 'b3abeb841d96';
 
 const App = {
   lastReport: null,

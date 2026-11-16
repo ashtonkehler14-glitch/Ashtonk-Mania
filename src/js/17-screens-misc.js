@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16b', title: 'A softer home screen', sections: [
+    { icon: 'home', title: 'Home', items: ['Slanted home buttons now have rounded corners and white labels, with a calmer triangle background.', 'Flowing waves replace the music-reactive bars around the logo. Home menu tips have been removed.'] },
+  ] },
   { id: '2026.11.16a', title: 'Cleaner home colours', sections: [
     { icon: 'home', title: 'Home', items: ['Restored the pink Ashtonk!mania logo, removed the full-width strip behind the home buttons, and refined the three button accents with solid pause-menu-style colours.'] },
   ] },

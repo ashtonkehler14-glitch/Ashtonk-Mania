@@ -5583,12 +5583,13 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-area-bg { display: none; }
 .lz-menu .lz-btn { --c: #3d3745 !important; }
 .lz-menu .lz-btn[data-id="settings"], .lz-menu .lz-btn[data-id="back"] { --c: #3d3745 !important; }
-.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #eeaa00 !important; color: #231b08; }
-.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #df679e !important; color: #281421; }
-.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8c66cf !important; color: #fff; }
+.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #a57000 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #bc3978 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8054bf !important; color: #fff; }
 .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #3d3745 !important; }
-.lz-menu .lz-bg { background: var(--c); box-shadow: none; }
-.lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
+.lz-menu .lz-bg { background: linear-gradient(#ffffff09, #00000008), var(--c); border-radius: 16px; box-shadow: inset 0 1px #ffffff26, 0 3px 8px #23172d20; }
+.lz-menu .lz-btn { color: #fff; }
+.lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
 .lz-menu .lz-btn:hover .lz-bg::before, .lz-menu .lz-btn:focus-visible .lz-bg::before { opacity: .85; }
 .lz-menu .lz-label { font-weight: 600; letter-spacing: .015em; }
 .lz-menu .lz-btn[data-id="play"] .lz-label, .lz-menu .lz-btn[data-id="solo"] .lz-label { text-shadow: none; }
@@ -5601,7 +5602,10 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-ring .lz-cookie-text { color: #f8f7f3; text-shadow: 0 3px 14px #00000025; }
 .lz-menu .lz-cookie-text small { color: #fff1d6; font-weight: 500; letter-spacing: .22em; }
 .lz-glass-wave { position: absolute; inset: 0; pointer-events: none; }
-.lz-glass-wave svg { display: block; width: 100%; height: 100%; }
+.lz-glass-wave svg { display: block; width: 200%; height: 100%; animation: home-wave calc(12s * var(--anim)) linear infinite; }
+@keyframes home-wave { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .lz-glass-wave svg { animation: none; } }
+:root.no-anim .lz-glass-wave svg, :root.perf .lz-glass-wave svg { animation: none; }
 
 /* Solid tips keep text readable over the colourful artwork. */
 .lz-menu .lz-tipbox { background: #3d3745f2; color: #f8f7f3; }
