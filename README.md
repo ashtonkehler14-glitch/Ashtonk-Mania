@@ -31,8 +31,14 @@ In the mods panel, enable **Percy** to adjust its tail offset from −500 to +50
 For Cloudflare Workers Builds, use these production settings:
 
 - Production branch: `main`
-- Build command: `pnpm run build`
-- Deploy command: `pnpm run deploy` (runs `wrangler deploy`)
+- Root directory: the repository root (`/` in the dashboard)
+- Build command: `node build.mjs`
+- Deploy command: `npx --yes wrangler@4.161.0 deploy`
+
+Deploy the latest commit on `main` after saving these settings. Retrying an older build
+reuses its older source revision. If the log says `No package.json`, check the commit and
+root directory: the current repository root contains `package.json`. The deploy command
+above also works without relying on a package script.
 
 `wrangler preview` creates a separate preview URL; it does not update the production game.
 Use `pnpm exec wrangler preview` only for non-production preview builds. The `previews` block
