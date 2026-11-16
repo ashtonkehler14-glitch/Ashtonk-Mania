@@ -195,7 +195,7 @@ const Chat = {
     if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
     // (/me: lazer's action line — the name and what they did, in italics)
     else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && this.mentions(l.text) ? '.mention' : ''}`,
-      h('span.ch-time', t),
+      chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),

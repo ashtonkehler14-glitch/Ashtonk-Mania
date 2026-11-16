@@ -77,14 +77,17 @@ try {
     window._spectatorFixture={ws:Presence.ws,send:Presence.send,target:Spectate.target,hostWatchers:Spectate.host.watchers,me:Presence.me};
     window._sentSpec=[];Presence.ws={readyState:1};Presence.send=m=>window._sentSpec.push(m);
     Spectate.target={id:'fixture-host',name:'Friend'};SpectatorChat.open();
-    SpectatorChat.on({t:'specChatLine',id:'fixture-host',line:{from:{pid:'friend-id',name:'Friend'},text:'hello from the player',at:Date.now()}});
+    SpectatorChat.on({t:'specChatLine',id:'fixture-host',line:{from:{pid:'friend-id',name:'Friend',role:{colour:'#ffcc22'},avatar:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII='},text:'hello from the player',at:Date.now()}});
   });
   await page.getByRole('textbox',{name:'Spectator chat message'}).fill('hello from spectator');await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(()=>window._sentSpec.at(-1).text),'hello from spectator');
   assert.ok(await page.locator('.spectator-chat .gp-chat-l').count()>0);
+  assert.equal(await page.locator('.spectator-chat .chat-avatar').count(),1);
+  assert.equal(await page.locator('.spectator-chat .chat-copy b').evaluate(el=>getComputedStyle(el).color),'rgb(255, 204, 34)');
   for(const viewport of [{width:1280,height:591},{width:844,height:390},{width:640,height:360}]){
     await page.setViewportSize(viewport);await page.waitForTimeout(150);
     const bounds=await page.locator('.spectator-chat').boundingBox();assert.ok(bounds.x<=20 && bounds.y+bounds.height<=viewport.height && bounds.x+bounds.width<viewport.width);
+    assert.ok(await page.locator('.spectator-chat .chat-avatar').isVisible(),'Portrait stays visible at mobile sizes');
     assert.ok(viewport.height-bounds.y-bounds.height<=22,'Chat hugs the lower left corner');
     await page.screenshot({path:`/tmp/spectator-gameplay-chat-${viewport.width}.png`});
   }
@@ -92,6 +95,15 @@ try {
   await page.evaluate(()=>{SpectatorChat.close();Spectate.target=null;Spectate.host.watchers=1;Presence.me='fixture-self';SpectatorChat.open();});
   assert.equal(await page.locator('.spectator-chat').count(),1,'Player receives the same chat UI');
   await page.evaluate(()=>{SpectatorChat.close();const old=window._spectatorFixture;Presence.ws=old.ws;Presence.send=old.send;Presence.me=old.me;Spectate.target=old.target;Spectate.host.watchers=old.hostWatchers;SpectatorChat.refresh();});
+  await page.evaluate(()=>{
+    Chat.open('#lobby'); clearEl(Chat.lines);
+    Chat.appendLine({from:{pid:'friend-id',name:'Friend',role:{colour:'#ffcc22'}},text:'A longer chat message that wraps neatly without pushing the name or portrait out of the conversation. '.repeat(3),at:Date.now()});
+  });
+  assert.equal(await page.locator('.ch-lines .chat-avatar').count(),1);
+  assert.equal(await page.locator('.ch-lines .ch-name').evaluate(el=>getComputedStyle(el).color),'rgb(255, 204, 34)');
+  assert.ok(await page.locator('.ch-lines').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Long messages wrap without horizontal overflow');
+  await page.screenshot({path:'/tmp/chat-portraits-mobile.png'});
+  await page.evaluate(()=>Chat.close());
   assert.deepEqual(errors,[]);
   console.log('PASS floating settings, exclusive menus, beatmap defaults/fallback, real beatmap backup round trip and spectator gameplay chat');
 } finally {if(browser)await browser.close();server.close();}

@@ -436,12 +436,12 @@ export class RoomLogic {
       case 'ping': return [{ to: id, msg: { t: 'pong', c: m.c, s: this.now() } }];
       case 'chat': {
         const text = str(m.text, 300);
-        return text ? [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, text, ts: this.now() } }] : [];
+        return text ? [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, avatar: p.avatar, text, ts: this.now() } }] : [];
       }
       case 'suggest': {
         const map = cleanSuggestion(m.map);
         if (!map) return [];
-        return [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, text: `suggested ${map.artist} - ${map.title} [${map.version}]`, suggest: map, ts: this.now() } }];
+        return [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, avatar: p.avatar, text: `suggested ${map.artist} - ${map.title} [${map.version}]`, suggest: map, ts: this.now() } }];
       }
       // the room's queue of songs: the host's — or, queue mode "all", anyone's — added in turn; the next one comes up
       // after each match (or straight away when the room has none)

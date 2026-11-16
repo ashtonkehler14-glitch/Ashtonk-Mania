@@ -63,6 +63,21 @@ function chatName(el, from = {}) {
   return el;
 }
 
+/** Small shared chat portrait; room IDs are resolved to the account behind them. */
+function chatAvatar(from = {}, size = 28) {
+  const room = typeof Multiplayer !== 'undefined' && Multiplayer.room;
+  const player = room && room.players.find(p => p.id === from.from);
+  const pid = from.pid || (player && player.pid);
+  const online = (Presence.players || []).find(p => p.pid === pid);
+  const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || '';
+  const el = Presence.avatarEl({ name: from.name || (player && player.name), avatar }, size);
+  el.classList.add('chat-avatar'); el.title = from.name || '';
+  return el;
+}
+function compactChatLine(cls, from, text) {
+  return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
+}
+
 /** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
   const key = name + '|' + cls;

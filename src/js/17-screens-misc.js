@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16l', title: 'Clearer chat', sections: [
+    { title: 'Chat', items: ['Profile pictures now appear beside chat messages, with cleaner spacing and wrapping to make conversations easier to follow.'] }
+  ] },
   { id: '2026.11.16k', title: 'Chat colours and lounge results', sections: [
     { title: 'Multiplayer', items: ['Chat names now use your role colour in lounge, gameplay and spectator chat.', 'Lounge matches wait for the final standings before opening results, so the winner is shown when the screen opens.'] }
   ] },

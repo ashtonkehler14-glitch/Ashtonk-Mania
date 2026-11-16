@@ -1563,8 +1563,8 @@ const MultiplayerScreen = {
         } catch (e) { Toast.err('Couldn\'t pick that beatmap', friendlyError(e)); }
         pick.disabled = false; pick.textContent = 'Pick';
       } }, 'Pick') : null;
-      el = h('div.mp-msg.suggest', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), pick);
-    } else el = m.from ? h(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, chatName(h('b', m.name), m), h('span', m.text)) : h('div.mp-msg.sys', m.text);
+      el = h('div.mp-msg.suggest', chatAvatar(m, 24), chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), pick);
+    } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text) : h('div.mp-msg.sys', m.text);
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)

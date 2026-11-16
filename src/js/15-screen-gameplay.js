@@ -321,7 +321,7 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? h('div.gp-chat-l', chatName(h('b', m.name), m), h('span', m.text)) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
     for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(el); }
     this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {

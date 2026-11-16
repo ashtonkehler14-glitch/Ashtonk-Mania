@@ -5654,6 +5654,21 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 }
 
 .gp-results-wait { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); padding: 12px 20px; border-radius: 12px; background: rgba(30, 28, 36, .88); color: white; text-align: center; pointer-events: none; }
+
+/* Portraits and a consistent reading edge make speakers easy to distinguish. */
+.chat-avatar { flex: none; border-radius: 7px; object-fit: cover; align-self: start; }
+.ch-line { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 1px 9px; padding: 6px 10px; }
+.ch-line > .chat-avatar { grid-column: 1; grid-row: 1 / span 2; }
+.ch-line > .ch-name { grid-column: 2; grid-row: 1; text-align: left; }
+.ch-line > .ch-time { grid-column: 3; grid-row: 1; font-size: 10px; opacity: .8; }
+.ch-line > .ch-text { grid-column: 2 / -1; grid-row: 2; }
+.ch-line.local > .ch-text { grid-column: 2 / -1; }
+.mp-msg:not(.sys):not(.suggest), .gp-chat-l:not(.sys) { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; line-height: 1.45; white-space: normal; overflow: visible; }
+.chat-copy { min-width: 0; overflow-wrap: anywhere; }
+.chat-copy > b { margin-right: 7px; }
+.chat-copy > span { white-space: pre-wrap; }
+.gp-chat-l .chat-avatar { width: 24px; height: 24px; border-radius: 6px; }
+.gp-chat-list { gap: 0; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -14104,6 +14119,21 @@ function chatName(el, from = {}) {
   return el;
 }
 
+/** Small shared chat portrait; room IDs are resolved to the account behind them. */
+function chatAvatar(from = {}, size = 28) {
+  const room = typeof Multiplayer !== 'undefined' && Multiplayer.room;
+  const player = room && room.players.find(p => p.id === from.from);
+  const pid = from.pid || (player && player.pid);
+  const online = (Presence.players || []).find(p => p.pid === pid);
+  const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || '';
+  const el = Presence.avatarEl({ name: from.name || (player && player.name), avatar }, size);
+  el.classList.add('chat-avatar'); el.title = from.name || '';
+  return el;
+}
+function compactChatLine(cls, from, text) {
+  return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
+}
+
 /** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
   const key = name + '|' + cls;
@@ -20737,7 +20767,7 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? h('div.gp-chat-l', chatName(h('b', m.name), m), h('span', m.text)) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
     for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(el); }
     this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {
@@ -25287,6 +25317,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16l', title: 'Clearer chat', sections: [
+    { title: 'Chat', items: ['Profile pictures now appear beside chat messages, with cleaner spacing and wrapping to make conversations easier to follow.'] }
+  ] },
   { id: '2026.11.16k', title: 'Chat colours and lounge results', sections: [
     { title: 'Multiplayer', items: ['Chat names now use your role colour in lounge, gameplay and spectator chat.', 'Lounge matches wait for the final standings before opening results, so the winner is shown when the screen opens.'] }
   ] },
@@ -29672,8 +29705,8 @@ const MultiplayerScreen = {
         } catch (e) { Toast.err('Couldn\'t pick that beatmap', friendlyError(e)); }
         pick.disabled = false; pick.textContent = 'Pick';
       } }, 'Pick') : null;
-      el = h('div.mp-msg.suggest', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), pick);
-    } else el = m.from ? h(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, chatName(h('b', m.name), m), h('span', m.text)) : h('div.mp-msg.sys', m.text);
+      el = h('div.mp-msg.suggest', chatAvatar(m, 24), chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), pick);
+    } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text) : h('div.mp-msg.sys', m.text);
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)
@@ -32701,7 +32734,7 @@ const Chat = {
     if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
     // (/me: lazer's action line — the name and what they did, in italics)
     else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && this.mentions(l.text) ? '.mention' : ''}`,
-      h('span.ch-time', t),
+      chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
@@ -35616,7 +35649,7 @@ const SpectatorChat = {
     if (!this.list) return;
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
-    const line = h(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, chatName(h('b', l.from.name), l.from), h('span', l.text));
+    const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(line);
     while (this.list.children.length > 100) this.list.firstChild.remove();
@@ -35632,7 +35665,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '9cb9e6a064ef';
+const APP_BUILD = 'cf819174a86f';
 
 const App = {
   lastReport: null,
