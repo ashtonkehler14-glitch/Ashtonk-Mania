@@ -1,7 +1,7 @@
 /* Main menu (osu!lazer's MainMenu + ButtonSystem + OsuLogo). The 512px logo waits in the middle of the screen with the
  * toolbar hidden; clicking it (or pressing any key) shrinks it to half size 228px left of centre and opens the button
  * bar around it: settings on its left; play (→ solo / multi → lounge / ranked play), edit and browse on its right.
- * Six idle seconds bring the big logo back. Behind it is lazer’s triangle artwork in the Sunlit Ivory palette. */
+ * Six idle seconds bring the big logo back. Behind it is lazer’s triangle artwork in the Zako palette. */
 
 /** The logo's two canvases — the music visualiser round it and the triangles drifting in it — drawn in a thread of
  *  their own. A canvas drawn on the page is handed to the compositor again on every frame it changes: on the menu, with
@@ -400,7 +400,7 @@ const HomeScreen = {
     this.tris = h('canvas.lz-tris');
     this._off = LogoPainter.adopt(this.vis, this.tris); this._visW = this._triW = 0;
     const wave = this.glassWave = h('span.lz-glass-wave', { 'aria-hidden': 'true' });
-    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none"><path d="M-24 395 C85 324 186 488 304 419 S452 335 540 394" stroke="#f0d06a" stroke-width="3.5"/><path d="M-24 441 C111 499 205 355 323 399 S469 474 540 410" stroke="#cfad50" stroke-width="2.5"/><path d="M-24 390 C85 319 186 483 304 414 S452 330 540 389" stroke="#fff1c1" stroke-opacity=".22" stroke-width="1"/></svg>';
+    wave.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none"><path d="M-24 395 C85 324 186 488 304 419 S452 335 540 394" stroke="#ffe699" stroke-width="3.5"/><path d="M-24 441 C111 499 205 355 323 399 S469 474 540 410" stroke="#fff4dd" stroke-width="2.5"/><path d="M-24 390 C85 319 186 483 304 414 S452 330 540 389" stroke="#fff1c1" stroke-opacity=".22" stroke-width="1"/></svg>';
     this.flashEl = h('span.lz-flash');
     this.impactEl = h('span.lz-impact');
     this.ripple = h('span.lz-ripple', h('span.lz-ring'));
@@ -838,8 +838,8 @@ onmessage = async ({ data: m }) => {
     return this.el;
   },
   stop() { this.running = false; if (this._ro) this._ro.disconnect(); this._ro = null; clearTimeout(this._rt); },
-  /** The chosen ivory palette stays consistent when the menu song changes. */
-  fromImage() { this.col = [40, 0.25]; this.render(); },
+  /** The chosen Zako palette stays consistent when the menu song changes. */
+  fromImage() { this.col = [290, 0.16]; this.render(); },
   /** Draw the picture in the current colour and fade it in over the last one. */
   render(resized = false) {
     const el = this.el;
@@ -880,16 +880,16 @@ onmessage = async ({ data: m }) => {
     });
   },
   paint(x, W, H, [hue, sat]) {
-    // Sunlit Ivory: use the same palette in the worker and fallback renderer.
-    hue = 40; sat = 0.25;
+    // Zako: use the same palette in the worker and fallback renderer.
+    hue = 290; sat = 0.16;
     const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(hue, sat, 0.93)); g.addColorStop(1, hsl(hue + 4, sat, 0.81));
+    g.addColorStop(0, hsl(hue, sat, 0.55)); g.addColorStop(1, hsl(hue + 4, sat, 0.43));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     const glow = x.createRadialGradient(W * .48, H * .38, 0, W * .48, H * .38, Math.max(W, H) * .65);
-    glow.addColorStop(0, 'rgba(255, 244, 205, .25)'); glow.addColorStop(1, 'rgba(255, 222, 143, 0)');
+    glow.addColorStop(0, 'rgba(255, 204, 166, .74)'); glow.addColorStop(1, 'rgba(255, 222, 143, 0)');
     x.fillStyle = glow; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
@@ -897,26 +897,25 @@ onmessage = async ({ data: m }) => {
     // faint outlines first (they sit behind the solid banks)
     x.lineWidth = 2.2; x.lineJoin = 'miter';
     for (const [ax, ay, s] of this.OUTLINE) {
-      const l = 0.78 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
+      const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
       x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
     }
-    // the solid banks, each a shade darker than the gradient behind it, with lazer's soft shadow
+    // the solid banks pick out the edges with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
     x.shadowColor = 'rgba(0, 0, 0, .16)'; x.shadowBlur = 12 * k;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, 0.87)); sg.addColorStop(1, hsl(hue + 3, sat, 0.75));
+    sg.addColorStop(0, hsl(hue, sat, 0.62)); sg.addColorStop(1, hsl(hue + 3, sat, 0.48));
     x.fillStyle = sg;
     x.beginPath();
     for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
     x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
     x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
-    // Champagne and amber outlines tie the original triangle composition to the gold menu.
-    const a1 = [42, 0.80, 0.43], a2 = [45, 0.85, 0.58], b1 = [35, 0.85, 0.43];
+    // Separate pink, blonde-gold and lilac rings keep the original triangle composition colourful.
+    const accents = [[333, 1, .77], [45, 1, .70], [255, 1, .80]];
     x.lineWidth = 2.6;
-    for (const [ax, ay, s] of this.RING) {
-      const t = clamp((ay + s * 0.43 - 170) / 720, 0, 1), left = ax < 1000;
-      const top = left ? a1 : b1, c = [top[0] + (a2[0] - top[0]) * t, top[1] + (a2[1] - top[1]) * t, top[2] + (a2[2] - top[2]) * t];
-      x.strokeStyle = hsl(c[0], c[1], c[2]); up(ax, ay, s); x.stroke();
+    for (let i = 0; i < this.RING.length; i++) {
+      const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
+      x.strokeStyle = hsl(...c); up(ax, ay, s); x.stroke();
     }
     x.setTransform(1, 0, 0, 1, 0, 0);
   },

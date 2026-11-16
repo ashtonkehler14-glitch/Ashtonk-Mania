@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16', title: 'Zako colours', sections: [
+    { icon: 'home', title: 'Appearance', items: ['A colourful triangle background, lilac glass-wave logo and golden Play button bring Neru-inspired colours to Home. Pink highlights and warmer panels carry the palette into the menus.'] },
+  ] },
   { id: '2026.11.15f', title: 'Sunlit Ivory home', sections: [
     { icon: 'home', title: 'Home', items: ['Cream triangle artwork, golden outlines and charcoal controls bring the Sunlit Ivory look to the home screen.'] },
   ] },

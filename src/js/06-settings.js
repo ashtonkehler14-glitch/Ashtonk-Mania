@@ -249,7 +249,7 @@ const Settings = {
     for (const p of Object.values(v['hud.profiles'] || {})) if (p && typeof p === 'object') { delete p['gameplay.noteOffset']; delete p['wom.noteOffset']; delete p['gameplay.noteHeight']; }
     if (v['gameplay.bgBlur'] > 1) v['gameplay.bgBlur'] = Math.min(1, v['gameplay.bgBlur'] / 30);
     if (v['gameplay.breakMin'] < 10000) delete v['gameplay.breakMin'];
-    delete v['ui.theme']; // (the accent colour setting is gone: always Kori purple)
+    delete v['ui.theme']; // (the accent colour setting is gone: use the game palette)
     delete v['gameplay.scrollMode']; // (and notes always scroll with the beatmap's SV and BPM changes, as osu!mania's do)
     // v5: menu blur is baked once into the background image, so Chromebook mode (which used to switch it off) gets it too
     // the default interface size became 80% (100% felt zoomed in); move people still on the old default along
@@ -415,7 +415,7 @@ const Settings = {
     if (typeof Zoom !== 'undefined' && Zoom.z !== undefined) Zoom.update();
     const sp = this.get('ui.animSpeed');
     r.style.setProperty('--anim', sp <= 0 ? 0 : (1 / sp));
-    r.dataset.theme = 'kori';
+    r.dataset.theme = 'zako';
     r.classList.toggle('no-effects', !this.get('graphics.effects'));
     // (animations turned off by the player: everything still. Performance mode's own sheet stills the menus, and leaves
     // Neru hers)
