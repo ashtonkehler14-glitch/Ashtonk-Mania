@@ -5720,11 +5720,27 @@ button.chat-avatar:disabled { cursor: default; }
 #toolbar { left: var(--menu-gutter); right: var(--menu-gutter); }
 .screen.menu-surface, .settings-panel {
   left: var(--menu-gutter); right: var(--menu-gutter); width: auto; max-width: none;
-  top: calc(var(--toolbar-h) + 10px); bottom: var(--menu-gutter);
+  top: calc(var(--toolbar-h) + 10px); bottom: 0;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
 }
 
 /* Full-screen pages meet the toolbar at the window edges; floating menus keep their inset frame. */
 #app.full-screen-menu #toolbar {
   left: 0; right: 0; border-radius: 0;
   padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right));
+}
+
+.menu-surface .page-back { bottom: env(safe-area-inset-bottom); }
+
+/* Entered rooms and matches fill the screen; their browsing pages remain floating. */
+.screen.destination-screen, .screen.rkm-on {
+  inset: 0; width: auto; max-width: none; margin: 0; border: 0; border-radius: 0;
+  padding-top: var(--toolbar-h);
+}
+.screen.rkm-on { padding-top: 0; }
+/* Settings keeps its compact, centred panel rather than becoming a full-screen destination. */
+.settings-panel {
+  left: 0; right: 0; margin-inline: auto;
+  width: min(620px, calc(100 * var(--vw) - 2 * var(--menu-gutter)));
+  max-width: calc(100 * var(--vw) - 2 * var(--menu-gutter));
 }

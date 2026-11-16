@@ -5731,13 +5731,29 @@ button.chat-avatar:disabled { cursor: default; }
 #toolbar { left: var(--menu-gutter); right: var(--menu-gutter); }
 .screen.menu-surface, .settings-panel {
   left: var(--menu-gutter); right: var(--menu-gutter); width: auto; max-width: none;
-  top: calc(var(--toolbar-h) + 10px); bottom: var(--menu-gutter);
+  top: calc(var(--toolbar-h) + 10px); bottom: 0;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
 }
 
 /* Full-screen pages meet the toolbar at the window edges; floating menus keep their inset frame. */
 #app.full-screen-menu #toolbar {
   left: 0; right: 0; border-radius: 0;
   padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right));
+}
+
+.menu-surface .page-back { bottom: env(safe-area-inset-bottom); }
+
+/* Entered rooms and matches fill the screen; their browsing pages remain floating. */
+.screen.destination-screen, .screen.rkm-on {
+  inset: 0; width: auto; max-width: none; margin: 0; border: 0; border-radius: 0;
+  padding-top: var(--toolbar-h);
+}
+.screen.rkm-on { padding-top: 0; }
+/* Settings keeps its compact, centred panel rather than becoming a full-screen destination. */
+.settings-panel {
+  left: 0; right: 0; margin-inline: auto;
+  width: min(620px, calc(100 * var(--vw) - 2 * var(--menu-gutter)));
+  max-width: calc(100 * var(--vw) - 2 * var(--menu-gutter));
 }
 </style>
 <style id="css-no-anim" media="not all">
@@ -15659,6 +15675,12 @@ const Screens = {
   history: [],
   busy: false,
   register(name, screen) { this.registry[name] = screen; },
+  syncMenuFrame(el = this.current && this.current.el) {
+    if (!el || !this.current) return;
+    const floating = this.currentName !== 'home' && this.currentName !== 'songselect' && !this.current.inGame && !this.current.transient && !el.classList.contains('destination-screen');
+    el.classList.toggle('menu-surface', floating);
+    $('#app').classList.toggle('full-screen-menu', this.currentName !== 'home' && !this.current.inGame && !floating);
+  },
   /** The screens' entrance animations (each ends where the element rests, so letting go of it changes nothing). */
   ENTRANCES: new Set(['floatingMenuIn', 'scrIn', 'scrInRight', 'scrInZoom', 'scrInMenu', 'ssWedgeIn', 'ssCarIn', 'ssFootIn', 'ovBodyIn', 'ovBgIn', 'wedgeIn']),
   async go(name, params = {}, { replace = false, transition = 'default' } = {}) {
@@ -15706,7 +15728,7 @@ const Screens = {
       }
       next.el = el;
       el.classList.add('screen', 'enter');
-      if (name !== 'home' && name !== 'songselect' && !next.inGame && !next.transient) el.classList.add('menu-surface');
+      this.syncMenuFrame(el);
       if (prevName === 'home') el.classList.add('after-menu');
       if (transition === 'zoom') el.classList.add('zoom');
       if (transition === 'right') el.classList.add('from-right');
@@ -15735,7 +15757,7 @@ const Screens = {
       $('#screens').appendChild(el);
       Toolbar.setActive(next.tab || name);
       $('#app').classList.toggle('in-game', !!next.inGame);
-      $('#app').classList.toggle('full-screen-menu', name !== 'home' && !next.inGame && !el.classList.contains('menu-surface'));
+      this.syncMenuFrame(el);
       Bus.emit('screen:changed', name);
     } finally { this.busy = false; }
   },
@@ -25382,6 +25404,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16s', title: 'Menu and room layouts', sections: [
+    { title: 'Interface', items: ['Large menus extend to the bottom of the screen.', 'Active lounge rooms and ranked matches use the full screen; settings stays a compact floating panel.'] }
+  ] },
   { id: '2026.11.16r', title: 'Full-width toolbar', sections: [
     { title: 'Interface', items: ['The top bar now fills the screen width on full-screen menus such as song select.'] }
   ] },
@@ -29423,6 +29448,8 @@ const MultiplayerScreen = {
   onKey(e) { return false; },
   render() {
     if (!this.body) return;
+    this.el.classList.toggle('destination-screen', Multiplayer.inRoom());
+    if (Screens.current === this) Screens.syncMenuFrame(this.el);
     // a Ranked Play match takes the whole screen (lazer's RankedPlayScreen)
     // (a room's kind decides which lounge you return to when you leave it)
     // (Ranked Play, its lounge and its matches: no song playing behind them — MenuMusic.hush)
@@ -34863,7 +34890,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'c2f408bba80c';
+const APP_BUILD = '8023574f24d0';
 
 const App = {
   lastReport: null,

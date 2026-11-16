@@ -1173,6 +1173,8 @@ const MultiplayerScreen = {
   onKey(e) { return false; },
   render() {
     if (!this.body) return;
+    this.el.classList.toggle('destination-screen', Multiplayer.inRoom());
+    if (Screens.current === this) Screens.syncMenuFrame(this.el);
     // a Ranked Play match takes the whole screen (lazer's RankedPlayScreen)
     // (a room's kind decides which lounge you return to when you leave it)
     // (Ranked Play, its lounge and its matches: no song playing behind them — MenuMusic.hush)

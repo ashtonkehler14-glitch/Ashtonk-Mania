@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16s', title: 'Menu and room layouts', sections: [
+    { title: 'Interface', items: ['Large menus extend to the bottom of the screen.', 'Active lounge rooms and ranked matches use the full screen; settings stays a compact floating panel.'] }
+  ] },
   { id: '2026.11.16r', title: 'Full-width toolbar', sections: [
     { title: 'Interface', items: ['The top bar now fills the screen width on full-screen menus such as song select.'] }
   ] },

@@ -1533,6 +1533,12 @@ const Screens = {
   history: [],
   busy: false,
   register(name, screen) { this.registry[name] = screen; },
+  syncMenuFrame(el = this.current && this.current.el) {
+    if (!el || !this.current) return;
+    const floating = this.currentName !== 'home' && this.currentName !== 'songselect' && !this.current.inGame && !this.current.transient && !el.classList.contains('destination-screen');
+    el.classList.toggle('menu-surface', floating);
+    $('#app').classList.toggle('full-screen-menu', this.currentName !== 'home' && !this.current.inGame && !floating);
+  },
   /** The screens' entrance animations (each ends where the element rests, so letting go of it changes nothing). */
   ENTRANCES: new Set(['floatingMenuIn', 'scrIn', 'scrInRight', 'scrInZoom', 'scrInMenu', 'ssWedgeIn', 'ssCarIn', 'ssFootIn', 'ovBodyIn', 'ovBgIn', 'wedgeIn']),
   async go(name, params = {}, { replace = false, transition = 'default' } = {}) {
@@ -1580,7 +1586,7 @@ const Screens = {
       }
       next.el = el;
       el.classList.add('screen', 'enter');
-      if (name !== 'home' && name !== 'songselect' && !next.inGame && !next.transient) el.classList.add('menu-surface');
+      this.syncMenuFrame(el);
       if (prevName === 'home') el.classList.add('after-menu');
       if (transition === 'zoom') el.classList.add('zoom');
       if (transition === 'right') el.classList.add('from-right');
@@ -1609,7 +1615,7 @@ const Screens = {
       $('#screens').appendChild(el);
       Toolbar.setActive(next.tab || name);
       $('#app').classList.toggle('in-game', !!next.inGame);
-      $('#app').classList.toggle('full-screen-menu', name !== 'home' && !next.inGame && !el.classList.contains('menu-surface'));
+      this.syncMenuFrame(el);
       Bus.emit('screen:changed', name);
     } finally { this.busy = false; }
   },
