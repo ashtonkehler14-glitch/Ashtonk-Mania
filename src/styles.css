@@ -5840,3 +5840,34 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
   .explorer.ov .ex-flabel { width: auto; padding-top: 0; }
   .explorer.ov .ex-flabel:empty { display: none; }
 }
+
+
+/* Quiet, static edge triangles keep the explorer lively without competing with covers. */
+.explorer.ov.menu-surface { background-color: #211d29; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='900' viewBox='0 0 1440 900'%3E%3Cg fill='none' stroke-linejoin='round' stroke-width='2'%3E%3Cpath stroke='%23ed4099' opacity='.12' d='M-70 510 100 215 270 510Z'/%3E%3Cpath stroke='%23a875dc' opacity='.13' d='M1260 110 1480 490 1040 490Z'/%3E%3Cpath stroke='%23d59400' opacity='.08' d='M1220 980 1380 700 1540 980Z'/%3E%3Cpath stroke='%23a875dc' opacity='.07' d='M-40 830 80 620 200 830Z'/%3E%3C/g%3E%3C/svg%3E"), radial-gradient(ellipse at 0 20%, #84305c14, transparent 45%), radial-gradient(ellipse at 100% 80%, #7136a61a, transparent 50%); background-size: cover; background-position: center; background-repeat: no-repeat; }
+
+/* Spectator chat stays a compact bottom-left panel, readable over any song. */
+.spectator-chat.gp-chat { width: min(380px, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 28px)); max-height: min(380px, calc(100dvh - 80px)); padding: 0; gap: 0; border: 1px solid #d4b8e026; border-radius: 16px; background: #25212d; box-shadow: 0 12px 32px #09060f66; overflow: hidden; }
+.spectator-chat-head { flex: none; padding: 12px 14px; background: linear-gradient(110deg, #91315c26, #70449714), #302938; border-bottom: 1px solid #ffffff0d; text-shadow: none; }
+.spectator-chat-head > div { min-width: 0; }
+.spectator-chat-head h3 { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; }
+.spectator-chat-head h3 .i { width: 16px; height: 16px; color: #ff91c4; }
+.spectator-chat-head span { margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #cbbdd1; }
+.spectator-chat-head .icon-btn { flex: none; background: transparent; color: #ded4e5; }
+.spectator-chat-head .icon-btn:hover { background: #ffffff0d; color: #fff; }
+.spectator-chat .gp-chat-list { flex: 1 1 auto; padding: 10px; max-height: min(240px, 40dvh); overscroll-behavior: contain; text-shadow: none; scrollbar-color: #85657d transparent; }
+.spectator-chat .gp-chat-l:not(.sys) { padding: 8px; gap: 9px; border-radius: 9px; }
+.spectator-chat .gp-chat-l.mine { background: #ed40990b; }
+.spectator-chat .chat-copy { flex: 1; }
+.spectator-chat .chat-copy > b { display: block; margin: 0 0 2px; font-size: 12px; line-height: 1.3; }
+.spectator-chat .chat-copy > span { color: #f2edf5; font-size: 13px; line-height: 1.5; }
+.spectator-chat .gp-chat-l .chat-avatar { margin-top: 1px; }
+.spectator-chat .gp-chat-l.sys { padding: 10px 8px; color: #c1b3c8; font-size: 12px; line-height: 1.5; font-style: normal; }
+.spectator-chat-send { flex: none; align-items: center; padding: 10px; gap: 8px; border-top: 1px solid #ffffff0d; background: #211d29; }
+.spectator-chat-send .gp-chat-in { height: 38px; padding: 0 12px; border: 1px solid #ffffff13; border-radius: 10px; background: #18151f; }
+.spectator-chat-send .gp-chat-in::placeholder { color: #bcaec5; }
+.spectator-chat.typing .gp-chat-in { background: #1c1723; border-color: #d568a1; box-shadow: none; }
+.spectator-chat-send .icon-btn { flex: none; width: 38px; height: 38px; border-radius: 10px; background: #9b306b; color: #fff; box-shadow: inset 0 1px #ffffff1a; }
+.spectator-chat-send .icon-btn:hover { background: #b83b80; }
+.spectator-chat .icon-btn:focus-visible { outline: 2px solid #f5a9d1; outline-offset: -3px; }
+.spec-host-chat { border-radius: 12px; background: #302938; border: 1px solid #d4b8e033; box-shadow: 0 4px 16px #0003; }
+.spec-host-chat > .i { color: #ff91c4; }

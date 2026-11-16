@@ -57,7 +57,7 @@ const SpectatorChat = {
     this.input.addEventListener('focus', () => this.panel?.classList.add('typing'));
     this.input.addEventListener('blur', () => this.panel?.classList.remove('typing'));
     const panel = this.panel = h('section.spectator-chat.gp-chat.open', { role: 'region', 'aria-label': 'Spectator chat' },
-      h('div.spectator-chat-head', h('div', h('h3', 'Spectator chat'), h('span', c.host ? 'You and your spectators' : `${c.name} and their spectators`)),
+      h('div.spectator-chat-head', h('div', h('h3', icon('chat'), 'Spectator chat'), h('span', c.host ? 'You and your spectators' : `${c.name} and their spectators`)),
         h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x'))),
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
