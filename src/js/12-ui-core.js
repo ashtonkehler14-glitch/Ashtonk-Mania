@@ -953,18 +953,6 @@ const NowPlaying = {
     this.bar.addEventListener('pointerdown', e => { seek(e); this.bar.setPointerCapture(e.pointerId); this._drag = true; });
     this.bar.addEventListener('pointermove', e => { if (this._drag) seek(e); });
     this.bar.addEventListener('pointerup', () => { this._drag = false; });
-    // lazer's DragContainer: the player follows a drag on a rubber band (distance^0.7) and springs back when let go
-    this.player.addEventListener('pointerdown', e => {
-      if (e.button !== 0 || e.target.closest('.np-ctl, .np-bar')) return;
-      const x0 = e.clientX, y0 = e.clientY;
-      this.el.classList.add('dragging');
-      const move = ev => {
-        const dx = ev.clientX - x0, dy = ev.clientY - y0, len = Math.hypot(dx, dy), k = len > 0 ? Math.pow(len, 0.7) / len : 0;
-        this.el.style.translate = `${dx * k}px ${dy * k}px`;
-      };
-      const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); this.el.classList.remove('dragging'); this.el.style.translate = ''; };
-      window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
-    });
     $('#app').appendChild(this.el);
     Bus.on('music:changed', () => { if (this.open) this.render(); }); // (closed, it's brought up to date when it opens)
     document.addEventListener('pointerdown', e => {
@@ -1592,7 +1580,7 @@ const Screens = {
       }
       next.el = el;
       el.classList.add('screen', 'enter');
-      if (name !== 'home' && !next.inGame && !next.transient) el.classList.add('menu-surface');
+      if (name !== 'home' && name !== 'songselect' && !next.inGame && !next.transient) el.classList.add('menu-surface');
       if (prevName === 'home') el.classList.add('after-menu');
       if (transition === 'zoom') el.classList.add('zoom');
       if (transition === 'right') el.classList.add('from-right');

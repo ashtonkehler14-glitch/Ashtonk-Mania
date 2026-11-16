@@ -3,9 +3,9 @@
  *  - Bundled files (Neru pictures, avatars, icons, the Kori skin): served from the cache and refreshed in the
  *    background (requests that ask for a fresh copy, like the Kori upgrade check, go to the network first).
  *  - Google Fonts: cached, so the text looks right offline.
- *  - /api/* (search, downloads, multiplayer) and other sites (mirrors, covers, previews) are never cached here.
+ *  - /api/* (downloads, multiplayer) and previews stay online; default explorer cover art is saved separately.
  *  Beatmaps, skins, scores and settings live in IndexedDB, not in these caches. */
-const VERSION = 'b0e55865e89a'; // (changes with every build, so browsers pick up a new service worker after a deploy)
+const VERSION = '167f99f99bb3'; // (changes with every build, so browsers pick up a new service worker after a deploy)
 const PAGES = 'ashtonk-pages', ASSETS = 'ashtonk-assets', FONTS = 'ashtonk-fonts', SHARED = 'ashtonk-shared';
 const CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'neru.png', 'neru-happy.png', 'avatars/avatars.json'];
 
@@ -40,6 +40,14 @@ self.addEventListener('fetch', e => {
     if (url.pathname.startsWith('/api/')) return; // live data
     if (req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) { e.respondWith(page(req, e)); return; }
     e.respondWith(req.cache === 'no-cache' || req.cache === 'reload' || req.cache === 'no-store' ? networkFirst(req, ASSETS) : cacheFirst(req, ASSETS, e));
+    return;
+  }
+  // Only artwork explicitly saved from the default explorer page is persisted here.
+  if (req.destination === 'image') {
+    e.respondWith((async () => {
+      try { const hit = await (await caches.open('am-explorer-covers-v1')).match(req); if (hit) return hit; } catch {}
+      return fetch(req);
+    })());
     return;
   }
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') e.respondWith(cacheFirst(req, FONTS, e));

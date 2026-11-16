@@ -102,9 +102,9 @@ svg.i.phi { fill: currentColor; stroke: none; }
   transition: transform 500ms var(--oq), opacity 125ms var(--oq);
 }
 #app.in-game #toolbar, #app.hide-toolbar #toolbar { transform: translateY(-100%); opacity: 0; pointer-events: none; transition: transform 500ms var(--oq), opacity 500ms cubic-bezier(.64, 0, .78, 0); }
-/* the shade under the bar while the pointer is on it, so the tooltips read over anything (2.5s in, 0.2s out) */
-#toolbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 80px; z-index: 1; pointer-events: none; background: linear-gradient(rgba(0, 0, 0, .7), rgba(0, 0, 0, 0)); opacity: 0; transition: opacity 200ms var(--oq); }
-#toolbar:hover::after { opacity: 1; transition-duration: 2500ms; }
+/* A quiet local shadow keeps the toolbar separate without a black hover curtain. */
+#toolbar { box-shadow: inset 0 0 0 1px #ffffff0c, 0 4px 14px #08050d26; }
+#toolbar::after { display: none; }
 .tb-group { display: flex; align-items: stretch; }
 .tb-spacer { flex: 1; }
 /* a ToolbarButton: 40px wide, the icon 20px; the highlight boxes sit 3px inside it with 6px corners and add light */
@@ -5697,3 +5697,20 @@ button.chat-avatar:disabled { cursor: default; }
 .nf-panel { top: calc(var(--toolbar-h) + 10px); right: 12px; bottom: 12px; border: 1px solid #ffffff0c; background: #25212d; overflow: hidden; }
 .np-panel { right: 12px; border: 1px solid #ffffff0c; background: #25212d; overflow: hidden; }
 .np-player { border-radius: 0; }
+
+/* Menu surfaces stay fixed; content scrolls vertically inside them. */
+.screen-body, .mp-body, .ov-content, .sp-main, .cl-body { overflow-x: hidden; overscroll-behavior-x: none; }
+.screen.menu-surface, .settings-panel, .nf-panel, .np-panel { max-width: calc(100 * var(--vw) - 24px); }
+.settings-panel { animation: floatingPanelIn calc(280ms * var(--anim)) var(--ease-out) both; }
+@keyframes floatingPanelIn { from { opacity: 0; clip-path: inset(0 0 10% 0 round 20px); } to { opacity: 1; clip-path: inset(0 round 20px); } }
+@media (prefers-reduced-motion: reduce) { .settings-panel { animation: none; } }
+
+.screen.menu-surface.enter:not(.zoom):not(.from-right), .screen.menu-surface.enter.zoom, .screen.menu-surface.enter.from-right {
+  animation: floatingMenuIn calc(280ms * var(--anim)) var(--ease-out) both;
+}
+
+.ex-card .ex-spec i, .ex-spec-more i {
+  width: 12px; height: 12px; border-radius: 0; box-shadow: none;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 35%);
+}
+.ex-spec-more::before { display: none; }

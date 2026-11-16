@@ -99,6 +99,13 @@ const OnlineBeatmaps = {
    *  page. Each set shows its difficulties that match the keys and stars, easiest first (WOM's useFilteredBeatmaps). */
   async search(p) {
     p = { status: 'leaderboard', keys: [], minStars: 0, maxStars: 20, nsfw: true, ...p };
+    const saveDefault = !p.q && !p.cursor && !p.sort && p.status === 'leaderboard' && !p.keys.length && p.minStars === 0 && p.maxStars === 20 && !p.genre && !p.language && !(p.extra || []).length && p.nsfw !== false;
+    let saved = null;
+    if (saveDefault) { try { saved = await DB.kvGet('explorer.defaultPage.v1'); } catch {} }
+    if (saved && Array.isArray(saved.data?.sets) && (navigator.onLine === false || Date.now() - saved.at < 3600000)) {
+      this._savedCoverIds = new Set(saved.data.sets.map(s => s.id));
+      return saved.data;
+    }
     if (navigator.onLine === false) throw new Error('You\'re offline. Connect to the internet to browse and download beatmaps — this page searches again by itself once you\'re back online.');
     if (!await this.checkApi()) throw this.serverDown();
     const lo = p.minStars > 0 ? p.minStars : null, hi = p.maxStars < 20 ? p.maxStars : null;
@@ -117,7 +124,12 @@ const OnlineBeatmaps = {
     const sets = (d.beatmapsets || []).map(x => this.normalize(x)).filter(Boolean)
       .map(s => ({ ...s, diffs: s.diffs.filter(x => (!p.keys.length || p.keys.includes(x.keys)) && (lo === null || x.stars >= lo) && (hi === null || x.stars <= hi)) }))
       .filter(s => s.diffs.length);
-    return { sets, cursor: d.cursor_string || null, hasMore: !!d.cursor_string, total: d.total ?? null };
+    const data = { sets, cursor: d.cursor_string || null, hasMore: !!d.cursor_string, total: d.total ?? null };
+    if (saveDefault) {
+      this._savedCoverIds = new Set(sets.map(s => s.id));
+      try { await DB.kvSet('explorer.defaultPage.v1', { at: Date.now(), data }); } catch {}
+    }
+    return data;
   },
   /** Several pages of one search, one after another (osu! pages with a cursor), as many as arrive within `ms`. */
   async searchPages(p, n, ms = 8000) {
@@ -274,7 +286,7 @@ const OnlineBeatmaps = {
     const urls = [...new Set(kinds.map(k => this.coverURL(id, k)))]; // (sources with one cover size give one URL)
     // a cover that has loaded before goes straight in, so rebuilt cards don't fade in again
     const known = this._covers.get(urls.join('|'));
-    if (known) { el.style.transition = 'none'; el.style.backgroundImage = `url("${known}")`; done && done(null); return; }
+    if (known) { this.saveDefaultCover(id, known); el.style.transition = 'none'; el.style.backgroundImage = `url("${known}")`; done && done(null); return; }
     PicWait.add(el); // (a list scrolled with the wheel waits for it — see PicWait)
     const next = i => {
       if (i >= urls.length) { PicWait.done(el); failed && failed(); return; }
@@ -282,11 +294,22 @@ const OnlineBeatmaps = {
       // (decoded off the main thread before it's shown, so a card scrolling in doesn't stall a frame decoding it)
       // (`queue`: the picture goes on in the page's next frame along with everything else, not the moment it's decoded —
       // a change between frames made the next scroll wait while the browser worked the page out again)
-      img.onload = () => { const put = () => { el.style.backgroundImage = `url("${img.src}")`; PicWait.done(el); done && done(img); }; const show = () => { this._covers.set(urls.join('|'), img.src); if (queue) queue(put); else put(); }; (img.decode ? img.decode() : Promise.resolve()).then(show, show); };
+      img.onload = () => { this.saveDefaultCover(id, img.src); const put = () => { el.style.backgroundImage = `url("${img.src}")`; PicWait.done(el); done && done(img); }; const show = () => { this._covers.set(urls.join('|'), img.src); if (queue) queue(put); else put(); }; (img.decode ? img.decode() : Promise.resolve()).then(show, show); };
       img.onerror = () => next(i + 1);
       img.src = urls[i];
     };
     next(0);
+  },
+  async saveDefaultCover(id, url) {
+    if (!this._savedCoverIds?.has(id) || typeof caches === 'undefined') return;
+    try {
+      const cache = await caches.open('am-explorer-covers-v1');
+      if (await cache.match(url)) return;
+      const response = await fetch(url, { mode: 'no-cors', cache: 'force-cache' });
+      if (response.ok || response.type === 'opaque') await cache.put(url, response);
+      const keys = await cache.keys();
+      for (const key of keys.slice(0, Math.max(0, keys.length - 120))) await cache.delete(key);
+    } catch { /* A full disk or unavailable cache must not break covers. */ }
   },
   previewURL(id) {
     const src = Settings.get('online.previewSource');
@@ -327,6 +350,7 @@ const ExplorerScreen = {
   audio: null,
 
   enter(params = {}) {
+    this._active = true;
     const el = h('div.explorer.ov', { style: { '--o-h': OVERLAY_HUES.blue } });
     const st = this.state;
     // opened from a multiplayer room: every card picks (host) or suggests (other players) a difficulty for the room
@@ -413,7 +437,7 @@ const ExplorerScreen = {
       clearTimeout(this._scrollT); this._scrollT = setTimeout(() => { this._scrolling = false; this._shieldOff = true; this.schedule(); }, 160);
     }, { passive: true });
     el.append(scroller, this.topBtn, h('div.page-back', backButton(() => Screens.back()))); // (back, as on every other page — a phone has no Esc)
-    this.io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting) && this.hasMore && !this.loading) this.loadMore(); }, { root: scroller, rootMargin: '0px 0px 3000px 0px' });
+    this.io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting) && this.hasMore && !this.loading) this.loadMore(); }, { root: scroller, rootMargin: '0px 0px 250px 0px' });
     this.io.observe(this.sentinel);
     // back online after an offline error: search again by itself
     const online = () => { if (this.error) this.newSearch(); };
@@ -423,10 +447,10 @@ const ExplorerScreen = {
     this._unsub = [Bus.on('library:changed', () => this.renderResults()),
       // (a difficulty's global board, asked for by its beatmap id, for the open beatmap overlay)
       Bus.on('lb', m => { if (!m.id) return; (this.lbById ||= new Map()).set(m.id, { ...m, at: Date.now() }); if (this.setView && this.setView.diff && this.setView.diff.id === m.id) this.renderSet(); }), () => window.removeEventListener('online', online), () => window.removeEventListener('resize', resized)];
-    if (!this.results.length) this.newSearch(); else this.renderResults();
+    if (!this.results.length || this.page === 0) this.newSearch(); else this.renderResults();
     return el;
   },
-  leave() { cancelAnimationFrame(this._fr); this._fr = 0; this._q = []; clearTimeout(this._scrollT); this.io && this.io.disconnect(); this._ringRO && this._ringRO.disconnect(); (this._unsub || []).forEach(f => f()); this.stopPreview(); this.closeSet(); },
+  leave() { this._active = false; this.token = {}; this.loading = false; this._replace = false; cancelAnimationFrame(this._fr); this._fr = 0; this._q = []; clearTimeout(this._scrollT); this.io && this.io.disconnect(); this._ringRO && this._ringRO.disconnect(); (this._unsub || []).forEach(f => f()); this.stopPreview(); this.closeSet(); },
   /** One track with two handles (minimum and maximum stars); the label follows the handles while dragging. */
   starSliders() {
     const st = this.state;
@@ -459,13 +483,14 @@ const ExplorerScreen = {
   async newSearch() {
     const st = this.state;
     if (st.sort === 'relevance' && !st.q) { st.sort = 'ranked'; st.dir = 'desc'; this.renderFilters && this.renderFilters(); }
-    this.page = 0; this.cursor = null; this.hasMore = false; this.token = {};
+    this.page = 0; this.cursor = null; this.hasMore = false; this.loading = false; this.token = {};
     // as lazer's listing: the old results stay, dimmed under the spinner, until the new ones are in to fade in over them
     // (emptying the list first blanked the page and jumped it up for every letter typed)
     if (this.results.length && this.grid) { this._replace = true; this.grid.classList.add('ex-dim'); } else { this.results = []; this.renderResults(); }
     await this.loadMore();
   },
   async loadMore() {
+    if (this.loading || this._active === false) return;
     const tok = this.token || (this.token = {});
     this.loading = true; this.renderStatus();
     try {
@@ -492,7 +517,7 @@ const ExplorerScreen = {
         if (this.hasMore && this.sentinel && this.sentinel.isConnected) requestAnimationFrame(() => {
           if (tok !== this.token || this.loading || !this.hasMore) return;
           const r = this.sentinel.getBoundingClientRect();
-          if (r.top < innerHeight + 600) this.loadMore();
+          if (r.top < innerHeight + 200) this.loadMore();
         });
       }
     }
@@ -625,7 +650,7 @@ const ExplorerScreen = {
     const rowH = this._m.rowH || 110, rows = Math.ceil(all.length / cols);
     const st = this._st ?? (sc ? sc.scrollTop : 0);
     let from = 0, to = rows;
-    if (sc && all.length > cols * 12) {
+    if (sc && all.length > cols * 2) {
       const range = extra => [clamp(Math.floor((st - gridTop - extra) / rowH), 0, rows), clamp(Math.ceil((st - gridTop + vh + extra) / rowH), 0, rows)];
       // what's in the page already is kept while it still covers the screen with a screen to spare; past that, the
       // window moves on to two screens either side — a few rows at a time as you scroll
@@ -634,10 +659,9 @@ const ExplorerScreen = {
       // (it moves a row at a time as you scroll — a row in at one end, a row out at the other — rather than a whole
       // screen of cards at once now and then: the same work, spread evenly, so no single frame is heavy)
       [from, to] = range(vh * 1.25);
-      // covers start loading five screens ahead (either way), so a card scrolling in already has its picture even
-      // after a hard flick
+      // Start artwork just beyond the viewport, rather than fetching several screens at once.
       const lite = this.lite();
-      const [pa, pb] = range(vh * (lite ? 3 : 5));
+      const [pa, pb] = range(vh * .5);
       // (the cards ahead are built a few a frame, so a new page of results never lands in one long frame)
       let budget = lite ? 3 : 6, more = false;
       for (let i = pa * cols; i < Math.min(all.length, pb * cols); i++) {
@@ -647,7 +671,7 @@ const ExplorerScreen = {
         const f = e.el._loadCovers; if (f) { e.el._loadCovers = null; f(); }
       }
       if (more) { this._wantWin = true; this.schedule(); }
-      // and the next page is asked for long before the end of the list comes into view
+      // Fetch the next page as the viewer approaches the end of the available rows.
       if (this.hasMore && !this.loading && !this.error && pb >= rows - 2) this.loadMore();
     } else for (const e of all) { const c = this.cardEl(e), f = c._loadCovers; if (f) { c._loadCovers = null; f(); } }
     this._win = { from, to, cols, n: all.length };
@@ -809,7 +833,7 @@ const ExplorerScreen = {
     const hover = h('div.bso-diffhover');
     const diffs = h('div.bso-diffs', ...set.diffs.map(x => {
       const b = h(`button.bso-diff${x === d ? '.on' : ''}`, { style: { '--sc': starColour(x.stars) }, 'aria-label': `${x.version} ${x.stars.toFixed(2)} stars`,
-        onclick: () => { this.setView.diff = x; UISounds.click(); this.renderSet(); } }, icon('mania'));
+        onclick: () => { this.setView.diff = x; UISounds.click(); this.renderSet(); } }, icon('star'));
       b.addEventListener('pointerenter', () => { UISounds.hover(); clearEl(hover).append(h('b', x.version), starBadge(x.stars)); });
       b.addEventListener('pointerleave', () => clearEl(hover).append(h('b', d.version), starBadge(d.stars)));
       return b;
