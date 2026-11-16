@@ -48,6 +48,18 @@ try {
     await page.screenshot({path:'/tmp/explorer-artwork-cards-idle.png'});
     await first.hover();await page.waitForTimeout(250);
     assert.equal(await side.evaluate(el=>getComputedStyle(el).visibility),'visible','Hover reveals actions');
+    const checkRail=async()=>{
+      const fit=await first.evaluate(card=>{
+        const rail=card.querySelector('.ex-side'),css=getComputedStyle(rail),shape=getComputedStyle(card,'::before');
+        const matrix=new DOMMatrix(css.transform),iconMatrix=new DOMMatrix(getComputedStyle(rail.querySelector('.i')).transform);
+        return {rail:css.transform,shape:shape.transform,right:css.right,edge:shape.right,top:rail.offsetTop,height:rail.offsetHeight,cardHeight:card.offsetHeight,iconSkew:matrix.c+iconMatrix.c};
+      });
+      assert.equal(fit.rail,fit.shape,'Action rail follows the card slant');
+      assert.equal(fit.right,fit.edge,'Action rail meets the artwork edge');
+      assert.equal(fit.top,0);assert.equal(fit.height,fit.cardHeight,'Action rail fits the card height');
+      assert.ok(Math.abs(fit.iconSkew)<0.001,'Action icons stay upright');
+    };
+    await checkRail();
     await first.getByRole('button',{name:'Like',exact:true}).click();assert.equal(await page.evaluate(()=>ExplorerScreen.liked().has(1)),true);
     await first.getByRole('button',{name:'Download',exact:true}).click();assert.equal(await page.evaluate(()=>window._downloadPick),1);
     assert.equal(await page.locator('.bso').count(),0,'Action clicks do not open the beatmap details');
@@ -56,6 +68,7 @@ try {
     assert.equal(await side.evaluate(el=>getComputedStyle(el).visibility),'hidden','Actions disappear when hover ends');
     await first.focus();await page.keyboard.press('Tab');await page.waitForTimeout(250);assert.ok(await page.locator('.ex-card:focus-visible .ex-side, .ex-card:focus-within .ex-side').first().isVisible(),'Keyboard focus reveals actions too');
     const focusedCard=page.locator('.ex-card:focus-visible, .ex-card:focus-within').first();
+    await checkRail();
     const focusedId=Number(await focusedCard.getAttribute('data-id'));
     const likedBefore=await page.evaluate(id=>ExplorerScreen.liked().has(id),focusedId);
     await focusedCard.getByRole('button',{name:'Like',exact:true}).focus();await page.keyboard.press('Enter');

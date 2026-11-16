@@ -5784,7 +5784,14 @@ body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-set
 .explorer .ex-cb { position: relative; z-index: 1; padding: 0 8px 0 14px; }
 .explorer .ex-card:hover .ex-cb, .explorer .ex-card:focus-visible .ex-cb,
 .explorer .ex-card:focus-within:not(:focus) .ex-cb { padding-right: 54px; }
-.explorer .ex-side { z-index: 2; right: 10px; top: 0; bottom: 0; border-radius: 0 16px 16px 0; transform: skewX(-8deg); }
+/* Keep the action rail on the same slant as the artwork, including hover/focus:
+   the shared card hover rule otherwise resets its transform to none. */
+.explorer .ex-side,
+.explorer .ex-card:hover .ex-side,
+.explorer .ex-card:focus-visible .ex-side,
+.explorer .ex-card:focus-within:not(:focus) .ex-side {
+  z-index: 2; right: 10px; top: 0; bottom: 0; border-radius: 0 16px 16px 0; transform: skewX(-8deg);
+}
 .explorer .ex-side-btn .i { transform: skewX(8deg); }
 .explorer .ex-card .ex-foot { gap: 6px; }
 .bso-like[aria-pressed="true"] { color: #ff91c4; }

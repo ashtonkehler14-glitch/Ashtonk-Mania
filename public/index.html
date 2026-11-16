@@ -5795,7 +5795,14 @@ body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-set
 .explorer .ex-cb { position: relative; z-index: 1; padding: 0 8px 0 14px; }
 .explorer .ex-card:hover .ex-cb, .explorer .ex-card:focus-visible .ex-cb,
 .explorer .ex-card:focus-within:not(:focus) .ex-cb { padding-right: 54px; }
-.explorer .ex-side { z-index: 2; right: 10px; top: 0; bottom: 0; border-radius: 0 16px 16px 0; transform: skewX(-8deg); }
+/* Keep the action rail on the same slant as the artwork, including hover/focus:
+   the shared card hover rule otherwise resets its transform to none. */
+.explorer .ex-side,
+.explorer .ex-card:hover .ex-side,
+.explorer .ex-card:focus-visible .ex-side,
+.explorer .ex-card:focus-within:not(:focus) .ex-side {
+  z-index: 2; right: 10px; top: 0; bottom: 0; border-radius: 0 16px 16px 0; transform: skewX(-8deg);
+}
 .explorer .ex-side-btn .i { transform: skewX(8deg); }
 .explorer .ex-card .ex-foot { gap: 6px; }
 .bso-like[aria-pressed="true"] { color: #ff91c4; }
@@ -25473,6 +25480,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16x', title: 'Better-fitting beatmap actions', sections: [
+    { title: 'Beatmap explorer', items: ['Favourite and download buttons now follow the slanted card edge, with upright icons and matching corners.'] }
+  ] },
   { id: '2026.11.16w', title: 'Artwork-backed beatmap cards', sections: [
     { title: 'Beatmap explorer', items: ['Song cards now use rounded, slanted artwork panels with a difficulty-coloured edge.', 'Favourite and download actions still appear on hover or keyboard focus. Favourites are also available in beatmap details.'] }
   ] },
@@ -34988,7 +34998,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'befad9d501f3';
+const APP_BUILD = '9b5437d03bfa';
 
 const App = {
   lastReport: null,
