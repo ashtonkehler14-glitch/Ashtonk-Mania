@@ -503,7 +503,7 @@ const RankedMatch = {
   },
   buildChat() {
     this.chatList = h('div.rkm-chatlist');
-    for (const m of this.M.chat.slice(-30)) this.chatList.append(this.chatLine(m));
+    for (const m of this.M.chat.slice(-30)) this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
     // (watching: their chat, read-only)
     const input = this.watching ? null : h('input.input', { placeholder: 'Chat with your opponent…', maxlength: 300, 'aria-label': 'Chat message' });
     if (input) input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') this.M.say(input); if (e.key === 'Escape') input.blur(); });
@@ -511,11 +511,11 @@ const RankedMatch = {
     requestAnimationFrame(() => { this.chatList.scrollTop = this.chatList.scrollHeight; });
     return box;
   },
-  chatLine(m) { return m.from ? h(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, h('b', m.name), h('span', m.text)) : h('div.rkm-msg.sys', m.text); },
+  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text) : h('div.rkm-msg.sys', m.text); },
   addChat(m) {
     if (!this.chatList) return;
-    this.chatList.append(this.chatLine(m));
-    while (this.chatList.childNodes.length > 60) this.chatList.firstChild.remove();
+    this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
+    trimChatLines(this.chatList, 60);
     this.chatList.scrollTop = this.chatList.scrollHeight;
   },
 

@@ -81,8 +81,8 @@ const SpectatorChat = {
     const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
     line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    this.list.append(line);
-    while (this.list.children.length > 100) this.list.firstChild.remove();
+    this.list.append(groupChatLine(this.list, line, l.from, l.at));
+    trimChatLines(this.list, 100);
     if (scroll && (atEnd || l.from.pid === Presence.pid())) this.list.scrollTop = this.list.scrollHeight;
   },
   close(force = false) { if (!force && Spectate.target) return; this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },

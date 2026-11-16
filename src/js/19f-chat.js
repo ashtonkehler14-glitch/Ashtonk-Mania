@@ -194,12 +194,13 @@ const Chat = {
     const act = /^\/me\s+/.test(l.text || '');
     if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
     // (/me: lazer's action line — the name and what they did, in italics)
-    else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
+    else this.lines.append(groupChatLine(this.lines, h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
       chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
-      h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)));
+      h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)), l.from, l.at));
+    trimChatLines(this.lines, 200);
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },
   paintList() {

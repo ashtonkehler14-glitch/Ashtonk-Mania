@@ -322,7 +322,7 @@ const GameplayScreen = {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
     const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
-    for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(el); }
+    for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
     this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); const t = this.gpChatIn.value.trim(); if (t) Multiplayer.send({ t: 'chat', text: t }); this.gpChatIn.value = ''; this.gpChatIn.blur(); }
@@ -333,7 +333,7 @@ const GameplayScreen = {
     this.hud.append(this.gpChat);
     this._gpChatOff = Bus.on('mp:chat', m => {
       const el = line(m); if (!el) return;
-      list.append(el); while (list.children.length > 5) list.firstChild.remove();
+      list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); trimChatLines(list, 5);
       this.gpChat.classList.add('fresh'); clearTimeout(this._gpChatT); this._gpChatT = setTimeout(() => this.gpChat && this.gpChat.classList.remove('fresh'), 5000);
     });
   },

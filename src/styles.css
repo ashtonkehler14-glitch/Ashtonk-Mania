@@ -5948,3 +5948,20 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .chat-mention-option .avatar { flex: none; border-radius: 7px; }
 .chat-mention-option[aria-selected=true], .chat-mention-option:hover { background: #8d285f; }
 .spectator-chat .gp-chat-l.mention { background: #a875dc1a; box-shadow: inset 2px 0 #ff91c4; }
+
+
+/* Repeated messages keep their own text and timestamp without repeating the portrait/name. */
+.chat-continuation > .chat-avatar { visibility: hidden; pointer-events: none; height: 0 !important; min-height: 0; margin-top: 0; }
+.chat-continuation > .chat-copy > b, .ch-line.chat-continuation > .ch-name { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.ch-line.chat-continuation { padding-top: 1px; padding-bottom: 1px; }
+.ch-line.chat-continuation > .ch-text { grid-row: 1; }
+.ch-line.chat-continuation > .ch-time { opacity: 0; }
+.ch-line.chat-continuation:hover > .ch-time { opacity: .8; }
+.spectator-chat .gp-chat-l.chat-continuation { padding-top: 0; padding-bottom: 4px; }
+.mp-msg .chat-copy > b { display: block; margin-bottom: 2px; }
+.mp-msg.chat-continuation, .gp-chat-l.chat-continuation { padding-top: 0; }
+.rkm-msg:not(.sys) { display: flex; align-items: flex-start; gap: 8px; }
+.rkm-msg .chat-avatar { flex: none; }
+.rkm-msg .chat-copy { flex: 1; }
+.rkm-msg .chat-copy > b { display: block; margin-bottom: 2px; }
+.rkm-msg.chat-continuation { padding-top: 0; }

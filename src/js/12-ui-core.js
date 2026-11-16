@@ -82,6 +82,21 @@ function compactChatLine(cls, from, text) {
   return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
 }
 
+/** Consecutive chat lines share a header for five minutes; system/action lines break the group. */
+function groupChatLine(list, line, from, at) {
+  if (!from || line.matches('.sys, .local, .act, .suggest')) return line;
+  const sender = from.pid ? 'pid:' + from.pid : from.from ? 'id:' + from.from : 'name:' + from.name;
+  const stamp = Number(at) || Date.now(), previous = list.lastElementChild;
+  line.dataset.chatSender = sender; line.dataset.chatAt = String(stamp);
+  const gap = previous ? stamp - Number(previous.dataset.chatAt) : Infinity;
+  line.classList.toggle('chat-continuation', !!previous && previous.dataset.chatSender === sender && gap >= 0 && gap < 300000);
+  return line;
+}
+function trimChatLines(list, limit) {
+  while (list.children.length > limit) list.firstElementChild.remove();
+  list.firstElementChild?.classList.remove('chat-continuation');
+}
+
 /** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
   const key = name + '|' + cls;

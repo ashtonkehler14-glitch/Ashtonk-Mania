@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ad', title: 'Grouped chat messages', sections: [
+    { title: 'Chat', items: ['Consecutive messages from the same player share one picture and name. A different speaker or a five-minute pause starts a new group.'] }
+  ] },
   { id: '2026.11.16ac', title: 'Mention players in chat', sections: [
     { title: 'Chat', items: ['Type @ to find a player, then choose their name with a tap or the arrow keys and Enter.', 'Mentions notify the named player in lobby, room and spectator chat. Pop-ups wait until their song ends and respect Do not disturb.'] }
   ] },

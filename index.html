@@ -5959,6 +5959,23 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .chat-mention-option .avatar { flex: none; border-radius: 7px; }
 .chat-mention-option[aria-selected=true], .chat-mention-option:hover { background: #8d285f; }
 .spectator-chat .gp-chat-l.mention { background: #a875dc1a; box-shadow: inset 2px 0 #ff91c4; }
+
+
+/* Repeated messages keep their own text and timestamp without repeating the portrait/name. */
+.chat-continuation > .chat-avatar { visibility: hidden; pointer-events: none; height: 0 !important; min-height: 0; margin-top: 0; }
+.chat-continuation > .chat-copy > b, .ch-line.chat-continuation > .ch-name { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.ch-line.chat-continuation { padding-top: 1px; padding-bottom: 1px; }
+.ch-line.chat-continuation > .ch-text { grid-row: 1; }
+.ch-line.chat-continuation > .ch-time { opacity: 0; }
+.ch-line.chat-continuation:hover > .ch-time { opacity: .8; }
+.spectator-chat .gp-chat-l.chat-continuation { padding-top: 0; padding-bottom: 4px; }
+.mp-msg .chat-copy > b { display: block; margin-bottom: 2px; }
+.mp-msg.chat-continuation, .gp-chat-l.chat-continuation { padding-top: 0; }
+.rkm-msg:not(.sys) { display: flex; align-items: flex-start; gap: 8px; }
+.rkm-msg .chat-avatar { flex: none; }
+.rkm-msg .chat-copy { flex: 1; }
+.rkm-msg .chat-copy > b { display: block; margin-bottom: 2px; }
+.rkm-msg.chat-continuation { padding-top: 0; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -14428,6 +14445,21 @@ function compactChatLine(cls, from, text) {
   return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
 }
 
+/** Consecutive chat lines share a header for five minutes; system/action lines break the group. */
+function groupChatLine(list, line, from, at) {
+  if (!from || line.matches('.sys, .local, .act, .suggest')) return line;
+  const sender = from.pid ? 'pid:' + from.pid : from.from ? 'id:' + from.from : 'name:' + from.name;
+  const stamp = Number(at) || Date.now(), previous = list.lastElementChild;
+  line.dataset.chatSender = sender; line.dataset.chatAt = String(stamp);
+  const gap = previous ? stamp - Number(previous.dataset.chatAt) : Infinity;
+  line.classList.toggle('chat-continuation', !!previous && previous.dataset.chatSender === sender && gap >= 0 && gap < 300000);
+  return line;
+}
+function trimChatLines(list, limit) {
+  while (list.children.length > limit) list.firstElementChild.remove();
+  list.firstElementChild?.classList.remove('chat-continuation');
+}
+
 /** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
   const key = name + '|' + cls;
@@ -21157,7 +21189,7 @@ const GameplayScreen = {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
     const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
-    for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(el); }
+    for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
     this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); const t = this.gpChatIn.value.trim(); if (t) Multiplayer.send({ t: 'chat', text: t }); this.gpChatIn.value = ''; this.gpChatIn.blur(); }
@@ -21168,7 +21200,7 @@ const GameplayScreen = {
     this.hud.append(this.gpChat);
     this._gpChatOff = Bus.on('mp:chat', m => {
       const el = line(m); if (!el) return;
-      list.append(el); while (list.children.length > 5) list.firstChild.remove();
+      list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); trimChatLines(list, 5);
       this.gpChat.classList.add('fresh'); clearTimeout(this._gpChatT); this._gpChatT = setTimeout(() => this.gpChat && this.gpChat.classList.remove('fresh'), 5000);
     });
   },
@@ -25704,6 +25736,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ad', title: 'Grouped chat messages', sections: [
+    { title: 'Chat', items: ['Consecutive messages from the same player share one picture and name. A different speaker or a five-minute pause starts a new group.'] }
+  ] },
   { id: '2026.11.16ac', title: 'Mention players in chat', sections: [
     { title: 'Chat', items: ['Type @ to find a player, then choose their name with a tap or the arrow keys and Enter.', 'Mentions notify the named player in lobby, room and spectator chat. Pop-ups wait until their song ends and respect Do not disturb.'] }
   ] },
@@ -30188,7 +30223,8 @@ const MultiplayerScreen = {
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)
     const l = this.chatList, atEnd = l.scrollHeight - l.scrollTop - l.clientHeight < 48;
-    l.append(el);
+    l.append(groupChatLine(l, el, m.from ? m : null, m.ts));
+    trimChatLines(l, 200);
     if (scroll && (atEnd || m.from === Multiplayer.me)) l.scrollTop = l.scrollHeight;
     if (scroll && m.from && m.from !== Multiplayer.me && !this._chatVis && this.chatPill) {
       this._chatNew++;
@@ -30926,7 +30962,7 @@ const RankedMatch = {
   },
   buildChat() {
     this.chatList = h('div.rkm-chatlist');
-    for (const m of this.M.chat.slice(-30)) this.chatList.append(this.chatLine(m));
+    for (const m of this.M.chat.slice(-30)) this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
     // (watching: their chat, read-only)
     const input = this.watching ? null : h('input.input', { placeholder: 'Chat with your opponent…', maxlength: 300, 'aria-label': 'Chat message' });
     if (input) input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') this.M.say(input); if (e.key === 'Escape') input.blur(); });
@@ -30934,11 +30970,11 @@ const RankedMatch = {
     requestAnimationFrame(() => { this.chatList.scrollTop = this.chatList.scrollHeight; });
     return box;
   },
-  chatLine(m) { return m.from ? h(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, h('b', m.name), h('span', m.text)) : h('div.rkm-msg.sys', m.text); },
+  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text) : h('div.rkm-msg.sys', m.text); },
   addChat(m) {
     if (!this.chatList) return;
-    this.chatList.append(this.chatLine(m));
-    while (this.chatList.childNodes.length > 60) this.chatList.firstChild.remove();
+    this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
+    trimChatLines(this.chatList, 60);
     this.chatList.scrollTop = this.chatList.scrollHeight;
   },
 
@@ -33200,12 +33236,13 @@ const Chat = {
     const act = /^\/me\s+/.test(l.text || '');
     if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
     // (/me: lazer's action line — the name and what they did, in italics)
-    else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
+    else this.lines.append(groupChatLine(this.lines, h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
       chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
-      h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)));
+      h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)), l.from, l.at));
+    trimChatLines(this.lines, 200);
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },
   paintList() {
@@ -35218,8 +35255,8 @@ const SpectatorChat = {
     const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
     line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    this.list.append(line);
-    while (this.list.children.length > 100) this.list.firstChild.remove();
+    this.list.append(groupChatLine(this.list, line, l.from, l.at));
+    trimChatLines(this.list, 100);
     if (scroll && (atEnd || l.from.pid === Presence.pid())) this.list.scrollTop = this.list.scrollHeight;
   },
   close(force = false) { if (!force && Spectate.target) return; this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
@@ -35232,7 +35269,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '158d9f643983';
+const APP_BUILD = 'e467f37429a9';
 
 const App = {
   lastReport: null,

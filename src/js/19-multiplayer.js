@@ -1566,7 +1566,8 @@ const MultiplayerScreen = {
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)
     const l = this.chatList, atEnd = l.scrollHeight - l.scrollTop - l.clientHeight < 48;
-    l.append(el);
+    l.append(groupChatLine(l, el, m.from ? m : null, m.ts));
+    trimChatLines(l, 200);
     if (scroll && (atEnd || m.from === Multiplayer.me)) l.scrollTop = l.scrollHeight;
     if (scroll && m.from && m.from !== Multiplayer.me && !this._chatVis && this.chatPill) {
       this._chatNew++;
