@@ -28,6 +28,19 @@ In the mods panel, enable **Percy** to adjust its tail offset from −500 to +50
 
 `npx wrangler deploy` puts it on Cloudflare: the game, beatmap search and downloads, and online multiplayer.
 
+For Cloudflare Workers Builds, use these production settings:
+
+- Production branch: `main`
+- Build command: `pnpm run build`
+- Deploy command: `pnpm run deploy` (runs `wrangler deploy`)
+
+`wrangler preview` creates a separate preview URL; it does not update the production game.
+Use `pnpm exec wrangler preview` only for non-production preview builds. The `previews` block
+in `wrangler.jsonc` provides preview-specific variables and isolated Durable Object bindings;
+assets and migrations remain at the top level. Preview data does not share production rooms,
+accounts, scores or settings. Production secrets must be configured separately for previews if needed.
+
+
 The beatmap listing comes from osu! itself, the same way Web-Osu-Mania gets it, so the server needs an osu! API key:
 
 1. On osu.ppy.sh, open **Settings → OAuth → New OAuth Application** and copy the Client ID and Secret.

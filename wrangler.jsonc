@@ -40,5 +40,18 @@
   ],
   "vars": {
     "TRUST_CF_CONNECTING_IP": "true"
+  },
+  // Preview Workers get their own Durable Object namespaces. Do not bind production script names here.
+  "previews": {
+    "vars": {
+      "TRUST_CF_CONNECTING_IP": "true"
+    },
+    "durable_objects": {
+      "bindings": [
+        { "name": "ROOMS", "class_name": "MatchRoom" },
+        { "name": "MATCHMAKER", "class_name": "Matchmaker" },
+        { "name": "VAULT", "class_name": "PlayerVault" }
+      ]
+    }
   }
 }
