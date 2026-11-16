@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16q', title: 'Consistent menu alignment', sections: [
+    { title: 'Interface', items: ['Large menus, including settings, now stay centred and match the top bar’s width as the window changes size.'] }
+  ] },
   { id: '2026.11.16p', title: 'Smoother menus and beatmap browsing', sections: [
     { title: 'Interface', items: ['Song select uses its full-screen layout again.', 'Softer top-bar shading and matching menu opening animations.', 'Menus stay in place without sideways panning.'] },
     { title: 'Beatmap explorer', items: ['Default search results are saved on this device for faster return visits.', 'More songs and cover art load as you scroll, with stars marking difficulty.'] }

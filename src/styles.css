@@ -5714,3 +5714,11 @@ button.chat-avatar:disabled { cursor: default; }
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 35%);
 }
 .ex-spec-more::before { display: none; }
+
+/* Large menus share one symmetric frame, including safe areas and UI scaling. */
+:root { --menu-gutter: max(14px, env(safe-area-inset-left), env(safe-area-inset-right)); }
+#toolbar { left: var(--menu-gutter); right: var(--menu-gutter); }
+.screen.menu-surface, .settings-panel {
+  left: var(--menu-gutter); right: var(--menu-gutter); width: auto; max-width: none;
+  top: calc(var(--toolbar-h) + 10px); bottom: var(--menu-gutter);
+}

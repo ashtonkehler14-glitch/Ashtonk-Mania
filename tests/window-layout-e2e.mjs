@@ -39,8 +39,16 @@ try {
     for(const name of ['beatmaps','collections','explore','profile','rankings','multiplayer']) {
       await page.evaluate(async name=>Screens.go(name),name);await page.waitForFunction(()=>!Screens.busy);await page.waitForTimeout(400);
       const panel=await page.locator('.screen.menu-surface:not(.leave)').boundingBox();assert.ok(panel && panel.x>0 && panel.y>0 && panel.x+panel.width<viewport.width && panel.y+panel.height<viewport.height, name+' '+JSON.stringify(viewport));
+      const toolbar=await page.locator('#toolbar').boundingBox();
+      assert.ok(Math.abs(panel.x+panel.width/2-viewport.width/2)<1,'Menu stays centred: '+name);
+      assert.ok(Math.abs(panel.width-toolbar.width)<1,'Menu matches toolbar width: '+name);
       if(viewport.width===650 && name==='collections') await page.screenshot({path:'/tmp/floating-collections-portrait.png'});
     }
+    await page.evaluate(()=>SettingsPanel.open());await page.waitForTimeout(350);
+    const settings=await page.locator('.settings-panel').boundingBox(),toolbar=await page.locator('#toolbar').boundingBox();
+    assert.ok(Math.abs(settings.x+settings.width/2-viewport.width/2)<1,'Settings stays centred');
+    assert.ok(Math.abs(settings.width-toolbar.width)<1,'Settings shares the large menu width');
+    await page.evaluate(()=>SettingsPanel.close());
     await page.evaluate(async()=>Screens.go('home'));await page.waitForFunction(()=>!Screens.busy);
   }
   assert.deepEqual(errors,[]);
