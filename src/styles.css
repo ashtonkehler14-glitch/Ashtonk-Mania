@@ -116,7 +116,7 @@ svg.i.phi { fill: currentColor; stroke: none; }
 .tb-btn::after { background: rgb(100, 100, 100); }                                                 /* white at 100/255 */
 .tb-btn.flash::after { animation: tbFlash 850ms both; }
 @keyframes tbFlash { 0% { opacity: 0; } 6% { opacity: 1; animation-timing-function: var(--oq); } 100% { opacity: 0; } }
-.tb-st { background: rgb(180, 4, 47); transition: opacity 200ms var(--oq); }                      /* Carmine at 180/255 */
+.tb-st { background: #8f285e; mix-blend-mode: normal; transition: opacity 200ms var(--oq); } /* Dark pink for an open toolbar tab. */
 .tb-btn.on > .tb-st { opacity: 1; }
 #toolbar .tb-btn:focus-visible { outline: none; }
 #toolbar .tb-btn:focus-visible::before { opacity: 1; }
@@ -171,7 +171,7 @@ svg.i.phi { fill: currentColor; stroke: none; }
 .tb-analog .dot { fill: #fff; }
 .tb-analog .dot2 { fill: #ff99cc; }
 .tb-digital { position: relative; display: flex; flex-direction: column; align-items: flex-start; }
-.tb-time { font-size: 16px; font-weight: 500; line-height: 14px; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tb-time { font-size: 16px; font-weight: 500; line-height: 14px; letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tb-run { display: flex; gap: 2px; margin-top: 3px; color: #ff99cc; font-size: 10px; font-weight: 600; line-height: 10px; white-space: nowrap; }
 .tb-run > span:last-child { letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) and (hover: none) and (orientation: portrait) { .tb-profile .lbl { display: none; } .tb-profile { padding: 0 13px; } }
@@ -651,7 +651,7 @@ html.touch .settings-panel .set-row .reset::after { content: ""; position: absol
 .lbs-sc { position: absolute; inset: 0 35px 0 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding: 0 10px; border-radius: 10px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rc) 50%, transparent)), linear-gradient(90deg, hsl(var(--ss-h) 10% 25% / 0), var(--bg3)); transform: none; }
 .lbs:hover .lbs-sc { background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rc) 50%, transparent)), linear-gradient(90deg, hsl(var(--ss-h) 10% 35% / 0), hsl(var(--ss-h) 10% 35%)); }
 .lbs-sc > * { transform: skewX(var(--unshear)); }
-.lbs-score { font-size: 28px; font-weight: 300; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lbs-score { font-size: 28px; font-weight: 300; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lbs-mods { display: flex; margin-top: 3px; }
 .lbs-mods .mod-badge + .mod-badge { margin-left: -4px; }
 .lbs-mods .mb-t { display: none; }
@@ -3976,8 +3976,10 @@ html.touch img { -webkit-user-drag: none; }
   .res-actions > .lz-back { width: 112px; min-width: 0; }
   .res-ab, .res-ab.wide { width: auto; flex: 1 1 0; max-width: 90px; height: 34px; }
   .res-actions > .muted { display: none; }
-  /* the top bar: the clock gives its room to the buttons (the notifications bell was pushed off the screen) */
-  #toolbar .tb-clock { display: none; }
+  /* The compact clock also opens notifications, so it can replace the bell on narrow screens. */
+  #toolbar .tb-clock { display: flex; padding-inline: 8px; }
+  #toolbar .tb-clock .tb-time { font-size: 14px; }
+  #toolbar .tb-btn[data-ov="notifications"]:not(.tb-clock) { display: none; }
 }
 /* osu!lazer's BeatmapSetOnlineStatusPill (title wedge: Caption1, padding 6×1; carousel set panels: Caption2, 4×0) */
 .status-pill { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 99px; font-size: 14px; line-height: 1.15; font-weight: 700; letter-spacing: 0; white-space: nowrap; }
@@ -4247,7 +4249,7 @@ html.touch .ch-item.on .ch-x { display: grid; place-items: center; width: 26px; 
 /* lazer's daily challenge (Plum scheme): the day's beatmap on its cover, the time left with a draining bar, Mods and
    Play; the leaderboard below in the rankings' table rows */
 .dc-card { position: relative; overflow: hidden; display: flex; min-height: 230px; max-width: 1100px; margin: 10px auto 0; border-radius: 10px; background: hsl(var(--o-h) 10% 15%); box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
-.dc-cover { position: absolute; inset: 0; background: center / cover no-repeat; opacity: .55; transition: opacity 400ms; }
+.dc-cover { position: absolute; inset: 0; height: auto; background: center / cover no-repeat; opacity: .55; transition: opacity 400ms; }
 .dc-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, hsl(var(--o-h) 10% 10% / .95) 0%, hsl(var(--o-h) 10% 10% / .7) 50%, hsl(var(--o-h) 10% 10% / .2) 100%); }
 .dc-info { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 24px 28px; min-width: 0; flex: 1; }
 .dc-kicker { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: hsl(var(--o-h) 100% 75%); }
@@ -4276,8 +4278,8 @@ html.touch .ch-item.on .ch-x { display: grid; place-items: center; width: 26px; 
    the countdown in 12px, 22px above the bottom */
 .lz-cover { position: absolute; inset: 0; transform: skewX(11.31deg) scale(1.25); background: center / cover no-repeat; }
 .lz-daily .lz-bg { background: var(--c); }
-.lz-cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 20%, transparent), var(--c)); mix-blend-mode: plus-lighter; }
-.lz-cover::after { content: ""; position: absolute; inset: 0; background: var(--c); opacity: .7; }
+.lz-cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #17121e20, #17121e90); }
+.lz-cover::after { content: ""; position: absolute; inset: 0; background: #17121e; opacity: .15; }
 .lz-countdown { position: absolute; left: 50%; bottom: 22px; transform: translateX(calc(-50% - 3px)); font-size: 12px; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* lazer's MedalAnimation: black at 60%, light strips sweeping out from a 400px disc (5px white rim, Blue glow, #05262f
@@ -5590,7 +5592,7 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-area-bg { display: none; }
 .lz-menu .lz-btn { --c: #3d3745 !important; }
 .lz-menu .lz-btn[data-id="settings"] { --c: #565064 !important; }
-.lz-menu .lz-btn[data-id="back"] { --c: #6450a5 !important; }
+.lz-menu .lz-btn[data-id="back"] { --c: #565064 !important; }
 .lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #d59400 !important; color: #fff; }
 .lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="multi"], .lz-menu .lz-btn[data-id="lounge"] { --c: #e01880 !important; color: #fff; }
 .lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"], .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #8c32ed !important; color: #fff; }

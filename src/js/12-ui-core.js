@@ -735,7 +735,7 @@ const Toolbar = {
     // like lazer's toolbar toggles: a page's button closes that page when it's already open
     const page = name => () => { if (Screens.currentName === name) Screens.back(); else Screens.go(name); };
     this.pages = { explore: page('explore'), profile: page('profile'), rankings: page('rankings'), changelog: page('changelog') };
-    this.clock = h('button.tb-clock', { 'aria-label': 'clock', onclick: () => { UISounds.click(); this.cycleClock(); } });
+    this.clock = h('button.tb-clock', { 'aria-label': 'Time and notifications', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', dataset: { ov: 'notifications' }, onclick: () => { UISounds.click(); Notifications.toggle(); } });
     // lazer's ToolbarRulesetSelector, here with the one ruleset: its icon in #00ffaa over a darker triangle-patterned
     // background, with the little white line under the selected one
     const ruleset = h('div.tb-ruleset',
@@ -802,7 +802,7 @@ const Toolbar = {
     this.volBar.classList.add('wide');
     clearTimeout(this._volT); this._volT = setTimeout(() => this.volBar.classList.remove('wide'), 1000);
   },
-  /** The carmine "open" state of the buttons whose panel is showing (lazer's ToolbarOverlayToggleButton). */
+  /** The dark pink "open" state of the buttons whose panel is showing (lazer's ToolbarOverlayToggleButton). */
   sync() {
     cancelAnimationFrame(this._syncRaf);
     this._syncRaf = requestAnimationFrame(() => {
@@ -811,67 +811,28 @@ const Toolbar = {
       $('#app').classList.toggle('side-l', on.settings);
       $('#app').classList.toggle('side-r', on.notifications && !on.settings);
       $$('#toolbar [data-ov]').forEach(b => b.classList.toggle('on', !!on[b.dataset.ov]));
+      if (this.clock) this.clock.setAttribute('aria-expanded', String(on.notifications));
       $$('#toolbar [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === this._tab));
     });
   },
-  /** lazer's ToolbarClock: click to go full (analog + digital + time running) → digital with time running → digital →
-   *  analog → full. The analog face is 22px with a 2px white rim, white hands and a pink second hand that ticks with
-   *  a little elastic bounce; the time is "h:mm:ss tt" (or 24-hour where that's the local habit). */
-  CLOCK_MODES: ['full', 'runtime', 'digital', 'analog'],
+  /** A compact 12-hour clock doubles as the notification-centre button. */
   buildClock() {
-    const mode = this.CLOCK_MODES.includes(Settings.get('ui.clockMode')) ? Settings.get('ui.clockMode') : 'full';
-    // hands drawn pointing at 12, rotated about the centre: lazer's LargeHand is 2.4px thick, 34% / 48% of the face
-    // long, with a 0.7px Gray2 rim; the SecondHand is 66% long, 1.68px thick and starts 3.36px behind the centre.
-    // (each hand a picture of its own, turned as a whole: the graphics card turns it, where turning a hand inside one
-    // picture had the page lay itself out again for every frame of every tick)
-    const pic = (inner, cls = '') => { const el = h(`span${cls}`); el.innerHTML = `<svg viewBox="0 0 22 22">${inner}</svg>`; return el; };
-    const hand = (cls, len) => pic(`<line x1="11" y1="11" x2="11" y2="${(11 - (len * 22 - 2.4)).toFixed(2)}" class="rim"/><line x1="11" y1="11" x2="11" y2="${(11 - (len * 22 - 2.4)).toFixed(2)}" class="core"/>`, `.tb-hand.${cls}`);
-    const svg = h('span.tb-analog', pic('<circle cx="11" cy="11" r="10" class="face"/>'), hand('hr', 0.34), hand('mn', 0.48),
-      pic('<line x1="11" y1="13.52" x2="11" y2="0.68"/>', '.tb-hand.sc'), pic('<circle cx="11" cy="11" r="1.2" class="dot"/><circle cx="11" cy="11" r="0.84" class="dot2"/>'));
-    this.hands = { hr: svg.querySelector('.hr'), mn: svg.querySelector('.mn'), sc: svg.querySelector('.sc') };
-    this._rot = { hr: null, mn: null, sc: null };
-    this.clockTime = h('span.tb-time'); this.clockRun = h('span.tb-run', h('span', 'running'), this.clockRunT = h('span'));
-    // (append() writes a literal "null" for null arguments, so only the parts this mode shows are passed)
-    clearEl(this.clock).append(...[h('span.tb-st'), mode === 'full' || mode === 'analog' ? svg : null,
-      mode !== 'analog' ? h('span.tb-digital', this.clockTime, mode === 'full' || mode === 'runtime' ? this.clockRun : null) : null].filter(Boolean));
-    this.clock.dataset.mode = mode;
+    this.clockTime = h('span.tb-time');
+    clearEl(this.clock).append(h('span.tb-st'), this.clockTime);
+    this.clock.dataset.mode = 'digital';
     this.clock.classList.add('tb-btn');
-    this._lastT = '';
   },
-  cycleClock() {
-    const i = this.CLOCK_MODES.indexOf(this.clock.dataset.mode);
-    Settings.set('ui.clockMode', this.CLOCK_MODES[(i + 1) % this.CLOCK_MODES.length]);
-    this.buildClock(); this.tick();
-  },
-  use24h() {
-    if (this._h24 == null) { try { const hc = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hourCycle; this._h24 = hc === 'h23' || hc === 'h24'; } catch { this._h24 = false; } }
-    return this._h24;
+  formatTime(d) {
+    const p2 = n => String(n).padStart(2, '0');
+    return `${p2(d.getHours() % 12 || 12)}:${p2(d.getMinutes())}:${p2(d.getSeconds())} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
   },
   tick() {
-    if ($('#app').classList.contains('in-game')) return; // the toolbar is hidden in game: don't relayout every second
-    const d = new Date(), p2 = n => String(n).padStart(2, '0');
-    const t = this.use24h() ? `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
-      : `${d.getHours() % 12 || 12}:${p2(d.getMinutes())}:${p2(d.getSeconds())} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
-    if (this.clockTime && this.clockTime.textContent !== t) this.clockTime.textContent = t;
-    if (this.clockRun && this.clockRun.isConnected) {
-      // .NET's TimeSpan "c" format, as lazer prints it: hh:mm:ss, with a day count in front after a day
-      const s = Math.floor(performance.now() / 1000), dd = Math.floor(s / 86400);
-      this.clockRunT.textContent = `${dd ? dd + '.' : ''}${p2(Math.floor(s / 3600) % 24)}:${p2(Math.floor(s / 60) % 60)}:${p2(s % 60)}`;
+    if ($('#app').classList.contains('in-game')) return;
+    const text = this.formatTime(new Date());
+    if (this.clockTime && this.clockTime.textContent !== text) {
+      this.clockTime.textContent = text;
+      this.clock.setAttribute('aria-label', `${text}. Open notifications`);
     }
-    if (this.hands && this.hands.hr.isConnected) {
-      const sec = d.getSeconds(), min = d.getMinutes() + sec / 60, hr = (d.getHours() % 12) + min / 60;
-      this.turn('hr', hr * 30); this.turn('mn', min * 6); this.turn('sc', sec * 6);
-    }
-  },
-  /** Rotate a clock hand the short way round (so 59 → 0 seconds carries on forwards rather than spinning back). */
-  turn(k, deg) {
-    const prev = this._rot[k];
-    const next = prev == null ? deg : prev + ((((deg - prev) % 360) + 540) % 360 - 180);
-    // (the hour and minute hands move on once it shows — half a degree — not by a fraction every second)
-    if (next === prev || (prev != null && k !== 'sc' && Math.abs(next - prev) < 0.5)) return;
-    this._rot[k] = next;
-    this.hands[k].style.transform = `rotate(${next}deg)`;
-    if (prev == null) { this.hands[k].style.transition = 'none'; void this.hands[k].getBoundingClientRect(); this.hands[k].style.transition = ''; }
   },
   setActive(id) { this._tab = id; this.sync(); },
   updateProfile() {

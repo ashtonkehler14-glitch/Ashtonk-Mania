@@ -4,6 +4,27 @@
 
 const Daily = {
   data: null,
+  /** Static song artwork stays visible in performance mode; use the imported background when available. */
+  setArtwork(el, map) {
+    const local = map && Multiplayer.localMap(map);
+    const key = map ? JSON.stringify([map.onlineSetId, map.onlineId, local && local.id, local && local.bgFile]) : '';
+    if (el._artKey === key) return;
+    el._artKey = key;
+    const token = el._artToken = {};
+    el.style.backgroundImage = '';
+    if (!map) return;
+    const apply = value => { if (el._artToken === token) el.style.backgroundImage = value; };
+    (async () => {
+      let url;
+      try { if (local) url = await BeatmapManager.bgURL(local); } catch { /* Try the online cover instead. */ }
+      if (el._artToken !== token) return;
+      if (url) { apply(`url("${url}")`); return; }
+      if (!(map.onlineSetId > 0)) return;
+      // Load into a temporary element so an older week's image cannot overwrite a newer one.
+      const cover = h('div');
+      OnlineBeatmaps.loadCover(cover, map.onlineSetId, ['cover@2x', 'cover', 'card@2x', 'card'], () => apply(cover.style.backgroundImage));
+    })().catch(() => {});
+  },
   remaining(ms) {
     const s = Math.floor(Math.max(0, ms) / 1000), days = Math.floor(s / 86400);
     return `${days ? days + 'd ' : ''}${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -91,7 +112,7 @@ const DailyScreen = {
   },
   buildCard(m, local, f, mods) {
     const cover = h('div.dc-cover');
-    OnlineBeatmaps.loadCover(cover, m.onlineSetId, ['cover@2x', 'cover', 'card@2x', 'card']);
+    Daily.setArtwork(cover, m);
     const play = h('button.dc-play', { disabled: !!(f && !f.error), onclick: () => this.play() },
       local ? 'Play' : f && !f.error ? `Downloading… ${Math.round((f.progress || 0) * 100)}%` : 'Download & play');
     this.timeEl = h('b'); this.timeBar = h('i');

@@ -211,7 +211,7 @@ const HomeScreen = {
     const b = this.btns && this.btns.find(x => x.dataset.id === 'daily'), d = Daily.data;
     if (!b) return;
     const cv = b.querySelector('.lz-cover'), cd = b.querySelector('.lz-countdown');
-    if (d && d.map && cv && cv._set !== d.map.onlineSetId) { cv._set = d.map.onlineSetId; OnlineBeatmaps.loadCover(cv, d.map.onlineSetId, ['card@2x', 'card', 'cover']); }
+    if (cv) Daily.setArtwork(cv, d && d.map);
     if (cd) {
       const left = d && d.map ? Math.max(0, d.endsAt - Date.now()) : 0;
       cd.textContent = left ? Daily.remaining(left) : '';
