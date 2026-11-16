@@ -38,6 +38,9 @@ const SongSelect = {
   rows: [], pool: new Map(), ROW_SET: 72, ROW_DIFF: 45, ROW_GROUP: 54, ROW_GAP: 3, // (lazer's PanelBeatmapSet / PanelBeatmap / PanelGroup heights)
 
   enter(params = {}) {
+    const hadMods = this.resetMods();
+    this._keyMod = 0;
+    if (hadMods) Bus.emit('mods:changed');
     // (as lazer: coming back to song select asks for the online leaderboard again — one from half a minute ago is
     // missing the scores set since, your own among them)
     this._onlineFor = null;
@@ -404,6 +407,7 @@ const SongSelect = {
   /** `stay`: a background change (library, favourites, collections, scores) — keep the list where the player has
    *  scrolled it instead of jumping back to the selected beatmap. */
   rebuild(keepScroll = false, stay = false) {
+    const oldSelected = this.selectedId;
     if (!this.el) return;
     if (this.convBtn) { this.convBtn.hidden = ![...BeatmapManager.maps.values()].some(m => m.mode === 0); this.convBtn.classList.toggle('on', Settings.get('songselect.converts') !== false); }
     const oldScroll = stay ? this.scroller.scrollTop : null;
@@ -482,6 +486,7 @@ const SongSelect = {
       if (first) this.selectedId = this.pickDiff(first.maps).id;
       else if (this.selectedId && !BeatmapManager.maps.has(this.selectedId)) this.selectedId = null;
     }
+    const modsReset = this.selectedId !== oldSelected && this.resetMods();
     this.expandedSet = this.selectedId ? BeatmapManager.maps.get(this.selectedId)?.setId : null;
     if (this.groups) this.expandGroupOf(this.selectedId, true);
     this.layoutRows();
@@ -503,6 +508,7 @@ const SongSelect = {
     if (sel && this._searching) this.showBackground(sel);
     else if (sel && (silent || !Music.meta || Music.meta.setId !== sel.setId || this.trackKey(sel) !== (Music.key || '').toLowerCase())) this.schedulePreview(sel);
     else if (sel) { this.showBackground(sel); this.loopTrack(sel); }
+    if (modsReset) Bus.emit('mods:changed');
     if (stay) return;
     this.scrollToSelected(keepScroll, true);
   },
@@ -861,9 +867,16 @@ const SongSelect = {
     }
     return wrap;
   },
+  /** Mods belong to this selection, rather than carrying into the next song or visit. */
+  resetMods() {
+    if (!(Settings.get('songselect.mods') || []).length) return false;
+    Settings.set('songselect.mods', []);
+    return true;
+  },
   select(id, { scroll = true, regroup: opened = false } = {}) {
     const m = BeatmapManager.maps.get(id);
     if (!m) return;
+    const modsReset = id !== this.selectedId && this.resetMods();
     const setChanged = this.expandedSet !== m.setId;
     if (setChanged) { this._collapseSet = this.expandedSet; this._expandSet = m.setId; this._expandAt = performance.now(); }
     this.selectedId = id;
@@ -890,6 +903,7 @@ const SongSelect = {
     if (setChanged || !Music.meta || Music.meta.setId !== m.setId || this.trackKey(m) !== (Music.key || '').toLowerCase()) this.schedulePreview(m, perf ? 350 : held ? 200 : 60);
     else if (perf) this._bgT = setTimeout(() => { if (this.selectedId === m.id) { this.showBackground(m); this.loopTrack(m); } }, wait);
     else { this.showBackground(m); this.loopTrack(m); } // (another difficulty of the same set can have its own background)
+    if (modsReset) Bus.emit('mods:changed');
   },
   scrollToSelected(smooth, force = false) {
     const row = this.rows.find(r => (r.type === 'diff' || r.type === 'std') && r.m.id === this.selectedId) || this.rows.find(r => r.type === 'set' && r.r.set.id === this.expandedSet);

@@ -38,9 +38,12 @@ try {
       await AshtonkMania.App.importFiles([new File([blob], 'test-set.osz')]);
       while (Overlays.top()) Overlays.top().close();
       const m = [...AshtonkMania.BeatmapManager.maps.values()].find(m => m.keys === 4 && !m.problems.length);
-      await AshtonkMania.Screens.go('songselect', { mapId: m.id });
+      AshtonkMania.Settings.set('songselect.mods',['NC','MR','AT','7K']);
+      await AshtonkMania.Screens.go('songselect', { mapId: m.id, force: true });
     });
     await page.waitForFunction(() => AshtonkMania.Screens.currentName === 'songselect' && AshtonkMania.Music.playing);
+    assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),[],'Entering song select clears all active mods');
+    await page.waitForFunction(()=>Music.rate===1);
     for (const [mod, rate, preserve] of [['DT', 1.5, true], ['NC', 1.5, false], ['HT', .75, true], ['DC', .75, false], ['RT', 1.35, true], ['', 1, true]]) {
       const state = await page.evaluate(async ({ mod }) => {
         const { Music, SongSelect, Settings, Bus } = AshtonkMania;
@@ -55,20 +58,36 @@ try {
       else { assert.equal(state.nativeRate, rate); assert.equal(state.pitch, preserve); }
       assert.ok(Math.abs(state.after - state.before) < 1500, JSON.stringify(state));
     }
-    // Changing audio files while a speed mod is selected applies it to the new track as well.
+    // A deliberate mod choice stays on the current difficulty, but not another one using the same audio.
+    await page.evaluate(async()=>{
+      Settings.set('songselect.mods',['NC','MR','AT','7K']);Bus.emit('mods:changed');
+      SongSelect.select(SongSelect.selectedId);await SongSelect.syncPreviewAudio();
+    });
+    assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),['NC','MR','AT','7K']);
+    await page.evaluate(()=>SongSelect.select([...BeatmapManager.maps.values()].find(m=>m.keys===7&&!m.problems.length).id));
+    await page.waitForFunction(()=>Settings.get('songselect.mods').length===0 && Music.rate===1);
+    assert.equal(await page.locator('.fb-mods').evaluate(el=>el.classList.contains('has-mods')),false,'Mod badges clear with the selection');
+    // A filter that chooses a different difficulty also starts with no mods, including mute and custom rate.
+    await page.evaluate(()=>{Settings.set('songselect.mods',['RT','MU','MR','AT','7K']);Bus.emit('mods:changed');Settings.set('songselect.keys',[4]);SongSelect.rebuild(true);});
+    await page.waitForFunction(()=>Settings.get('songselect.mods').length===0 && Music.rate===1 && AudioManager.modGain.gain.value>.99);
+    await page.evaluate(()=>{Settings.set('songselect.keys',[]);SongSelect.rebuild(true);});
+    // Selecting a new audio file clears its inherited speed mod as well.
     await page.evaluate(async () => {
       const { Settings, SongSelect, BeatmapManager, Bus } = AshtonkMania;
       await Settings.set('songselect.mods', ['NC']); Bus.emit('mods:changed');
       const m = [...BeatmapManager.maps.values()].find(m => m.keys === 9 && !m.problems.length);
       SongSelect.select(m.id);
     });
-    await page.waitForFunction(() => AshtonkMania.Music.meta?.mapId === AshtonkMania.SongSelect.selectedId && AshtonkMania.Music.rate === 1.5 && AshtonkMania.Music.playing);
+    await page.waitForFunction(() => AshtonkMania.Music.meta?.mapId === AshtonkMania.SongSelect.selectedId && AshtonkMania.Music.rate === 1 && AshtonkMania.Music.playing);
+    assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),[]);
+    await page.evaluate(async()=>{Settings.set('songselect.mods',['NC']);Bus.emit('mods:changed');await SongSelect.syncPreviewAudio();});
     await page.evaluate(() => AshtonkMania.SongSelect.play());
     await page.waitForFunction(() => AshtonkMania.Screens.currentName === 'gameplay' && AshtonkMania.GameplayScreen.s?.running);
     assert.equal(await page.evaluate(() => AshtonkMania.Music.rate), 1.5);
     assert.equal(await page.evaluate(() => !!AshtonkMania.Music.stretched), false);
     await page.evaluate(() => AshtonkMania.Screens.go('songselect'));
-    await page.waitForFunction(() => AshtonkMania.Screens.currentName === 'songselect' && AshtonkMania.Music.playing && AshtonkMania.Music.rate === 1.5);
+    await page.waitForFunction(() => AshtonkMania.Screens.currentName === 'songselect' && AshtonkMania.Music.playing && AshtonkMania.Music.rate === 1);
+    assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),[],'Returning from gameplay clears mods');
     await page.evaluate(() => AshtonkMania.Screens.go('home'));
     await page.waitForFunction(() => AshtonkMania.Screens.currentName === 'home');
     assert.equal(await page.evaluate(() => AshtonkMania.Music.rate), 1);
@@ -99,7 +118,7 @@ try {
     assert.equal(await page.evaluate(() => AshtonkMania.Settings.get('audio.autoplay')), false);
     assert.equal(await page.evaluate(() => AshtonkMania.Music.playing), false, 'The setting survives reload and keeps startup quiet');
     assert.deepEqual(errors, []);
-    console.log(`PASS: ${touch ? 'touch / decoded' : 'desktop / streamed'} previews match speed/pitch mods, retain position, follow track changes and gameplay, reset on exit; autoplay off keeps menus/reloads quiet, allows Play/Next and preserves gameplay audio`);
+    console.log(`PASS: ${touch ? 'touch / decoded' : 'desktop / streamed'} previews match speed/pitch mods, retain position, clear on entry, difficulty/track/filter changes, preserve deliberate same-song choices and gameplay; autoplay off keeps menus/reloads quiet, allows Play/Next and preserves gameplay audio`);
     await context.close();
   }
 } finally { await browser?.close(); await new Promise(resolve => server.close(resolve)); }

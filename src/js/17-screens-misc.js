@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16j', title: 'Fresh mods for each song', sections: [
+    { icon: 'mods', title: 'Song select', items: ['All mods turn off when you enter song select or choose a different song or difficulty.'] },
+  ] },
   { id: '2026.11.16i', title: 'Floating settings and simpler menus', sections: [
     { icon: 'gear', title: 'Menus', items: ['Settings now uses rounded groups with colourful slanted headings.', 'Menu pages replace one another: closing a menu returns Home instead of reopening an older page.', 'The top bar is inset a little further, with rounding only on its bottom corners.'] },
     { icon: 'music', title: 'Backgrounds and chat', items: ['Home uses song backgrounds by default, with triangles until a beatmap background is available.', 'Spectator chat sits at the bottom left and shares the gameplay chat styling.', 'Full backups now export only beatmap files. Backup imports no longer restore scores or medals; settings files carry preferences only.'] },
