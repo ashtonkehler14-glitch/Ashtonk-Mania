@@ -26,7 +26,7 @@ try {
   await page.waitForFunction(() => !Screens.busy);
   await page.evaluate(()=>{
     Overlays.closeAll();Settings.set('audio.autoplay',false);
-    SpectatorChat.context=()=>({id:'fixture-host',name:'Keyboard Murderer',host:false});
+    SpectatorChat.context=()=>({id:'fixture-host',name:'Keyboard Murderer',host:true});
     Presence.ws={readyState:1,send(){}};
     Presence.send=m=>{if(m.t==='specChat')window._sentChat=m;};
     SpectatorChat.refresh();
@@ -47,6 +47,26 @@ try {
   assert.equal(await page.getByRole('textbox',{name:'Spectator chat message'}).inputValue(),'');
   await page.getByRole('button',{name:'Close spectator chat'}).click();
   assert.equal(await panel.count(),0);
+  await page.evaluate(()=>{
+    Spectate.target={id:'fixture-viewed',name:'Friend',room:false};
+    SpectatorChat.context=()=>Spectate.target ? {id:'fixture-viewed',name:'Friend',host:false}:null;
+    SpectatorChat.refresh();
+  });
+  assert.equal(await panel.count(),1,'Viewer chat opens automatically');
+  assert.equal(await page.getByRole('button',{name:'Close spectator chat'}).count(),0,'Viewer chat stays open');
+  await page.getByRole('textbox',{name:'Spectator chat message'}).focus();await page.keyboard.press('Escape');
+  assert.equal(await panel.count(),1,'Escape leaves viewer chat open');
+  assert.equal(await page.getByRole('textbox',{name:'Spectator chat message'}).evaluate(el=>el===document.activeElement),false,'Escape releases typing focus');
+  await page.evaluate(()=>{MainMenus.close();Spectate._launching=true;Bus.emit('screen:changed','gameplay');});
+  assert.equal(await panel.count(),1,'Chat survives screen transitions');
+  await page.evaluate(()=>{
+    document.querySelector('#app').append(Spectate.liveEl({spectate:{name:'Friend'},rec:{title:'Test Song'}}));
+  });
+  const bar=await page.locator('.spec-live').boundingBox();
+  assert.ok(bar.width>page.viewportSize().width*.95 && bar.y<2,'Watching strip spans the top');
+  assert.equal(await page.locator('.spec-live .spec-msg').count(),0);
+  await page.evaluate(()=>{Spectate.target=null;SpectatorChat.refresh();document.querySelector('.spec-live').remove();});
+  assert.equal(await panel.count(),0,'Chat closes when watching stops');
   assert.deepEqual(errors,[]);
   console.log('PASS spectator chat wrapping, scroll, viewport bounds, sending and close');
 } finally {if(browser)await browser.close();server.close();}

@@ -4759,7 +4759,7 @@ html.no-zoom, html.no-zoom body { touch-action: manipulation; }
 @media (max-height: 520px) { .results .rs-diff { flex-wrap: wrap; row-gap: 3px; } }
 /* lazer's HUD overlay visibility mode (hidden during gameplay / never): the HUD fades out — but not the touch columns,
  * the skip and pause buttons, the room's chat or the replay controls; Ctrl peeks */
-.gp-hud.auto-hide > :not(.fnf-hitbox):not(.hud-skip):not(.hud-touch-pause):not(.gp-chat):not(.replay-bar):not(.hud-replay) { opacity: 0; transition: opacity 300ms ease; }
+.gp-hud.auto-hide > :not(.fnf-hitbox):not(.hud-skip):not(.hud-touch-pause):not(.gp-chat):not(.replay-bar):not(.hud-replay):not(.spec-live):not(.spec-switch) { opacity: 0; transition: opacity 300ms ease; }
 .gp-hud.auto-hide.peek > * { opacity: 1 !important; }
 /* lazer's ProfileShowMoreButton and the Recent activity rows */
 .pf-more { align-self: center; display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 8px auto 2px; padding: 0 18px; border: 0; border-radius: 15px; background: var(--ob4, rgba(255, 255, 255, .08)); color: var(--oc2, #ddd); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 120ms; }
@@ -5882,6 +5882,74 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .spectator-chat .icon-btn:focus-visible { outline: 2px solid #f5a9d1; outline-offset: -3px; }
 .spec-host-chat { border-radius: 12px; background: #302938; border: 1px solid #d4b8e033; box-shadow: 0 4px 16px #0003; }
 .spec-host-chat > .i { color: #ff91c4; }
+
+
+/* A single top strip replaces the floating watching pill and central loader card. */
+.spec-live { top: 0; left: 0; right: 0; translate: none; max-width: none; min-height: 42px; padding: 6px max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left)); gap: 12px; border-radius: 0; border-bottom: 1px solid #d4b8e026; background: #25212df5; animation: specTopIn 220ms var(--ease-out) both; }
+.spec-live > .spec-live-l { flex: none; padding: 3px 6px; border-radius: 5px; background: #9b306b; font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.spec-live-t { flex: 1; }
+.spec-live-song { color: #cbbdd1; }
+.spec-stop { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid #ffffff1a; border-radius: 7px; background: #ffffff08; color: #fff; font: inherit; font-size: 12px; pointer-events: auto; }
+.spec-stop:hover { background: #9b306b; }
+.spec-stop .i { width: 13px; height: 13px; }
+.spec-switch { top: 50px; }
+@keyframes specTopIn { from { opacity: 0; transform: translateY(-8px); } }
+.spm { display: block; padding: var(--toolbar-h) 0 0; }
+.spm .spm-box { width: 100%; max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 16px; padding: 12px 18px; border-radius: 0; background: #25212df5; border-bottom: 1px solid #d4b8e026; box-shadow: 0 6px 20px #0003; animation: specTopIn 220ms var(--ease-out) both; }
+.spm .spm-row { min-width: 0; flex-direction: row; gap: 16px; }
+.spm .spm-user { width: auto; flex: 0 1 210px; display: flex; align-items: center; gap: 9px; min-width: 0; }
+.spm-user .avatar { flex: none; border-radius: 8px; }
+.spm-identity { min-width: 0; }
+.spm-identity > span { display: block; color: #cbbdd1; font-size: 11px; }
+.spm-identity > b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.spm .spm-map { flex: 1; min-width: 0; width: auto; min-height: 0; }
+.spm .spm-idle { height: auto; min-height: 48px; padding: 8px 12px; font-size: 13px; background: #ffffff05; }
+.spm .spm-card { height: 78px; padding: 8px; }
+.spm .spm-card .ex-thumbwrap { width: 56px; height: 56px; }
+.spm .spm-watch { width: auto; padding: 0 14px; height: 34px; background: #9b306b; font-size: 13px; }
+.spm .spm-auto { grid-column: 1 / -1; justify-self: end; padding: 3px 0; font-size: 11px; gap: 8px; }
+.spectator-chat.viewer { max-height: min(380px, calc(100dvh - 210px)); }
+@media (max-width: 700px) {
+  .spm .spm-box { gap: 6px 8px; padding: 10px; }
+  .spm .spm-row { gap: 8px; }
+  .spm .spm-user { flex-basis: 120px; }
+  .spm .spm-watch { padding-inline: 8px; font-size: 11px; }
+  .spec-live { gap: 8px; font-size: 12px; }
+}
+
+
+/* Shared menu language: quiet edge triangles, raised plum controls, clear colour accents. */
+.menu-surface.ov:not([data-profile-style]):not(.explorer) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='900'%3E%3Cg fill='none' stroke='%23b67bcc' stroke-width='2' stroke-linejoin='round' opacity='.09'%3E%3Cpath d='M-80 530 110 200 300 530Z M1270 140 1490 520 1050 520Z M-40 900 90 675 220 900Z'/%3E%3C/g%3E%3C/svg%3E"), linear-gradient(135deg, #ed409905, transparent 45%, #8c32ed09); background-size: cover; background-position: center; background-repeat: no-repeat; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .ov-titlebar { background: #292331; border-bottom: 1px solid #ffffff0c; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .ov-head h1 { font-weight: 650; color: #fff; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .ov-icon { border-radius: 10px; background: linear-gradient(#ffffff12, #0000000c), hsl(var(--o-h) 62% 43%); color: #fff; box-shadow: inset 0 1px #ffffff26; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .ov-tabs { background: #25212d; border-bottom: 1px solid #ffffff0b; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .ov-tab { color: #d8ccdf; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .ov-tab.on { color: #fff; background: hsl(var(--o-h) 45% 32% / .6); }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) :is(.input, .select) { border: 1px solid #cfa7d32b; border-radius: 12px; background-color: #352d3e; color: #fff; box-shadow: inset 0 1px #ffffff08; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) :is(.input, .select):focus { border-color: hsl(var(--o-h) 70% 75%); box-shadow: none; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .input::placeholder { color: #cbbdd1; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) :is(.list-row, .side-item) { border: 1px solid #ffffff0c; background-color: #302938; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) :is(.list-row, .side-item):hover { border-color: #d6a4d02b; background-color: #3a2f42; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .btn:not(.primary):not(.danger) { border: 1px solid #ffffff15; border-radius: 10px; background: #3b3045; color: #fff; }
+.menu-surface.ov:not([data-profile-style]):not(.explorer) .btn:not(.primary):not(.danger):hover { background: #4b3857; }
+/* Small panels and dialogs use the same materials without changing their layout. */
+.dialog { background: #302938; border: 1px solid #d4b8e026; }
+.dialog :is(.input, .select), .settings-panel :is(.input, .select) { border-radius: 12px; border-color: #cfa7d32b; background-color: #241e2c; }
+.menu, .nf-panel, .np-panel { border: 1px solid #d4b8e026; background-color: #2b2533; }
+.menu button:hover { background-color: #8d285f; color: #fff; }
+
+.gp-hud:has(> .spec-live) > :is(.hud-score, .hud-hp, .hud-replay) { margin-top: 42px; }
+@media (max-width: 700px) {
+  .spm .spm-box { grid-template-columns: minmax(0, 1fr); }
+  .spm .spm-acts { justify-content: flex-end; }
+  .spm .spm-auto { justify-self: end; }
+}
+/* Fit the border pattern to tall menus too, rather than cropping its side edges. */
+.menu-surface.ov:not([data-profile-style]):not(.explorer) { background-size: 100% 100%, cover; }
+.cl { background-color: #25212d; border: 1px solid #d4b8e026; }
+.cl-hicon { border-radius: 12px; background: #9b306b; }
+.cl-title { font-weight: 650; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -25547,6 +25615,12 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ab', title: 'A consistent menu style', sections: [
+    { title: 'Menus', items: ['The explorer’s plum surfaces, subtle triangle backgrounds and colourful headers now carry through the other browsing menus.', 'Search fields, tabs, list rows and small panels have matching colours and softer borders. Custom profile themes keep their own colours.'] }
+  ] },
+  { id: '2026.11.16aa', title: 'Simpler spectator controls', sections: [
+    { title: 'Spectating', items: ['Watching controls sit in a compact bar across the top.', 'Spectator chat stays open automatically while you watch, including between songs and retries.'] }
+  ] },
   { id: '2026.11.16z', title: 'Explorer background and clearer spectator chat', sections: [
     { title: 'Appearance', items: ['Subtle triangle outlines add colour around the beatmap explorer.', 'Spectator chat has a readable plum background, clearer speaker rows and matching pink message controls.'] }
   ] },
@@ -31811,12 +31885,9 @@ const Spectate = {
   /** lazer's SpectatorPlayer message, top centre: "Watching (them) play (song) live". */
   liveEl(s) {
     const c = s.spectate, title = Settings.get('ui.unicodeMetadata') && s.rec.titleUnicode ? s.rec.titleUnicode : s.rec.title;
-    // The player and their spectators share the lounge-style chat; playback continues behind the panel.
-    this.msgDot = h('i.spec-msg-n');
-    const btn = h('button.spec-msg', { title: 'Spectator chat (F8)', 'aria-label': 'Open spectator chat',
-      onclick: e => { e.stopPropagation(); this.message(); } }, icon('chat'), h('span', 'Message'), this.msgDot);
-    this.paintMsgDot();
-    return h('div.spec-live', h('span.spec-live-t', 'Watching ', h('b', c.name), ' play ', h('b', title), h('b.spec-live-l', ' live')), btn);
+    this.msgDot = null;
+    const stop = h('button.spec-stop', { onclick: () => { const room = this.target?.room; this.stop(); if (!room) Screens.go('home'); } }, icon('x'), 'Stop watching');
+    return h('div.spec-live', h('span.spec-live-l', 'LIVE'), h('span.spec-live-t', h('b', c.name), h('span.spec-live-song', ' · ', title)), stop);
   },
   /** The shared spectator chat: the player and everyone currently watching them. */
   message() {
@@ -31950,7 +32021,7 @@ const Spectate = {
 const SpectatorScreen = {
   enter() {
     this.box = h('div.spm-box');
-    const el = h('div.spm', h('div.spm-dim'), this.box, h('div.page-back', backButton(() => Screens.back())));
+    const el = h('div.spm', h('div.spm-dim'), this.box);
     this.scr = { el, body: this.box };
     this._unsub = [
       Bus.on('library:changed', () => { this.paintMap(); setTimeout(() => Spectate.tryStart(), 0); }),
@@ -31982,14 +32053,9 @@ const SpectatorScreen = {
     this.userEl = h('div.spm-user');
     this.mapEl = h('div.spm-map');
     this.btn = h('button.spm-watch', { onclick: () => { UISounds.click(); Spectate.tryStart(true); } }, 'Start Watching');
-    // The same shared spectator chat as during their play.
-    const t = Spectate.target;
-    const msg = h('button.spm-msg', { title: 'Spectator chat', onclick: () => Spectate.message() }, icon('chat'), 'Message');
     clearEl(box).append(
-      h('div.spm-t', 'Spectator Mode'),
-      h('div.spm-row', this.userEl, h('span.spm-arrow', icon('back')), this.mapEl),
-      this.autoRow(),
-      h('div.spm-acts', this.btn, msg));
+      h('div.spm-row', this.userEl, this.mapEl),
+      h('div.spm-acts', this.btn, h('button.spec-stop', { onclick: () => Screens.back() }, icon('x'), 'Stop watching')), this.autoRow());
     this.paintUser(); this.paintMap();
   },
   /** lazer's UserGridPanel of who you're watching (offline: as the online list shows someone who's gone). */
@@ -32001,7 +32067,7 @@ const SpectatorScreen = {
     const sig = JSON.stringify([u.id, u.name, u.avatar, u.status, u.song, u.online]);
     if (sig === this._userSig && this.userEl.firstChild) return;
     this._userSig = sig;
-    clearEl(this.userEl).append(UserPanels.card(u));
+    clearEl(this.userEl).append(Presence.avatarEl(u, 32), h('div.spm-identity', h('span', 'Watching'), h('b', u.name)));
   },
   /** Their beatmap's card — or, between songs, what you're waiting for. */
   paintMap() {
@@ -34989,10 +35055,10 @@ const SpectatorChat = {
     Bus.on('screen:changed', () => this.refresh());
     Bus.on('presence:changed', () => this.refresh());
   },
-  refresh() {
+  refresh(autoOpen = true) {
     const c = this.context();
     if (c?.id !== this.id) {
-      this.close(); this.id = c?.id || null; this.lines = []; this.unread = 0;
+      this.close(true); this.id = c?.id || null; this.lines = []; this.unread = 0;
       if (c) Presence.send({ t: 'specChatHistory', to: c.id });
     }
     if (c?.host && !this.hostButton) {
@@ -35004,6 +35070,7 @@ const SpectatorChat = {
       this.hostButton.lastChild.textContent = `Spectator chat${this.unread ? ` (${this.unread})` : ''}`;
     }
     Spectate.paintMsgDot();
+    if (autoOpen && c && !c.host && !this.panel) this.open();
   },
   on(m) {
     this.refresh();
@@ -35020,9 +35087,9 @@ const SpectatorChat = {
     }
     this.refresh();
   },
-  toggle() { if (this.panel) this.close(); else this.open(); },
+  toggle() { if (this.panel && !Spectate.target) this.close(); else this.open(); },
   open() {
-    this.refresh();
+    this.refresh(false);
     const c = this.context();
     if (!c) return;
     if (this.panel) return;
@@ -35031,18 +35098,18 @@ const SpectatorChat = {
     this.list = h('div.gp-chat-list', { role: 'log', 'aria-live': 'polite', 'aria-label': 'Spectator messages' });
     this.input = h('input.gp-chat-in', { type: 'text', maxlength: 300, placeholder: 'Type a message…', 'aria-label': 'Spectator chat message', autocomplete: 'off' });
     const send = () => { const text = this.input.value.trim(); if (!text || !Presence.ws || !this.context()) return; Presence.send({ t: 'specChat', to: this.id, text }); this.input.value = ''; };
-    this.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') this.close(); });
+    this.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') { if (c.host) this.close(); else this.input.blur(); } });
     this.input.addEventListener('keyup', e => e.stopPropagation());
     this.input.addEventListener('focus', () => this.panel?.classList.add('typing'));
     this.input.addEventListener('blur', () => this.panel?.classList.remove('typing'));
-    const panel = this.panel = h('section.spectator-chat.gp-chat.open', { role: 'region', 'aria-label': 'Spectator chat' },
+    const panel = this.panel = h(`section.spectator-chat.gp-chat.open${c.host ? '' : '.viewer'}`, { role: 'region', 'aria-label': 'Spectator chat' },
       h('div.spectator-chat-head', h('div', h('h3', icon('chat'), 'Spectator chat'), h('span', c.host ? 'You and your spectators' : `${c.name} and their spectators`)),
-        h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x'))),
+        c.host ? h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x')) : null),
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
     document.body.append(panel); this.paint(); this.refresh(); Toolbar.sync();
-    if (!Mobile.touch) this.input.focus({ preventScroll: true });
+    if (c.host && !Mobile.touch) this.input.focus({ preventScroll: true });
   },
   paint() {
     if (!this.list) return;
@@ -35061,7 +35128,7 @@ const SpectatorChat = {
     while (this.list.children.length > 100) this.list.firstChild.remove();
     if (scroll && (atEnd || l.from.pid === Presence.pid())) this.list.scrollTop = this.list.scrollHeight;
   },
-  close() { this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
+  close(force = false) { if (!force && Spectate.target) return; this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
 };
 
 /* ===== 20-app.js ===== */
@@ -35071,7 +35138,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '85763597842a';
+const APP_BUILD = '9d1dc82108eb';
 
 const App = {
   lastReport: null,

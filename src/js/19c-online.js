@@ -324,12 +324,9 @@ const Spectate = {
   /** lazer's SpectatorPlayer message, top centre: "Watching (them) play (song) live". */
   liveEl(s) {
     const c = s.spectate, title = Settings.get('ui.unicodeMetadata') && s.rec.titleUnicode ? s.rec.titleUnicode : s.rec.title;
-    // The player and their spectators share the lounge-style chat; playback continues behind the panel.
-    this.msgDot = h('i.spec-msg-n');
-    const btn = h('button.spec-msg', { title: 'Spectator chat (F8)', 'aria-label': 'Open spectator chat',
-      onclick: e => { e.stopPropagation(); this.message(); } }, icon('chat'), h('span', 'Message'), this.msgDot);
-    this.paintMsgDot();
-    return h('div.spec-live', h('span.spec-live-t', 'Watching ', h('b', c.name), ' play ', h('b', title), h('b.spec-live-l', ' live')), btn);
+    this.msgDot = null;
+    const stop = h('button.spec-stop', { onclick: () => { const room = this.target?.room; this.stop(); if (!room) Screens.go('home'); } }, icon('x'), 'Stop watching');
+    return h('div.spec-live', h('span.spec-live-l', 'LIVE'), h('span.spec-live-t', h('b', c.name), h('span.spec-live-song', ' · ', title)), stop);
   },
   /** The shared spectator chat: the player and everyone currently watching them. */
   message() {
@@ -463,7 +460,7 @@ const Spectate = {
 const SpectatorScreen = {
   enter() {
     this.box = h('div.spm-box');
-    const el = h('div.spm', h('div.spm-dim'), this.box, h('div.page-back', backButton(() => Screens.back())));
+    const el = h('div.spm', h('div.spm-dim'), this.box);
     this.scr = { el, body: this.box };
     this._unsub = [
       Bus.on('library:changed', () => { this.paintMap(); setTimeout(() => Spectate.tryStart(), 0); }),
@@ -495,14 +492,9 @@ const SpectatorScreen = {
     this.userEl = h('div.spm-user');
     this.mapEl = h('div.spm-map');
     this.btn = h('button.spm-watch', { onclick: () => { UISounds.click(); Spectate.tryStart(true); } }, 'Start Watching');
-    // The same shared spectator chat as during their play.
-    const t = Spectate.target;
-    const msg = h('button.spm-msg', { title: 'Spectator chat', onclick: () => Spectate.message() }, icon('chat'), 'Message');
     clearEl(box).append(
-      h('div.spm-t', 'Spectator Mode'),
-      h('div.spm-row', this.userEl, h('span.spm-arrow', icon('back')), this.mapEl),
-      this.autoRow(),
-      h('div.spm-acts', this.btn, msg));
+      h('div.spm-row', this.userEl, this.mapEl),
+      h('div.spm-acts', this.btn, h('button.spec-stop', { onclick: () => Screens.back() }, icon('x'), 'Stop watching')), this.autoRow());
     this.paintUser(); this.paintMap();
   },
   /** lazer's UserGridPanel of who you're watching (offline: as the online list shows someone who's gone). */
@@ -514,7 +506,7 @@ const SpectatorScreen = {
     const sig = JSON.stringify([u.id, u.name, u.avatar, u.status, u.song, u.online]);
     if (sig === this._userSig && this.userEl.firstChild) return;
     this._userSig = sig;
-    clearEl(this.userEl).append(UserPanels.card(u));
+    clearEl(this.userEl).append(Presence.avatarEl(u, 32), h('div.spm-identity', h('span', 'Watching'), h('b', u.name)));
   },
   /** Their beatmap's card — or, between songs, what you're waiting for. */
   paintMap() {

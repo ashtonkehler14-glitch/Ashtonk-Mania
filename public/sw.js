@@ -5,7 +5,7 @@
  *  - Google Fonts: cached, so the text looks right offline.
  *  - /api/* (downloads, multiplayer) and previews stay online; default explorer and weekly challenge cover art are saved separately.
  *  Beatmaps, skins, scores and settings live in IndexedDB, not in these caches. */
-const VERSION = '85763597842a'; // (changes with every build, so browsers pick up a new service worker after a deploy)
+const VERSION = '9d1dc82108eb'; // (changes with every build, so browsers pick up a new service worker after a deploy)
 const PAGES = 'ashtonk-pages', ASSETS = 'ashtonk-assets', FONTS = 'ashtonk-fonts', SHARED = 'ashtonk-shared';
 const CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'neru.png', 'neru-happy.png', 'avatars/avatars.json'];
 

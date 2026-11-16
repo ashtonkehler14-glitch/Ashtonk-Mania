@@ -922,6 +922,12 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ab', title: 'A consistent menu style', sections: [
+    { title: 'Menus', items: ['The explorer’s plum surfaces, subtle triangle backgrounds and colourful headers now carry through the other browsing menus.', 'Search fields, tabs, list rows and small panels have matching colours and softer borders. Custom profile themes keep their own colours.'] }
+  ] },
+  { id: '2026.11.16aa', title: 'Simpler spectator controls', sections: [
+    { title: 'Spectating', items: ['Watching controls sit in a compact bar across the top.', 'Spectator chat stays open automatically while you watch, including between songs and retries.'] }
+  ] },
   { id: '2026.11.16z', title: 'Explorer background and clearer spectator chat', sections: [
     { title: 'Appearance', items: ['Subtle triangle outlines add colour around the beatmap explorer.', 'Spectator chat has a readable plum background, clearer speaker rows and matching pink message controls.'] }
   ] },

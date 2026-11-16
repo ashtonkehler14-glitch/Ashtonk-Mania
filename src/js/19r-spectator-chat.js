@@ -10,10 +10,10 @@ const SpectatorChat = {
     Bus.on('screen:changed', () => this.refresh());
     Bus.on('presence:changed', () => this.refresh());
   },
-  refresh() {
+  refresh(autoOpen = true) {
     const c = this.context();
     if (c?.id !== this.id) {
-      this.close(); this.id = c?.id || null; this.lines = []; this.unread = 0;
+      this.close(true); this.id = c?.id || null; this.lines = []; this.unread = 0;
       if (c) Presence.send({ t: 'specChatHistory', to: c.id });
     }
     if (c?.host && !this.hostButton) {
@@ -25,6 +25,7 @@ const SpectatorChat = {
       this.hostButton.lastChild.textContent = `Spectator chat${this.unread ? ` (${this.unread})` : ''}`;
     }
     Spectate.paintMsgDot();
+    if (autoOpen && c && !c.host && !this.panel) this.open();
   },
   on(m) {
     this.refresh();
@@ -41,9 +42,9 @@ const SpectatorChat = {
     }
     this.refresh();
   },
-  toggle() { if (this.panel) this.close(); else this.open(); },
+  toggle() { if (this.panel && !Spectate.target) this.close(); else this.open(); },
   open() {
-    this.refresh();
+    this.refresh(false);
     const c = this.context();
     if (!c) return;
     if (this.panel) return;
@@ -52,18 +53,18 @@ const SpectatorChat = {
     this.list = h('div.gp-chat-list', { role: 'log', 'aria-live': 'polite', 'aria-label': 'Spectator messages' });
     this.input = h('input.gp-chat-in', { type: 'text', maxlength: 300, placeholder: 'Type a message…', 'aria-label': 'Spectator chat message', autocomplete: 'off' });
     const send = () => { const text = this.input.value.trim(); if (!text || !Presence.ws || !this.context()) return; Presence.send({ t: 'specChat', to: this.id, text }); this.input.value = ''; };
-    this.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') this.close(); });
+    this.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') { if (c.host) this.close(); else this.input.blur(); } });
     this.input.addEventListener('keyup', e => e.stopPropagation());
     this.input.addEventListener('focus', () => this.panel?.classList.add('typing'));
     this.input.addEventListener('blur', () => this.panel?.classList.remove('typing'));
-    const panel = this.panel = h('section.spectator-chat.gp-chat.open', { role: 'region', 'aria-label': 'Spectator chat' },
+    const panel = this.panel = h(`section.spectator-chat.gp-chat.open${c.host ? '' : '.viewer'}`, { role: 'region', 'aria-label': 'Spectator chat' },
       h('div.spectator-chat-head', h('div', h('h3', icon('chat'), 'Spectator chat'), h('span', c.host ? 'You and your spectators' : `${c.name} and their spectators`)),
-        h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x'))),
+        c.host ? h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x')) : null),
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
     document.body.append(panel); this.paint(); this.refresh(); Toolbar.sync();
-    if (!Mobile.touch) this.input.focus({ preventScroll: true });
+    if (c.host && !Mobile.touch) this.input.focus({ preventScroll: true });
   },
   paint() {
     if (!this.list) return;
@@ -82,5 +83,5 @@ const SpectatorChat = {
     while (this.list.children.length > 100) this.list.firstChild.remove();
     if (scroll && (atEnd || l.from.pid === Presence.pid())) this.list.scrollTop = this.list.scrollHeight;
   },
-  close() { this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
+  close(force = false) { if (!force && Spectate.target) return; this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
 };
