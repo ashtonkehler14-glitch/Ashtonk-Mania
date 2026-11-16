@@ -198,7 +198,7 @@ const Chat = {
       h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
-      fxName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), roleOfPid(l.from.pid)),
+      chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
       h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)));
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },

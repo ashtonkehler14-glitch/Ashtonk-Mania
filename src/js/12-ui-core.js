@@ -54,6 +54,15 @@ function fxName(el, role) {
   return el;
 }
 
+/** Chat uses the role's exact colour, with the usual chat colour for players without a role. */
+function chatName(el, from = {}) {
+  const room = typeof Multiplayer !== 'undefined' && Multiplayer.room;
+  const player = room && room.players.find(p => p.id === from.from);
+  const role = roleOfPid(from.pid || (player && player.pid)) || from.role;
+  if (role && /^#[0-9a-f]{6}$/i.test(role.colour || '')) el.style.color = role.colour;
+  return el;
+}
+
 /** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
   const key = name + '|' + cls;

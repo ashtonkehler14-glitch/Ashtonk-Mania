@@ -5641,3 +5641,5 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
   .sp-nb { padding-inline: 7px; gap: 7px; font-size: 11px; }
   .sp-head, .sp-scroll { padding-inline: 12px; }
 }
+
+.gp-results-wait { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); padding: 12px 20px; border-radius: 12px; background: rgba(30, 28, 36, .88); color: white; text-align: center; pointer-events: none; }

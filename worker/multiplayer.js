@@ -436,12 +436,12 @@ export class RoomLogic {
       case 'ping': return [{ to: id, msg: { t: 'pong', c: m.c, s: this.now() } }];
       case 'chat': {
         const text = str(m.text, 300);
-        return text ? [{ to: 'all', msg: { t: 'chat', from: id, name: p.name, text, ts: this.now() } }] : [];
+        return text ? [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, text, ts: this.now() } }] : [];
       }
       case 'suggest': {
         const map = cleanSuggestion(m.map);
         if (!map) return [];
-        return [{ to: 'all', msg: { t: 'chat', from: id, name: p.name, text: `suggested ${map.artist} - ${map.title} [${map.version}]`, suggest: map, ts: this.now() } }];
+        return [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, text: `suggested ${map.artist} - ${map.title} [${map.version}]`, suggest: map, ts: this.now() } }];
       }
       // the room's queue of songs: the host's — or, queue mode "all", anyone's — added in turn; the next one comes up
       // after each match (or straight away when the room has none)
@@ -2453,7 +2453,7 @@ export class PresenceLogic {
       if (msg.t === 'say' && !staff && rules.slow && last != null && t - last < rules.slow * 1000) return [{ to: id, msg: { t: 'error', msg: `Slow mode: one message every ${rules.slow} seconds (${Math.ceil((rules.slow * 1000 - (t - last)) / 1000)}s to go).` } }];
       recent.push(t); this.said.set(id, recent);
       if (msg.t === 'say') { this.lastSay.set(u.pid || id, t); if (this.lastSay.size > 5000) this.lastSay.clear(); }
-      const from = { pid: u.pid, name: u.name, avatar: u.avatar };
+      const from = { pid: u.pid, name: u.name, avatar: u.avatar, role: this.roles.get(u.pid) || null };
       // (blocked words starred out; one who keeps at it — 3 lines in 10 minutes — is muted for 10 minutes, where the
       // admins have that on)
       const starred = this.starWords(text), auto = [];

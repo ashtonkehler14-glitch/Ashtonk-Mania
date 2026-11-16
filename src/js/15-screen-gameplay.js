@@ -321,7 +321,7 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? h('div.gp-chat-l', h('b', m.name), h('span', m.text)) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const line = m => m.from ? h('div.gp-chat-l', chatName(h('b', m.name), m), h('span', m.text)) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
     for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(el); }
     this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {
@@ -354,6 +354,7 @@ const GameplayScreen = {
     this.gpChatIn.placeholder = open ? kbHint('press Enter to chat', 'tap to chat') : 'chat is available when your song is over';
   },
   leave() {
+    if (this._mpResultsCancel) this._mpResultsCancel();
     if (this._failSound) { try { this._failSound.stop(); } catch {} this._failSound = null; }
     if (SkinEditor.on) SkinEditor.close({ leaving: true });
     if (this._quitO) { const o = this._quitO; this._quitO = null; o.close(); } // ("Quit match?" still up as the song ended)
@@ -1897,8 +1898,22 @@ Skin         ${SkinManager.current.name} (${s.layout.from4K ? 'skin.ini [Mania] 
    *  (Quick Play and Ranked Play show their standings there). */
   mpAfter(score, replay) {
     const r = Multiplayer.room;
-    if (r && !r.rp && !r.qp) Screens.go('results', { score, replay, fresh: true, mp: true }, { replace: true, transition: 'zoom' });
-    else Screens.go('multiplayer', {}, { replace: true });
+    if (!r || r.rp || r.qp) { Screens.go('multiplayer', {}, { replace: true }); return; }
+    if (this._mpResultsCancel) this._mpResultsCancel();
+    const s = this.s;
+    const waiting = h('div.gp-results-wait', { role: 'status' }, 'Waiting for the match results…');
+    this.hud.append(waiting);
+    let timer, off;
+    const cancel = () => { clearTimeout(timer); if (off) off(); waiting.remove(); this._mpResultsCancel = null; };
+    this._mpResultsCancel = cancel;
+    const show = () => {
+      cancel();
+      if (this.s === s && Multiplayer.room && Multiplayer.room.code === r.code) Screens.go('results', { score, replay, fresh: true, mp: true }, { replace: true, transition: 'zoom' });
+    };
+    off = Bus.on('mp:changed', () => { if (Multiplayer.lastResults) show(); else if (!Multiplayer.room || Multiplayer.room.code !== r.code) cancel(); });
+    // osu!lazer MultiplayerPlayer also bounds its ResultsReady wait to 60 seconds.
+    timer = setTimeout(show, 60000);
+    if (Multiplayer.lastResults) show();
   },
   async complete() {
     const s = this.s;

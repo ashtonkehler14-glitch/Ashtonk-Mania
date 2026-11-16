@@ -76,7 +76,7 @@ const SpectatorChat = {
     if (!this.list) return;
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
-    const line = h(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, h('b', l.from.name), h('span', l.text));
+    const line = h(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, chatName(h('b', l.from.name), l.from), h('span', l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(line);
     while (this.list.children.length > 100) this.list.firstChild.remove();
