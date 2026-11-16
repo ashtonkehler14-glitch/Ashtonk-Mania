@@ -5965,3 +5965,14 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .rkm-msg .chat-copy { flex: 1; }
 .rkm-msg .chat-copy > b { display: block; margin-bottom: 2px; }
 .rkm-msg.chat-continuation { padding-top: 0; }
+
+
+.mp-msg.suggest { align-items: flex-start; gap: 9px; padding: 10px; border-radius: 12px; background: #a875dc14; border: 1px solid #d4b8e01c; }
+.mp-suggest-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mp-suggest-copy > b { display: block; margin-bottom: 3px; }
+.mp-suggest-copy > span { display: block; line-height: 1.45; }
+.mp-suggest-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mp-msg.suggest .mp-suggest-actions .btn { margin-left: 0; min-height: 30px; border-radius: 8px; font-size: 11px; }
+.mp-suggest-action[data-action=set] { background: #9b306b; color: #fff; }
+.mp-suggest-action[data-action=queue] { background: #694180; color: #fff; }
+.mp-suggest-action:disabled { opacity: .45; cursor: default; }

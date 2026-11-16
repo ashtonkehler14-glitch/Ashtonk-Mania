@@ -5976,6 +5976,17 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .rkm-msg .chat-copy { flex: 1; }
 .rkm-msg .chat-copy > b { display: block; margin-bottom: 2px; }
 .rkm-msg.chat-continuation { padding-top: 0; }
+
+
+.mp-msg.suggest { align-items: flex-start; gap: 9px; padding: 10px; border-radius: 12px; background: #a875dc14; border: 1px solid #d4b8e01c; }
+.mp-suggest-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mp-suggest-copy > b { display: block; margin-bottom: 3px; }
+.mp-suggest-copy > span { display: block; line-height: 1.45; }
+.mp-suggest-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mp-msg.suggest .mp-suggest-actions .btn { margin-left: 0; min-height: 30px; border-radius: 8px; font-size: 11px; }
+.mp-suggest-action[data-action=set] { background: #9b306b; color: #fff; }
+.mp-suggest-action[data-action=queue] { background: #694180; color: #fff; }
+.mp-suggest-action:disabled { opacity: .45; cursor: default; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -25736,6 +25747,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ae', title: 'Use room recommendations', sections: [
+    { title: 'Multiplayer', items: ['Recommended songs have Set song and Add to queue actions, following the room’s host and queue permissions.', 'Missing recommended beatmaps download before being selected or queued.'] }
+  ] },
   { id: '2026.11.16ad', title: 'Grouped chat messages', sections: [
     { title: 'Chat', items: ['Consecutive messages from the same player share one picture and name. A different speaker or a five-minute pause starts a new group.'] }
   ] },
@@ -30026,6 +30040,7 @@ const MultiplayerScreen = {
     requestAnimationFrame(() => { if (this.chatList) this.chatList.scrollTop = this.chatList.scrollHeight; });
   },
   refreshRoom() {
+    this.refreshSuggestionActions();
     if (Multiplayer.isQP()) { this.refreshQP(); return; }
     this._qpKey = null;
     const r = Multiplayer.room, me = Multiplayer.self(), host = Multiplayer.isHost();
@@ -30207,17 +30222,30 @@ const MultiplayerScreen = {
     let el;
     if (m.suggest) {
       const map = m.suggest;
-      const pick = Multiplayer.isHost() ? h('button.btn.sm.primary', { onclick: async () => {
-        pick.disabled = true;
+      const buttons = [];
+      let busy = false;
+      const run = async (kind, button) => {
+        if (busy || !this.suggestionAllowed(kind)) return;
+        const code = Multiplayer.code;
+        busy = true; el.dataset.busy = 'true'; this.refreshSuggestionActions();
         try {
           let local = Multiplayer.localMap(map);
-          if (!local && map.onlineSetId > 0) { pick.textContent = 'Downloading…'; await OnlineBeatmaps.downloadAndImport({ id: map.onlineSetId, title: map.title, artist: map.artist }); local = Multiplayer.localMap(map); }
+          if (!local && map.onlineSetId > 0) { button.textContent = 'Downloading…'; await OnlineBeatmaps.downloadAndImport({ id: map.onlineSetId, title: map.title, artist: map.artist }); local = Multiplayer.localMap(map); }
+          if (!Multiplayer.inRoom() || Multiplayer.code !== code) throw new Error('You left this room before the beatmap was ready.');
+          if (!this.suggestionAllowed(kind)) throw new Error('Your room permissions changed before the beatmap was ready.');
           if (!local) throw new Error(map.onlineSetId > 0 ? 'Beatmap not available.' : 'You don\'t have this beatmap, and it isn\'t online to download.');
-          Multiplayer.selectMap(local, Settings.get('songselect.mods') || []);
-        } catch (e) { Toast.err('Couldn\'t pick that beatmap', friendlyError(e)); }
-        pick.disabled = false; pick.textContent = 'Pick';
-      } }, 'Pick') : null;
-      el = h('div.mp-msg.suggest', chatAvatar(m, 24), chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), pick);
+          if (!Multiplayer.ws || Multiplayer.ws.readyState !== 1) throw new Error('Not connected to the room. Try again once it reconnects.');
+          if (kind === 'queue') {
+            if (!Multiplayer.queueAdd(local)) throw new Error('Could not send the queue request. Try again.');
+          } else Multiplayer.selectMap(local, Settings.get('songselect.mods') || []);
+        } catch (e) { Toast.err(kind === 'queue' ? 'Couldn’t queue that beatmap' : 'Couldn’t set that beatmap', friendlyError(e)); }
+        finally { busy = false; delete el.dataset.busy; for (const b of buttons) b.textContent = b.dataset.action === 'queue' ? 'Add to queue' : 'Set song'; this.refreshSuggestionActions(); }
+      };
+      for (const [kind, label] of [['set', 'Set song'], ['queue', 'Add to queue']]) {
+        const button = h('button.btn.sm.mp-suggest-action', { 'data-action': kind, disabled: !this.suggestionAllowed(kind), onclick: () => run(kind, button) }, label);
+        buttons.push(button);
+      }
+      el = h('div.mp-msg.suggest', chatAvatar(m, 24), h('div.mp-suggest-copy', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), h('div.mp-suggest-actions', ...buttons)));
     } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text) : h('div.mp-msg.sys', m.text);
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -30234,6 +30262,19 @@ const MultiplayerScreen = {
   },
   /** The room's queue (lazer's playlist of upcoming songs): the next one comes up after each match. The host plays one
    *  now, moves one up or takes one off; whoever added a song can take it off. */
+  suggestionAllowed(kind) {
+    const r = Multiplayer.room;
+    if (!r || r.qp || r.rp) return false;
+    return kind === 'queue' ? Multiplayer.canQueue() : Multiplayer.isHost() && r.state !== 'playing' && !r.players.some(p => p.playing);
+  },
+  refreshSuggestionActions() {
+    if (!this.chatList) return;
+    for (const button of this.chatList.querySelectorAll('.mp-suggest-action')) {
+      const busy = button.closest('.suggest').dataset.busy === 'true', allowed = this.suggestionAllowed(button.dataset.action);
+      button.disabled = busy || !allowed;
+      button.title = allowed ? '' : button.dataset.action === 'queue' ? 'The host controls who can add songs to the queue.' : 'Only the host can set the song between rounds.';
+    }
+  },
   queuePanel(r, host) {
     const q = r.queue || [], can = Multiplayer.canQueue(), lobby = !r.players.some(p => p.playing);
     const btn = (title, ic, fn, cls = '') => h(`button.mp-qi-b${cls}`, { title, 'aria-label': title, onclick: () => { UISounds.click(); fn(); } }, icon(ic));
@@ -35269,7 +35310,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'e467f37429a9';
+const APP_BUILD = '6a50cc78dd3e';
 
 const App = {
   lastReport: null,

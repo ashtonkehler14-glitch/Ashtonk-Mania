@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ae', title: 'Use room recommendations', sections: [
+    { title: 'Multiplayer', items: ['Recommended songs have Set song and Add to queue actions, following the room’s host and queue permissions.', 'Missing recommended beatmaps download before being selected or queued.'] }
+  ] },
   { id: '2026.11.16ad', title: 'Grouped chat messages', sections: [
     { title: 'Chat', items: ['Consecutive messages from the same player share one picture and name. A different speaker or a five-minute pause starts a new group.'] }
   ] },
