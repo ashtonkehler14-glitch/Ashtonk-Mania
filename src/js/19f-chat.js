@@ -35,7 +35,7 @@ const Chat = {
     if (m.t === 'say') {
       this.add('#lobby', m);
       // lazer's MentionNotification: your name in #lobby while you're not looking at it (not in Do not disturb)
-      if (this.mentions(m.text) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd')
+      if ((this.mentions(m.text) || ChatMentions.has(m.text)) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd')
         Toast.show(`${m.from.name} mentioned you in #lobby`, m.text.length > 80 ? m.text.slice(0, 80) + '…' : m.text, { onClick: () => this.open('#lobby'), hold: true });
     }
     else if (m.t === 'pm' && m.with && m.with.pid) {
@@ -194,7 +194,7 @@ const Chat = {
     const act = /^\/me\s+/.test(l.text || '');
     if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
     // (/me: lazer's action line — the name and what they did, in italics)
-    else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && this.mentions(l.text) ? '.mention' : ''}`,
+    else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
       chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)

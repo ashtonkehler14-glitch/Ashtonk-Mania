@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ac', title: 'Mention players in chat', sections: [
+    { title: 'Chat', items: ['Type @ to find a player, then choose their name with a tap or the arrow keys and Enter.', 'Mentions notify the named player in lobby, room and spectator chat. Pop-ups wait until their song ends and respect Do not disturb.'] }
+  ] },
   { id: '2026.11.16ab', title: 'A consistent menu style', sections: [
     { title: 'Menus', items: ['The explorer’s plum surfaces, subtle triangle backgrounds and colourful headers now carry through the other browsing menus.', 'Search fields, tabs, list rows and small panels have matching colours and softer borders. Custom profile themes keep their own colours.'] }
   ] },

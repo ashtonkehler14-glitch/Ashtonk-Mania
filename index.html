@@ -5939,7 +5939,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .menu, .nf-panel, .np-panel { border: 1px solid #d4b8e026; background-color: #2b2533; }
 .menu button:hover { background-color: #8d285f; color: #fff; }
 
-.gp-hud:has(> .spec-live) > :is(.hud-score, .hud-hp, .hud-replay) { margin-top: 42px; }
+.gp-hud.spectator-hud > :is(.hud-score, .hud-hp, .hud-replay) { margin-top: 42px; }
 @media (max-width: 700px) {
   .spm .spm-box { grid-template-columns: minmax(0, 1fr); }
   .spm .spm-acts { justify-content: flex-end; }
@@ -5950,6 +5950,15 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .cl { background-color: #25212d; border: 1px solid #d4b8e026; }
 .cl-hicon { border-radius: 12px; background: #9b306b; }
 .cl-title { font-weight: 650; }
+
+
+.chat-mentions { position: fixed; z-index: 10000; overflow-y: auto; overscroll-behavior: contain; padding: 6px; border: 1px solid #d4b8e033; border-radius: 12px; background: #302938; box-shadow: 0 8px 30px #0006; color: #fff; font-size: 13px; }
+.chat-mentions-title { padding: 5px 8px 8px; color: #cbbdd1; font-size: 11px; }
+.chat-mention-option { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 38px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: #fff; font: inherit; text-align: left; }
+.chat-mention-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-mention-option .avatar { flex: none; border-radius: 7px; }
+.chat-mention-option[aria-selected=true], .chat-mention-option:hover { background: #8d285f; }
+.spectator-chat .gp-chat-l.mention { background: #a875dc1a; box-shadow: inset 2px 0 #ff91c4; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -16204,6 +16213,85 @@ const ProfileAppearance = {
   },
 };
 
+/* ===== 12c-chat-mentions.js ===== */
+/* Shared @-completion for chat inputs. Nothing is sent until the normal send action. */
+const ChatMentions = {
+  escape(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); },
+  has(text, name = ProfileManager.profile.name) {
+    if (!name?.trim()) return false;
+    return new RegExp(`(^|[^\\p{L}\\p{N}_])@${this.escape(name.trim())}(?=$|[^\\p{L}\\p{N}_])`, 'iu').test(String(text || ''));
+  },
+  players(input) {
+    const room = Multiplayer.room;
+    let list = input?.closest('.mp-tabpane, .gp-chat:not(.spectator-chat)') && room ? room.players : Presence.players;
+    if (input?.closest('.spectator-chat')) list = [...(list || []), ...SpectatorChat.lines.map(l => l.from), Spectate.target].filter(Boolean);
+    const seen = new Set();
+    return (list || []).filter(p => {
+      if (!p.name || p.pid && p.pid === Presence.pid() || p.id && p.id === Presence.me) return false;
+      const key = p.name.toLocaleLowerCase(); if (seen.has(key)) return false; seen.add(key); return true;
+    });
+  },
+  matches(input) {
+    const end = input.selectionStart ?? input.value.length;
+    if (input.selectionEnd !== end) return null;
+    const m = /(?:^|\s)@([^\s@]*)$/.exec(input.value.slice(0, end));
+    return m ? { start: end - m[1].length - 1, end, query: m[1].toLocaleLowerCase() } : null;
+  },
+  notify(line, where, onClick) {
+    const from = typeof line.from === 'object' ? line.from : line;
+    if (!from?.name || from.pid && from.pid === Presence.pid() || typeof line.from === 'string' && line.from === Multiplayer.me || Settings.get('online.status') === 'dnd' || !this.has(line.text)) return;
+    Toast.show(`${from.name} mentioned you in ${where}`, String(line.text).slice(0, 120), { onClick, hold: true });
+  },
+  init() {
+    const eligible = el => el instanceof HTMLInputElement && !el.disabled && el.matches('.ch-input, .gp-chat-in, input[aria-label="Chat message"]');
+    Bus.on('screen:changed', () => this.hide());
+    document.addEventListener('focusout', e => { if (e.target === this.input) setTimeout(() => { if (this.input && document.activeElement !== this.input) this.hide(); }, 0); });
+    document.addEventListener('input', e => { if (eligible(e.target)) this.show(e.target); });
+    document.addEventListener('focusin', e => { if (eligible(e.target)) this.show(e.target); else if (!this.popup?.contains(e.target)) this.hide(); });
+    document.addEventListener('pointerdown', e => { if (e.target !== this.input && !this.popup?.contains(e.target)) this.hide(); }, true);
+    document.addEventListener('keydown', e => {
+      if (!this.popup || e.target !== this.input || e.isComposing) return;
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) { this.hide(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); this.active = (this.active + (e.key === 'ArrowDown' ? 1 : -1) + this.options.length) % this.options.length; this.paintActive(); }
+      else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); this.choose(this.active); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); this.hide(); }
+    }, true);
+    document.addEventListener('scroll', e => { if (!this.popup?.contains(e.target)) this.hide(); }, true);
+    window.addEventListener('resize', () => this.hide());
+  },
+  show(input) {
+    this.hide();
+    const token = this.matches(input); if (!token) return;
+    const options = this.players(input).filter(p => p.name.toLocaleLowerCase().includes(token.query)).sort((a,b) => Number(b.name.toLocaleLowerCase().startsWith(token.query)) - Number(a.name.toLocaleLowerCase().startsWith(token.query)) || a.name.localeCompare(b.name)).slice(0, 6);
+    if (!options.length) return;
+    this.input = input; this.token = token; this.options = options; this.active = 0;
+    this.popup = h('div.chat-mentions', { id: 'chat-mention-options', role: 'listbox', 'aria-label': 'Mention a player' }, h('div.chat-mentions-title', 'Mention a player'), ...options.map((p,i) => h('button.chat-mention-option', { id: `chat-mention-${i}`, role: 'option', type: 'button', onpointerdown: e => { e.preventDefault(); this.choose(i); } }, Presence.avatarEl(p, 26), h('span', p.name))));
+    document.body.append(this.popup);
+    input.setAttribute('aria-controls', this.popup.id); input.setAttribute('aria-expanded', 'true'); input.setAttribute('aria-autocomplete', 'list');
+    const rect = input.getBoundingClientRect(), width = Math.min(320, innerWidth - 24);
+    Object.assign(this.popup.style, { width: width + 'px', left: Math.max(12, Math.min(rect.left, innerWidth - width - 12)) + 'px' });
+    if (rect.top > 140) Object.assign(this.popup.style, { bottom: (innerHeight - rect.top + 6) + 'px', maxHeight: Math.min(240, rect.top - 18) + 'px' });
+    else Object.assign(this.popup.style, { top: (rect.bottom + 6) + 'px', maxHeight: Math.max(60, Math.min(240, innerHeight - rect.bottom - 18)) + 'px' });
+    this.paintActive();
+  },
+  paintActive() {
+    [...this.popup.querySelectorAll('[role=option]')].forEach((el,i) => { el.setAttribute('aria-selected', String(i === this.active)); if (i === this.active) el.scrollIntoView({ block: 'nearest' }); });
+    this.input.setAttribute('aria-activedescendant', `chat-mention-${this.active}`);
+  },
+  choose(index) {
+    const input = this.input, p = this.options?.[index], token = this.token;
+    if (!input || !p || !token) return;
+    const insert = `@${p.name} `, value = input.value.slice(0,token.start) + insert + input.value.slice(token.end);
+    if (input.maxLength > 0 && value.length > input.maxLength) return;
+    input.value = value; input.setSelectionRange(token.start + insert.length, token.start + insert.length); this.hide(); input.focus({ preventScroll: true });
+  },
+  hide() {
+    this.popup?.remove(); this.popup = null;
+    if (this.input) { this.input.setAttribute('aria-expanded', 'false'); this.input.removeAttribute('aria-activedescendant'); this.input.removeAttribute('aria-controls'); }
+    this.input = null;
+  },
+};
+
 /* ===== 12c-dropdowns.js ===== */
 /* Lazer-style dropdowns. Keep the real select as the form/settings source, with an accessible custom menu above it. */
 const GameDropdowns = {
@@ -21573,6 +21661,7 @@ const GameplayScreen = {
     // (the skin editor shows every component, the ones turned off too — dimmed — so each can be placed before it's on)
     const all = this._hudAll = !!(this.params.skinEditor || (typeof SkinEditor !== 'undefined' && SkinEditor.on));
     clearEl(this.hud);
+    this.hud.classList.toggle('spectator-hud', !!s.spectate);
     this._pq = this._pieQ = this._lead = this._canSkip = this._inBreak = this._progT = this._ppJudged = this._scT = undefined; this._lastSc = this._lastAcc = this._lastTT = this._hudOff = undefined; this._ctrl = false;
     this.scoreEl = h('div.sc', '0'); this.accEl = h('div.acc', '100.00%');
     this.progEl = h('i');
@@ -25615,6 +25704,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ac', title: 'Mention players in chat', sections: [
+    { title: 'Chat', items: ['Type @ to find a player, then choose their name with a tap or the arrow keys and Enter.', 'Mentions notify the named player in lobby, room and spectator chat. Pop-ups wait until their song ends and respect Do not disturb.'] }
+  ] },
   { id: '2026.11.16ab', title: 'A consistent menu style', sections: [
     { title: 'Menus', items: ['The explorer’s plum surfaces, subtle triangle backgrounds and colourful headers now carry through the other browsing menus.', 'Search fields, tabs, list rows and small panels have matching colours and softer borders. Custom profile themes keep their own colours.'] }
   ] },
@@ -28824,7 +28916,7 @@ const Multiplayer = {
         Bus.emit('mp:changed');
         break;
       }
-      case 'chat': this.chat.push(m); if (this.chat.length > 200) this.chat.shift(); Bus.emit('mp:chat', m); break;
+      case 'chat': ChatMentions.notify(m, 'the room', () => Screens.go('multiplayer')); this.chat.push(m); if (this.chat.length > 200) this.chat.shift(); Bus.emit('mp:chat', m); break;
       case 'pong': if (m.c === this._pingAt) this.rtt = performance.now() - m.c; break;
       case 'opp': this.opps.set(m.id, m); Bus.emit('mp:opp', m); break;
       case 'qpPool': this.buildPool(m); break;
@@ -32949,7 +33041,7 @@ const Chat = {
     if (m.t === 'say') {
       this.add('#lobby', m);
       // lazer's MentionNotification: your name in #lobby while you're not looking at it (not in Do not disturb)
-      if (this.mentions(m.text) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd')
+      if ((this.mentions(m.text) || ChatMentions.has(m.text)) && !(m.from && m.from.pid === Presence.pid()) && !(this.o && this.cur === '#lobby') && Settings.get('online.status') !== 'dnd')
         Toast.show(`${m.from.name} mentioned you in #lobby`, m.text.length > 80 ? m.text.slice(0, 80) + '…' : m.text, { onClick: () => this.open('#lobby'), hold: true });
     }
     else if (m.t === 'pm' && m.with && m.with.pid) {
@@ -33108,7 +33200,7 @@ const Chat = {
     const act = /^\/me\s+/.test(l.text || '');
     if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
     // (/me: lazer's action line — the name and what they did, in italics)
-    else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && this.mentions(l.text) ? '.mention' : ''}`,
+    else this.lines.append(h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
       chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
@@ -35081,6 +35173,7 @@ const SpectatorChat = {
       this.lines = [...all.values()].sort((a, b) => a.at - b.at).slice(-100);
       if (this.panel) this.paint();
     } else if (m.line?.from && typeof m.line.text === 'string') {
+      ChatMentions.notify(m.line, 'spectator chat', () => this.open());
       this.lines.push(m.line); this.lines = this.lines.slice(-100);
       if (this.panel) this.append(m.line);
       else if (m.line.from.pid !== Presence.pid()) this.unread++;
@@ -35123,6 +35216,7 @@ const SpectatorChat = {
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
     const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
+    line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(line);
     while (this.list.children.length > 100) this.list.firstChild.remove();
@@ -35138,7 +35232,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '9d1dc82108eb';
+const APP_BUILD = '158d9f643983';
 
 const App = {
   lastReport: null,
@@ -35173,6 +35267,7 @@ const App = {
     Toolbar.build();
     GameDropdowns.init();
     SpectatorChat.init();
+    ChatMentions.init();
     NeruMenuSecrets.init();
     Tooltip.init();
     UISounds.initHover();

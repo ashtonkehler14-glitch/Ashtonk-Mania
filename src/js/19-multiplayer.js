@@ -294,7 +294,7 @@ const Multiplayer = {
         Bus.emit('mp:changed');
         break;
       }
-      case 'chat': this.chat.push(m); if (this.chat.length > 200) this.chat.shift(); Bus.emit('mp:chat', m); break;
+      case 'chat': ChatMentions.notify(m, 'the room', () => Screens.go('multiplayer')); this.chat.push(m); if (this.chat.length > 200) this.chat.shift(); Bus.emit('mp:chat', m); break;
       case 'pong': if (m.c === this._pingAt) this.rtt = performance.now() - m.c; break;
       case 'opp': this.opps.set(m.id, m); Bus.emit('mp:opp', m); break;
       case 'qpPool': this.buildPool(m); break;

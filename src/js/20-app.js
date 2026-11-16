@@ -39,6 +39,7 @@ const App = {
     Toolbar.build();
     GameDropdowns.init();
     SpectatorChat.init();
+    ChatMentions.init();
     NeruMenuSecrets.init();
     Tooltip.init();
     UISounds.initHover();

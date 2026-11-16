@@ -5928,7 +5928,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .menu, .nf-panel, .np-panel { border: 1px solid #d4b8e026; background-color: #2b2533; }
 .menu button:hover { background-color: #8d285f; color: #fff; }
 
-.gp-hud:has(> .spec-live) > :is(.hud-score, .hud-hp, .hud-replay) { margin-top: 42px; }
+.gp-hud.spectator-hud > :is(.hud-score, .hud-hp, .hud-replay) { margin-top: 42px; }
 @media (max-width: 700px) {
   .spm .spm-box { grid-template-columns: minmax(0, 1fr); }
   .spm .spm-acts { justify-content: flex-end; }
@@ -5939,3 +5939,12 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .cl { background-color: #25212d; border: 1px solid #d4b8e026; }
 .cl-hicon { border-radius: 12px; background: #9b306b; }
 .cl-title { font-weight: 650; }
+
+
+.chat-mentions { position: fixed; z-index: 10000; overflow-y: auto; overscroll-behavior: contain; padding: 6px; border: 1px solid #d4b8e033; border-radius: 12px; background: #302938; box-shadow: 0 8px 30px #0006; color: #fff; font-size: 13px; }
+.chat-mentions-title { padding: 5px 8px 8px; color: #cbbdd1; font-size: 11px; }
+.chat-mention-option { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 38px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: #fff; font: inherit; text-align: left; }
+.chat-mention-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-mention-option .avatar { flex: none; border-radius: 7px; }
+.chat-mention-option[aria-selected=true], .chat-mention-option:hover { background: #8d285f; }
+.spectator-chat .gp-chat-l.mention { background: #a875dc1a; box-shadow: inset 2px 0 #ff91c4; }

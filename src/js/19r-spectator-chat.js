@@ -36,6 +36,7 @@ const SpectatorChat = {
       this.lines = [...all.values()].sort((a, b) => a.at - b.at).slice(-100);
       if (this.panel) this.paint();
     } else if (m.line?.from && typeof m.line.text === 'string') {
+      ChatMentions.notify(m.line, 'spectator chat', () => this.open());
       this.lines.push(m.line); this.lines = this.lines.slice(-100);
       if (this.panel) this.append(m.line);
       else if (m.line.from.pid !== Presence.pid()) this.unread++;
@@ -78,6 +79,7 @@ const SpectatorChat = {
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
     const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
+    line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(line);
     while (this.list.children.length > 100) this.list.firstChild.remove();

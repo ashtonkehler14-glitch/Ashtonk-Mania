@@ -826,6 +826,7 @@ const GameplayScreen = {
     // (the skin editor shows every component, the ones turned off too — dimmed — so each can be placed before it's on)
     const all = this._hudAll = !!(this.params.skinEditor || (typeof SkinEditor !== 'undefined' && SkinEditor.on));
     clearEl(this.hud);
+    this.hud.classList.toggle('spectator-hud', !!s.spectate);
     this._pq = this._pieQ = this._lead = this._canSkip = this._inBreak = this._progT = this._ppJudged = this._scT = undefined; this._lastSc = this._lastAcc = this._lastTT = this._hudOff = undefined; this._ctrl = false;
     this.scoreEl = h('div.sc', '0'); this.accEl = h('div.acc', '100.00%');
     this.progEl = h('i');
