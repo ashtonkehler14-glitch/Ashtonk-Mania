@@ -495,7 +495,7 @@ const ShareCard = {
     const W = this.W, H = this.H;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const x = c.getContext('2d');
-    const F = (w, px) => `${w} ${px}px Outfit, "Segoe UI", system-ui, sans-serif`;
+    const F = (w, px) => `${w} ${px}px Sora, "Segoe UI", system-ui, sans-serif`;
     try { await Promise.all([800, 700, 500].map(w => document.fonts.load(F(w, 40)))); } catch (e) { /* system font */ }
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff66ab';
     // background: the beatmap's picture, blurred and darkened
@@ -641,7 +641,7 @@ const Charts = {
       x.fillStyle = 'rgba(255,255,255,.28)'; x.fillRect(zx - 0.5, pad.t, 1, ph);
       const mx = pad.l + clamp((mean + range) / (2 * range), 0, 1) * pw;
       x.fillStyle = '#ffd54a'; x.fillRect(mx - 1, pad.t, 2, ph);
-      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 11px Torus, Outfit, system-ui'; x.textAlign = 'center';
+      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 11px Sora, system-ui'; x.textAlign = 'center';
       x.fillText(`-${Math.round(range)}ms (early)`, pad.l + 44, H - 5); x.fillText('0', zx, H - 5); x.fillText(`+${Math.round(range)}ms (late)`, w - pad.r - 44, H - 5);
     };
     // lazer's bars grow up into place (300ms OutQuint) the first time the graph comes into view
@@ -687,7 +687,7 @@ const Charts = {
       }
       x.globalAlpha = 1;
       x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(pad.l, Y(0) - 0.5, pw, 1);
-      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Torus, Outfit, system-ui'; x.textAlign = 'right';
+      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Sora, system-ui'; x.textAlign = 'right';
       x.fillText(`-${Math.round(range)}`, pad.l - 6, pad.t + 9); x.fillText('0', pad.l - 6, Y(0) + 3); x.fillText(`+${Math.round(range)}`, pad.l - 6, H - pad.b);
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
@@ -728,7 +728,7 @@ const Charts = {
       const bw = pw / data.length;
       const maxBar = 56;
       geo = { pad, pw, ph, bw };
-      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Torus, Outfit, system-ui'; x.textAlign = 'right';
+      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Sora, system-ui'; x.textAlign = 'right';
       for (let k = 0; k <= 4; k++) {
         const y = pad.t + ph * (1 - k / 4);
         x.beginPath(); x.moveTo(pad.l, y); x.lineTo(w - pad.r, y); x.stroke();
@@ -773,7 +773,7 @@ const Charts = {
       const X = i => pad.l + (pts.length < 2 ? pw / 2 : i / (pts.length - 1) * pw);
       const Y = v => pad.t + ph * (1 - (v - lo) / span);
       geo = { pad, pw, X };
-      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Torus, Outfit, system-ui'; x.textAlign = 'right';
+      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Sora, system-ui'; x.textAlign = 'right';
       for (let k = 0; k <= 4; k++) { const v = lo + span * k / 4, y = Y(v); x.beginPath(); x.moveTo(pad.l, y); x.lineTo(w - pad.r, y); x.stroke(); x.fillText(fmtY(v), pad.l - 5, y + 3); }
       const acc = this._css('--accent') || '#b07cff';
       x.strokeStyle = acc; x.lineWidth = 2; x.lineJoin = 'round'; x.beginPath();

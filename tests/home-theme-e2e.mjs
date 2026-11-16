@@ -24,6 +24,7 @@ try {
     await page.waitForSelector('.setup-step-wom, .setup-step-mobile'); await page.evaluate(() => Onboarding.finish());
   }
   await page.waitForFunction(() => !Screens.busy);
+  assert.equal(await page.evaluate(async()=>{const faces=await document.fonts.load('600 16px Sora');return faces.length>0 && faces.every(face=>face.status==='loaded');}),true,'Bundled Sora font loads');
 
 
   await page.evaluate(()=>{while(Overlays.top())Overlays.top().close();Settings.set('ui.menuBackground','triangles');});
@@ -52,6 +53,19 @@ try {
       console.log(viewport.width,state,result);
     }
   }
+  const clearCentre=await page.evaluate(()=>{
+    for(const [width,height] of [[1280,591],[591,1280]]) {
+      const cv=document.createElement('canvas');cv.width=width;cv.height=height;
+      const ctx=cv.getContext('2d');MenuTriangles.paint(ctx,width,height,[255,.14]);
+      for(const y of [.25,.5,.75]) {
+        const row=ctx.getImageData(0,Math.floor(height*y),width,1).data;
+        const anchor=row.slice(Math.floor(width*.5)*4,Math.floor(width*.5)*4+3);
+        for(let px=Math.floor(width*.2);px<width*.8;px++)if(anchor.some((v,c)=>Math.abs(row[px*4+c]-v)>1))return {width,height,px,y,anchor:[...anchor],pixel:[...row.slice(px*4,px*4+3)]};
+      }
+    }
+    return true;
+  });
+  assert.equal(clearCentre,true,'Triangles stay at the border in landscape and portrait');
   const wave=page.locator('.lz-glass-wave path').first();
   const waveBefore=await wave.getAttribute('d');
   await page.waitForTimeout(180);

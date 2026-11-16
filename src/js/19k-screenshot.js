@@ -49,7 +49,7 @@ const Screenshot = {
       const draw = (node, text, weight) => {
         const r = node.getBoundingClientRect(); if (!r.width) return;
         const cs = getComputedStyle(node), size = parseFloat(cs.fontSize) * sy;
-        ctx.font = `${weight} ${size}px Torus, Outfit, system-ui, sans-serif`;
+        ctx.font = `${weight} ${size}px Sora, system-ui, sans-serif`;
         ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(0, 0, 0, .6)'; ctx.shadowBlur = 8 * sy;
         ctx.fillStyle = cs.color || '#fff';

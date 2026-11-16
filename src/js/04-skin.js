@@ -673,7 +673,7 @@ class DefaultSkin extends Skin {
     if ((m = /^mania-hit(300g|300|200|100|50|0)$/.exec(key))) {
       // lazer's judgement words in lazer's hit-result colours, spaced out, with a soft glow of the same colour
       const [word, col] = { '300g': ['PERFECT', '#99eeff'], '300': ['GREAT', '#66ccff'], '200': ['GOOD', '#b3d944'], '100': ['OK', '#88b300'], '50': ['MEH', '#ffcc22'], '0': ['MISS', '#ed1121'] }[m[1]];
-      const font = '600 58px "Torus", "Inter", "Segoe UI", system-ui, sans-serif';
+      const font = '600 58px "Sora", "Inter", "Segoe UI", system-ui, sans-serif';
       const meas = document.createElement('canvas').getContext('2d'); meas.font = font;
       if ('letterSpacing' in meas) meas.letterSpacing = '12px';
       const tw = Math.ceil(meas.measureText(word).width) + 60;

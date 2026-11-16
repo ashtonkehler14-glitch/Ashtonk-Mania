@@ -747,38 +747,30 @@ onmessage = async ({ data: m }) => {
   paint(x, W, H, [hue, sat]) {
     // Zako: use the same palette in the worker and fallback renderer.
     hue = Number.isFinite(hue) ? hue : 255; sat = clamp(sat || .14, .12, .16);
-    const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, hsl(hue, sat, .23)); g.addColorStop(1, hsl(hue, sat, .18));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.setTransform(k, 0, 0, k, ox, oy);
-    const R3 = Math.sqrt(3) / 2;
-    const up = (ax, ay, s) => { x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); };
-    // faint outlines first (they sit behind the solid banks)
-    x.lineWidth = 2.2; x.lineJoin = 'miter';
-    for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 7 === 0)) {
-      const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
-      x.strokeStyle = hsl(hue, sat, .42, .10); up(ax, ay, s); x.stroke();
-    }
-    // the solid banks pick out the edges with lazer's soft shadow
-    // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
-    x.shadowColor = 'transparent'; x.shadowBlur = 0;
-    const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, .34, .09)); sg.addColorStop(1, hsl(hue + 3, sat, .24, .09));
-    x.fillStyle = sg;
-    x.beginPath();
-    for (const [ax, ay, s] of this.SOLID.filter((_, i) => i % 5 === 0)) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
-    x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
-    x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
-    // Separate pink, blonde-gold and lilac rings keep the original triangle composition colourful.
-    const accents = [[333, 1, .77], [45, 1, .70], [255, 1, .80]];
-    x.lineWidth = 2.6;
-    for (let i = 0; i < this.RING.length; i++) {
-      if (i % 5) continue;
-      const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
-      x.strokeStyle = hsl(c[0], c[1] * .65, c[2], .17); up(ax, ay, s); x.stroke();
+    // Screen-relative edge decorations keep the centre clear at every aspect ratio.
+    const unit = Math.min(W, H), R3 = Math.sqrt(3) / 2;
+    const triangle = (u, v, size, down = false) => {
+      const ax = W * u, ay = H * v, half = unit * size / 2, height = half * 2 * R3 * (down ? -1 : 1);
+      x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + half, ay + height); x.lineTo(ax - half, ay + height); x.closePath();
+    };
+    x.lineWidth = Math.max(1, unit * .0018); x.lineJoin = 'round';
+    const edges = [[.08,.025,.09], [.29,.018,.055], [.73,.025,.065], [.94,.02,.10],
+      [.025,.31,.055], [.975,.67,.055], [.09,.98,.08,true], [.31,.98,.05,true],
+      [.75,.98,.065,true], [.94,.98,.09,true]];
+    const accents = [[333,.65,.67], [45,.65,.63], [255,.65,.72]];
+    edges.forEach(([u,v,size,down], i) => {
+      const c = accents[i % accents.length];
+      x.strokeStyle = hsl(c[0], c[1], c[2], .22);
+      triangle(u,v,size,down); x.stroke();
+    });
+    x.fillStyle = hsl(hue, sat, .40, .10);
+    for (const t of [[.015,.01,.16], [.99,.03,.20], [.025,.99,.16,true], [.99,.99,.19,true]]) {
+      triangle(...t); x.fill();
     }
     x.setTransform(1, 0, 0, 1, 0, 0);
   },

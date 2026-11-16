@@ -13,10 +13,15 @@ window.__bip = null; addEventListener('beforeinstallprompt', function (e) { e.pr
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ashtonk!mania">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/Sora-Variable.ttf" as="font" type="font/ttf" crossorigin>
 <style>
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(fonts/Sora-Variable.ttf) format("truetype");
+}
 /* ───────────────────────── Ashtonk!mania — client styles ───────────────────────── */
 :root {
   --el-out: linear(0, .518, 1.097, 1.364, 1.296, 1.081, .912, .87, .924, 1, 1.043, 1.041, 1.016, .992, .984, .989, .998, 1.005, 1.006, 1.003, .999, .998, .998, 1, 1); /* osu!framework's OutElastic */
@@ -74,7 +79,7 @@ window.__bip = null; addEventListener('beforeinstallprompt', function (e) { e.pr
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
 body {
-  font-family: "Torus", "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-weight: 400; -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
 }
 input, textarea, select { user-select: text; -webkit-user-select: text; }
@@ -1547,7 +1552,7 @@ html.touch .practice-bar .kbd { display: none; }
 /* osu!lazer's FPSCounter: bottom right with a 5px margin, 26px tall; a black box (40%, solid on hover) behind the frame
    time (16px) and, under it, the frame rate (13px), right-aligned in a fixed-width face; at 70% when nothing's
    happening, full when something changes */
-#fps-counter { position: absolute; right: 5px; bottom: 5px; z-index: 900; font-family: Torus, Outfit, system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: fcIn 100ms ease-out; }
+#fps-counter { position: absolute; right: 5px; bottom: 5px; z-index: 900; font-family: Sora, system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: fcIn 100ms ease-out; }
 #fps-counter[hidden] { display: none; }
 @keyframes fcIn { from { opacity: 0; } }
 #fps-counter .fc-main { position: relative; height: 26px; min-width: 52px; opacity: .7; transition: opacity 300ms cubic-bezier(.22, 1, .36, 1); }
@@ -3794,7 +3799,7 @@ html.touch .explorer.ov .ex-flabel { padding-top: 7px; }
 
 /* osu!lazer's judgement counter (JudgementCounterDisplay): counters 10px apart, each a 16px fixed-width count over its
    8px name, in the judgement's colour — on a Kori panel (dark purple, Kori-purple edge) */
-.hud-jc { position: absolute; right: 14px; top: 50%; translate: 0 -50%; z-index: 5; display: flex; gap: 10px; padding: 9px 12px 9px 13px; border-radius: 10px; background: linear-gradient(135deg, hsl(262 30% 12% / .78), hsl(262 25% 8% / .7)); box-shadow: inset 3px 0 0 hsl(262 70% 68%), 0 4px 18px rgba(0, 0, 0, .35); pointer-events: none; font-family: Torus, Outfit, system-ui, sans-serif; animation: jcIn 250ms cubic-bezier(.22, 1, .36, 1); }
+.hud-jc { position: absolute; right: 14px; top: 50%; translate: 0 -50%; z-index: 5; display: flex; gap: 10px; padding: 9px 12px 9px 13px; border-radius: 10px; background: linear-gradient(135deg, hsl(262 30% 12% / .78), hsl(262 25% 8% / .7)); box-shadow: inset 3px 0 0 hsl(262 70% 68%), 0 4px 18px rgba(0, 0, 0, .35); pointer-events: none; font-family: Sora, system-ui, sans-serif; animation: jcIn 250ms cubic-bezier(.22, 1, .36, 1); }
 .hud-jc.v { flex-direction: column; }
 .hud-jc.h { flex-direction: row; top: auto; bottom: 64px; right: 50%; translate: 50% 0; }
 .gameplay.pm-open .hud-jc { z-index: 0; } /* Keep the counter beneath the pause menu's dimming backdrop. */
@@ -4166,7 +4171,7 @@ html.touch img { -webkit-user-drag: none; }
 .pd-btn.danger:hover .pd-fill, .pd-btn.danger:focus-visible .pd-fill { left: 5%; width: calc(var(--p) * 90%); }
 
 /* phones, as lazer's app: the game sideways, gameplay upright; held the other way, a prompt covers the screen */
-.rot-prompt { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #0d0b12; color: #fff; text-align: center; font-family: Torus, Outfit, system-ui, sans-serif; }
+.rot-prompt { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #0d0b12; color: #fff; text-align: center; font-family: Sora, system-ui, sans-serif; }
 .rot-prompt[hidden] { display: none; }
 .rot-prompt b { font-size: 1.3rem; font-weight: 700; }
 .rot-prompt span { color: rgba(255, 255, 255, .6); font-size: .95rem; }
@@ -4342,7 +4347,7 @@ html.touch .ch-item.on .ch-x { display: grid; place-items: center; width: 26px; 
    sideways typing bar, in lazer's colours); along the top of the screen when the keyboard's height isn't known */
 .kb-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2147483000; display: flex; align-items: center; gap: 10px;
   min-height: 52px; padding: 6px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); background: #22282a; border-top: 2px solid var(--accent, #ff66ab);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); font: 600 18px/1.2 var(--font, Torus, sans-serif); color: #fff; animation: kbIn 160ms cubic-bezier(.22, 1, .36, 1); }
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); font: 600 18px/1.2 var(--font, Sora, sans-serif); color: #fff; animation: kbIn 160ms cubic-bezier(.22, 1, .36, 1); }
 .kb-bar[hidden] { display: none; }
 .kb-bar.top { bottom: auto; top: 0; border-top: 0; border-bottom: 2px solid var(--accent, #ff66ab); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); padding-top: max(6px, env(safe-area-inset-top)); }
 @keyframes kbIn { from { opacity: 0; } to { opacity: 1; } }
@@ -4602,7 +4607,7 @@ html.touch .pl-group input[type=range].slider { height: 40px; margin: -8px 0; }
 body.se-open .gp-hud .hl-off { visibility: visible !important; opacity: .3; filter: grayscale(.8); }
 body.se-open { background: #121116; }
 body.se-open .screen.gameplay { box-shadow: 0 0 0 1px rgba(255, 255, 255, .12), 0 12px 48px rgba(0, 0, 0, .55); border-radius: 6px; overflow: hidden; }
-.se { --se-gold: #ffcc22; --se-bg: #1c1b21; --se-bg2: #24222b; --se-line: rgba(255, 255, 255, .07); position: fixed; inset: 0; z-index: 9000; pointer-events: none; font-family: Torus, Outfit, system-ui, sans-serif; color: #fff; }
+.se { --se-gold: #ffcc22; --se-bg: #1c1b21; --se-bg2: #24222b; --se-line: rgba(255, 255, 255, .07); position: fixed; inset: 0; z-index: 9000; pointer-events: none; font-family: Sora, system-ui, sans-serif; color: #fff; }
 .se > * { pointer-events: auto; }
 .se.se-changing-keys .se-side, .se.se-changing-keys .se-boxes { pointer-events: none; }
 .se-boxes { position: fixed; inset: 0; }
@@ -8108,7 +8113,7 @@ class DefaultSkin extends Skin {
     if ((m = /^mania-hit(300g|300|200|100|50|0)$/.exec(key))) {
       // lazer's judgement words in lazer's hit-result colours, spaced out, with a soft glow of the same colour
       const [word, col] = { '300g': ['PERFECT', '#99eeff'], '300': ['GREAT', '#66ccff'], '200': ['GOOD', '#b3d944'], '100': ['OK', '#88b300'], '50': ['MEH', '#ffcc22'], '0': ['MISS', '#ed1121'] }[m[1]];
-      const font = '600 58px "Torus", "Inter", "Segoe UI", system-ui, sans-serif';
+      const font = '600 58px "Sora", "Inter", "Segoe UI", system-ui, sans-serif';
       const meas = document.createElement('canvas').getContext('2d'); meas.font = font;
       if ('letterSpacing' in meas) meas.letterSpacing = '12px';
       const tw = Math.ceil(meas.measureText(word).width) + 60;
@@ -12579,7 +12584,7 @@ class ManiaRenderer {
       // Timing feedback is readable on the first frame, independently of the judgement fade-in.
       ctx.globalAlpha = el < 180 ? 1 : alpha;
       const size = Math.round(6.5 * this.s);
-      ctx.font = `900 ${size}px Torus, Outfit, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `900 ${size}px Sora, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const y2 = this.up ? this.H - (y + t.h * k / 2 + size) : y + t.h * k / 2 + size * 0.9;
       ctx.lineWidth = Math.max(2, size / 5); ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(fx.el, cx, y2);
       ctx.fillStyle = fx.el === 'EARLY' ? '#6cc6ff' : '#ff8a6c'; ctx.fillText(fx.el, cx, y2);
@@ -12650,7 +12655,7 @@ class ManiaRenderer {
     } else {
       const size = Math.round(26 * s * sk);
       ctx.save(); ctx.translate(cx, cy); ctx.scale(sx, sy);
-      ctx.font = `800 ${size}px Torus, Outfit, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `800 ${size}px Sora, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = Math.max(2, size / 8); ctx.strokeStyle = 'rgba(0,0,0,.7)'; if (!tint) ctx.strokeText(text, 0, 0);
       ctx.fillStyle = tint || (L.skin.builtin ? '#efe6ff' : '#fff'); ctx.fillText(text, 0, 0);
       const w = ctx.measureText(text).width;
@@ -12764,7 +12769,7 @@ class ManiaRenderer {
     const ctx = this.ctx, s = this.s, K = this.layout.keys;
     const size = 14 * s, gap = 2 * s;
     const x0 = this.stageX + this.stageW + 14 * s, y0 = this.H * 0.5;
-    ctx.font = `700 ${Math.round(size * 0.36)}px Torus, Outfit, system-ui, sans-serif`;
+    ctx.font = `700 ${Math.round(size * 0.36)}px Sora, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (let i = 0; i < K; i++) {
       const y = y0 + i * (size + gap);
@@ -16864,38 +16869,30 @@ onmessage = async ({ data: m }) => {
   paint(x, W, H, [hue, sat]) {
     // Zako: use the same palette in the worker and fallback renderer.
     hue = Number.isFinite(hue) ? hue : 255; sat = clamp(sat || .14, .12, .16);
-    const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, hsl(hue, sat, .23)); g.addColorStop(1, hsl(hue, sat, .18));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.setTransform(k, 0, 0, k, ox, oy);
-    const R3 = Math.sqrt(3) / 2;
-    const up = (ax, ay, s) => { x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); };
-    // faint outlines first (they sit behind the solid banks)
-    x.lineWidth = 2.2; x.lineJoin = 'miter';
-    for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 7 === 0)) {
-      const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
-      x.strokeStyle = hsl(hue, sat, .42, .10); up(ax, ay, s); x.stroke();
-    }
-    // the solid banks pick out the edges with lazer's soft shadow
-    // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
-    x.shadowColor = 'transparent'; x.shadowBlur = 0;
-    const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, .34, .09)); sg.addColorStop(1, hsl(hue + 3, sat, .24, .09));
-    x.fillStyle = sg;
-    x.beginPath();
-    for (const [ax, ay, s] of this.SOLID.filter((_, i) => i % 5 === 0)) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
-    x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
-    x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
-    // Separate pink, blonde-gold and lilac rings keep the original triangle composition colourful.
-    const accents = [[333, 1, .77], [45, 1, .70], [255, 1, .80]];
-    x.lineWidth = 2.6;
-    for (let i = 0; i < this.RING.length; i++) {
-      if (i % 5) continue;
-      const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
-      x.strokeStyle = hsl(c[0], c[1] * .65, c[2], .17); up(ax, ay, s); x.stroke();
+    // Screen-relative edge decorations keep the centre clear at every aspect ratio.
+    const unit = Math.min(W, H), R3 = Math.sqrt(3) / 2;
+    const triangle = (u, v, size, down = false) => {
+      const ax = W * u, ay = H * v, half = unit * size / 2, height = half * 2 * R3 * (down ? -1 : 1);
+      x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + half, ay + height); x.lineTo(ax - half, ay + height); x.closePath();
+    };
+    x.lineWidth = Math.max(1, unit * .0018); x.lineJoin = 'round';
+    const edges = [[.08,.025,.09], [.29,.018,.055], [.73,.025,.065], [.94,.02,.10],
+      [.025,.31,.055], [.975,.67,.055], [.09,.98,.08,true], [.31,.98,.05,true],
+      [.75,.98,.065,true], [.94,.98,.09,true]];
+    const accents = [[333,.65,.67], [45,.65,.63], [255,.65,.72]];
+    edges.forEach(([u,v,size,down], i) => {
+      const c = accents[i % accents.length];
+      x.strokeStyle = hsl(c[0], c[1], c[2], .22);
+      triangle(u,v,size,down); x.stroke();
+    });
+    x.fillStyle = hsl(hue, sat, .40, .10);
+    for (const t of [[.015,.01,.16], [.99,.03,.20], [.025,.99,.16,true], [.99,.99,.19,true]]) {
+      triangle(...t); x.fill();
     }
     x.setTransform(1, 0, 0, 1, 0, 0);
   },
@@ -24308,7 +24305,7 @@ const ShareCard = {
     const W = this.W, H = this.H;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const x = c.getContext('2d');
-    const F = (w, px) => `${w} ${px}px Outfit, "Segoe UI", system-ui, sans-serif`;
+    const F = (w, px) => `${w} ${px}px Sora, "Segoe UI", system-ui, sans-serif`;
     try { await Promise.all([800, 700, 500].map(w => document.fonts.load(F(w, 40)))); } catch (e) { /* system font */ }
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff66ab';
     // background: the beatmap's picture, blurred and darkened
@@ -24454,7 +24451,7 @@ const Charts = {
       x.fillStyle = 'rgba(255,255,255,.28)'; x.fillRect(zx - 0.5, pad.t, 1, ph);
       const mx = pad.l + clamp((mean + range) / (2 * range), 0, 1) * pw;
       x.fillStyle = '#ffd54a'; x.fillRect(mx - 1, pad.t, 2, ph);
-      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 11px Torus, Outfit, system-ui'; x.textAlign = 'center';
+      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 11px Sora, system-ui'; x.textAlign = 'center';
       x.fillText(`-${Math.round(range)}ms (early)`, pad.l + 44, H - 5); x.fillText('0', zx, H - 5); x.fillText(`+${Math.round(range)}ms (late)`, w - pad.r - 44, H - 5);
     };
     // lazer's bars grow up into place (300ms OutQuint) the first time the graph comes into view
@@ -24500,7 +24497,7 @@ const Charts = {
       }
       x.globalAlpha = 1;
       x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(pad.l, Y(0) - 0.5, pw, 1);
-      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Torus, Outfit, system-ui'; x.textAlign = 'right';
+      x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Sora, system-ui'; x.textAlign = 'right';
       x.fillText(`-${Math.round(range)}`, pad.l - 6, pad.t + 9); x.fillText('0', pad.l - 6, Y(0) + 3); x.fillText(`+${Math.round(range)}`, pad.l - 6, H - pad.b);
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
@@ -24541,7 +24538,7 @@ const Charts = {
       const bw = pw / data.length;
       const maxBar = 56;
       geo = { pad, pw, ph, bw };
-      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Torus, Outfit, system-ui'; x.textAlign = 'right';
+      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Sora, system-ui'; x.textAlign = 'right';
       for (let k = 0; k <= 4; k++) {
         const y = pad.t + ph * (1 - k / 4);
         x.beginPath(); x.moveTo(pad.l, y); x.lineTo(w - pad.r, y); x.stroke();
@@ -24586,7 +24583,7 @@ const Charts = {
       const X = i => pad.l + (pts.length < 2 ? pw / 2 : i / (pts.length - 1) * pw);
       const Y = v => pad.t + ph * (1 - (v - lo) / span);
       geo = { pad, pw, X };
-      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Torus, Outfit, system-ui'; x.textAlign = 'right';
+      x.strokeStyle = 'rgba(255,255,255,.06)'; x.fillStyle = this._css('--muted') || '#999'; x.font = '700 10px Sora, system-ui'; x.textAlign = 'right';
       for (let k = 0; k <= 4; k++) { const v = lo + span * k / 4, y = Y(v); x.beginPath(); x.moveTo(pad.l, y); x.lineTo(w - pad.r, y); x.stroke(); x.fillText(fmtY(v), pad.l - 5, y + 3); }
       const acc = this._css('--accent') || '#b07cff';
       x.strokeStyle = acc; x.lineWidth = 2; x.lineJoin = 'round'; x.beginPath();
@@ -25538,6 +25535,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16e', title: 'A clearer frame', sections: [
+    { icon: 'home', title: 'Appearance', items: ['Home triangles now frame the outer edges, leaving the centre clear around the main buttons.', 'Sora brings a new geometric font to the menus and interface.'] },
+  ] },
   { id: '2026.11.16d', title: 'Lazer Punch home', sections: [
     { icon: 'home', title: 'Home', items: ['Vivid gold, rose and violet buttons stand out against a simpler graphite triangle background that picks up a subtle tint from the song artwork.', 'The logo waves now bend and swell with the music instead of sliding sideways.'] },
   ] },
@@ -33721,7 +33721,7 @@ const Screenshot = {
       const draw = (node, text, weight) => {
         const r = node.getBoundingClientRect(); if (!r.width) return;
         const cs = getComputedStyle(node), size = parseFloat(cs.fontSize) * sy;
-        ctx.font = `${weight} ${size}px Torus, Outfit, system-ui, sans-serif`;
+        ctx.font = `${weight} ${size}px Sora, system-ui, sans-serif`;
         ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(0, 0, 0, .6)'; ctx.shadowBlur = 8 * sy;
         ctx.fillStyle = cs.color || '#fff';
@@ -36021,7 +36021,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'de461f2e0681';
+const APP_BUILD = '9037c92f480b';
 
 const App = {
   lastReport: null,

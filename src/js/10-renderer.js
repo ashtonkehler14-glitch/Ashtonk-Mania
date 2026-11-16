@@ -1189,7 +1189,7 @@ class ManiaRenderer {
       // Timing feedback is readable on the first frame, independently of the judgement fade-in.
       ctx.globalAlpha = el < 180 ? 1 : alpha;
       const size = Math.round(6.5 * this.s);
-      ctx.font = `900 ${size}px Torus, Outfit, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `900 ${size}px Sora, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const y2 = this.up ? this.H - (y + t.h * k / 2 + size) : y + t.h * k / 2 + size * 0.9;
       ctx.lineWidth = Math.max(2, size / 5); ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(fx.el, cx, y2);
       ctx.fillStyle = fx.el === 'EARLY' ? '#6cc6ff' : '#ff8a6c'; ctx.fillText(fx.el, cx, y2);
@@ -1260,7 +1260,7 @@ class ManiaRenderer {
     } else {
       const size = Math.round(26 * s * sk);
       ctx.save(); ctx.translate(cx, cy); ctx.scale(sx, sy);
-      ctx.font = `800 ${size}px Torus, Outfit, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `800 ${size}px Sora, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = Math.max(2, size / 8); ctx.strokeStyle = 'rgba(0,0,0,.7)'; if (!tint) ctx.strokeText(text, 0, 0);
       ctx.fillStyle = tint || (L.skin.builtin ? '#efe6ff' : '#fff'); ctx.fillText(text, 0, 0);
       const w = ctx.measureText(text).width;
@@ -1374,7 +1374,7 @@ class ManiaRenderer {
     const ctx = this.ctx, s = this.s, K = this.layout.keys;
     const size = 14 * s, gap = 2 * s;
     const x0 = this.stageX + this.stageW + 14 * s, y0 = this.H * 0.5;
-    ctx.font = `700 ${Math.round(size * 0.36)}px Torus, Outfit, system-ui, sans-serif`;
+    ctx.font = `700 ${Math.round(size * 0.36)}px Sora, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (let i = 0; i < K; i++) {
       const y = y0 + i * (size + gap);

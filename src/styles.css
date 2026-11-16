@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(fonts/Sora-Variable.ttf) format("truetype");
+}
 /* ───────────────────────── Ashtonk!mania — client styles ───────────────────────── */
 :root {
   --el-out: linear(0, .518, 1.097, 1.364, 1.296, 1.081, .912, .87, .924, 1, 1.043, 1.041, 1.016, .992, .984, .989, .998, 1.005, 1.006, 1.003, .999, .998, .998, 1, 1); /* osu!framework's OutElastic */
@@ -57,7 +64,7 @@
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
 body {
-  font-family: "Torus", "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-weight: 400; -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
 }
 input, textarea, select { user-select: text; -webkit-user-select: text; }
@@ -1530,7 +1537,7 @@ html.touch .practice-bar .kbd { display: none; }
 /* osu!lazer's FPSCounter: bottom right with a 5px margin, 26px tall; a black box (40%, solid on hover) behind the frame
    time (16px) and, under it, the frame rate (13px), right-aligned in a fixed-width face; at 70% when nothing's
    happening, full when something changes */
-#fps-counter { position: absolute; right: 5px; bottom: 5px; z-index: 900; font-family: Torus, Outfit, system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: fcIn 100ms ease-out; }
+#fps-counter { position: absolute; right: 5px; bottom: 5px; z-index: 900; font-family: Sora, system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: fcIn 100ms ease-out; }
 #fps-counter[hidden] { display: none; }
 @keyframes fcIn { from { opacity: 0; } }
 #fps-counter .fc-main { position: relative; height: 26px; min-width: 52px; opacity: .7; transition: opacity 300ms cubic-bezier(.22, 1, .36, 1); }
@@ -3779,7 +3786,7 @@ html.touch .explorer.ov .ex-flabel { padding-top: 7px; }
 
 /* osu!lazer's judgement counter (JudgementCounterDisplay): counters 10px apart, each a 16px fixed-width count over its
    8px name, in the judgement's colour — on a Kori panel (dark purple, Kori-purple edge) */
-.hud-jc { position: absolute; right: 14px; top: 50%; translate: 0 -50%; z-index: 5; display: flex; gap: 10px; padding: 9px 12px 9px 13px; border-radius: 10px; background: linear-gradient(135deg, hsl(262 30% 12% / .78), hsl(262 25% 8% / .7)); box-shadow: inset 3px 0 0 hsl(262 70% 68%), 0 4px 18px rgba(0, 0, 0, .35); pointer-events: none; font-family: Torus, Outfit, system-ui, sans-serif; animation: jcIn 250ms cubic-bezier(.22, 1, .36, 1); }
+.hud-jc { position: absolute; right: 14px; top: 50%; translate: 0 -50%; z-index: 5; display: flex; gap: 10px; padding: 9px 12px 9px 13px; border-radius: 10px; background: linear-gradient(135deg, hsl(262 30% 12% / .78), hsl(262 25% 8% / .7)); box-shadow: inset 3px 0 0 hsl(262 70% 68%), 0 4px 18px rgba(0, 0, 0, .35); pointer-events: none; font-family: Sora, system-ui, sans-serif; animation: jcIn 250ms cubic-bezier(.22, 1, .36, 1); }
 .hud-jc.v { flex-direction: column; }
 .hud-jc.h { flex-direction: row; top: auto; bottom: 64px; right: 50%; translate: 50% 0; }
 .gameplay.pm-open .hud-jc { z-index: 0; } /* Keep the counter beneath the pause menu's dimming backdrop. */
@@ -4151,7 +4158,7 @@ html.touch img { -webkit-user-drag: none; }
 .pd-btn.danger:hover .pd-fill, .pd-btn.danger:focus-visible .pd-fill { left: 5%; width: calc(var(--p) * 90%); }
 
 /* phones, as lazer's app: the game sideways, gameplay upright; held the other way, a prompt covers the screen */
-.rot-prompt { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #0d0b12; color: #fff; text-align: center; font-family: Torus, Outfit, system-ui, sans-serif; }
+.rot-prompt { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #0d0b12; color: #fff; text-align: center; font-family: Sora, system-ui, sans-serif; }
 .rot-prompt[hidden] { display: none; }
 .rot-prompt b { font-size: 1.3rem; font-weight: 700; }
 .rot-prompt span { color: rgba(255, 255, 255, .6); font-size: .95rem; }
@@ -4327,7 +4334,7 @@ html.touch .ch-item.on .ch-x { display: grid; place-items: center; width: 26px; 
    sideways typing bar, in lazer's colours); along the top of the screen when the keyboard's height isn't known */
 .kb-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2147483000; display: flex; align-items: center; gap: 10px;
   min-height: 52px; padding: 6px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); background: #22282a; border-top: 2px solid var(--accent, #ff66ab);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); font: 600 18px/1.2 var(--font, Torus, sans-serif); color: #fff; animation: kbIn 160ms cubic-bezier(.22, 1, .36, 1); }
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); font: 600 18px/1.2 var(--font, Sora, sans-serif); color: #fff; animation: kbIn 160ms cubic-bezier(.22, 1, .36, 1); }
 .kb-bar[hidden] { display: none; }
 .kb-bar.top { bottom: auto; top: 0; border-top: 0; border-bottom: 2px solid var(--accent, #ff66ab); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); padding-top: max(6px, env(safe-area-inset-top)); }
 @keyframes kbIn { from { opacity: 0; } to { opacity: 1; } }
@@ -4587,7 +4594,7 @@ html.touch .pl-group input[type=range].slider { height: 40px; margin: -8px 0; }
 body.se-open .gp-hud .hl-off { visibility: visible !important; opacity: .3; filter: grayscale(.8); }
 body.se-open { background: #121116; }
 body.se-open .screen.gameplay { box-shadow: 0 0 0 1px rgba(255, 255, 255, .12), 0 12px 48px rgba(0, 0, 0, .55); border-radius: 6px; overflow: hidden; }
-.se { --se-gold: #ffcc22; --se-bg: #1c1b21; --se-bg2: #24222b; --se-line: rgba(255, 255, 255, .07); position: fixed; inset: 0; z-index: 9000; pointer-events: none; font-family: Torus, Outfit, system-ui, sans-serif; color: #fff; }
+.se { --se-gold: #ffcc22; --se-bg: #1c1b21; --se-bg2: #24222b; --se-line: rgba(255, 255, 255, .07); position: fixed; inset: 0; z-index: 9000; pointer-events: none; font-family: Sora, system-ui, sans-serif; color: #fff; }
 .se > * { pointer-events: auto; }
 .se.se-changing-keys .se-side, .se.se-changing-keys .se-boxes { pointer-events: none; }
 .se-boxes { position: fixed; inset: 0; }
