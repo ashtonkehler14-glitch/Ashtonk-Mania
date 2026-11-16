@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16a', title: 'Cleaner home colours', sections: [
+    { icon: 'home', title: 'Home', items: ['Restored the pink Ashtonk!mania logo, removed the full-width strip behind the home buttons, and refined the three button accents with solid pause-menu-style colours.'] },
+  ] },
   { id: '2026.11.16', title: 'Zako colours', sections: [
     { icon: 'home', title: 'Appearance', items: ['A colourful triangle background, lilac glass-wave logo and golden Play button bring Neru-inspired colours to Home. Pink highlights and warmer panels carry the palette into the menus.'] },
   ] },

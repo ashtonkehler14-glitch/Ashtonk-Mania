@@ -5580,21 +5580,21 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .menu button > .i { flex: none; }
 
 /* Home: Zako colour families, with the existing lazer ButtonSystem layout and motion. */
-.lz-menu .lz-area-bg { background: #3d3745; border-block: 1px solid #ffffff0a; }
+.lz-menu .lz-area-bg { display: none; }
 .lz-menu .lz-btn { --c: #3d3745 !important; }
 .lz-menu .lz-btn[data-id="settings"], .lz-menu .lz-btn[data-id="back"] { --c: #3d3745 !important; }
-.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #ffd966 !important; color: #29251a; }
-.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #ff99c7 !important; color: #302337; }
-.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #b299ff !important; color: #292138; }
+.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"] { --c: #eeaa00 !important; color: #231b08; }
+.lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #df679e !important; color: #281421; }
+.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8c66cf !important; color: #fff; }
 .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #3d3745 !important; }
-.lz-menu .lz-bg { background: linear-gradient(135deg, #ffffff0a, transparent 65%), var(--c); box-shadow: inset 0 1px #ffffff12, inset 0 -1px #00000026; }
+.lz-menu .lz-bg { background: var(--c); box-shadow: none; }
 .lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
 .lz-menu .lz-btn:hover .lz-bg::before, .lz-menu .lz-btn:focus-visible .lz-bg::before { opacity: .85; }
 .lz-menu .lz-label { font-weight: 600; letter-spacing: .015em; }
 .lz-menu .lz-btn[data-id="play"] .lz-label, .lz-menu .lz-btn[data-id="solo"] .lz-label { text-shadow: none; }
 .lz-menu .lz-btn[data-id="play"] .lz-ico .i, .lz-menu .lz-btn[data-id="solo"] .lz-ico .i { filter: none; }
 /* Glass-wave logo: a lightweight painted face; no live glass blur or extra animation. */
-.lz-menu .lz-home-disc { background: linear-gradient(155deg, #9b82d5, #625180 80%); box-shadow: inset 0 2px 24px #ffffff12; }
+.lz-menu .lz-home-disc { background: linear-gradient(#ff66ab, #cc5289); box-shadow: none; }
 .lz-menu .lz-tris { display: none; }
 .lz-menu .lz-ring { border-width: 16px; box-shadow: 0 0 0 1px #ffffff18, 0 12px 36px #0000002b, inset 0 0 0 1px #ffffff12; }
 .lz-menu .lz-ripple .lz-ring { box-shadow: none; }
