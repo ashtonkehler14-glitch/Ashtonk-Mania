@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16w', title: 'Artwork-backed beatmap cards', sections: [
+    { title: 'Beatmap explorer', items: ['Song cards now use rounded, slanted artwork panels with a difficulty-coloured edge.', 'Favourite and download actions still appear on hover or keyboard focus. Favourites are also available in beatmap details.'] }
+  ] },
   { id: '2026.11.16v', title: 'Clearer toolbar', sections: [
     { title: 'Interface', items: ['Home is highlighted pink only when you’re on the home screen with no menu open.', 'The changelog shortcut is now only at the bottom of settings.', 'Dragging UI scaling previews the percentage and applies the new size when you release.'] }
   ] },

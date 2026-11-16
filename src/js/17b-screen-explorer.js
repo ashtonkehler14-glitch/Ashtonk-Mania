@@ -729,20 +729,20 @@ const ExplorerScreen = {
     const len = Math.max(...set.diffs.map(d => d.length));
     const title = Settings.get('ui.unicodeMetadata') && set.titleUnicode ? set.titleUnicode : set.title;
     const artist = Settings.get('ui.unicodeMetadata') && set.artistUnicode ? set.artistUnicode : set.artist;
-    const playBtn = h('button.ex-play', { title: 'Preview', 'aria-label': 'Preview', dataset: { ic: this.previewId === set.id ? 'pause' : 'play' }, onclick: e => { e.stopPropagation(); this.togglePreview(set.id); } }, icon(this.previewId === set.id ? 'pause' : 'play'));
-    const spectrum = set.diffs.length > 10
+    const playBtn = h('button.ex-play', { title: 'Preview', 'aria-label': 'Preview', dataset: { ic: this.previewId === set.id ? 'pause' : 'play' }, onclick: e => { e.stopPropagation(); if (e.detail > 0) e.currentTarget.blur(); this.togglePreview(set.id); } }, icon(this.previewId === set.id ? 'pause' : 'play'));
+    const spectrum = set.diffs.length > 5
       ? h('span.ex-spec-more', ...[...new Set(set.diffs.map(d => starColour(d.stars)))].slice(0, 1).map(c => h('i', { style: { '--sc': c } })), `${set.diffs.length}`)
       : h('span.ex-spec', ...set.diffs.map(d => h('i', { style: { '--sc': starColour(d.stars) }, title: `[${d.version}] ${d.stars.toFixed(2)}★ ${d.keys}K` })));
     // lazer's hover panel on the card's right edge: like and download (or play when it's already in the library)
     const liked = this.liked().has(set.id);
-    const likeBtn = h(`button.ex-side-btn.like${liked ? '.on' : ''}`, { title: liked ? 'Unlike' : 'Like', 'aria-label': 'Like', onclick: e => { e.stopPropagation(); e.currentTarget.blur(); this.toggleLike(set.id); likeBtn.classList.toggle('on', this.liked().has(set.id)); clearEl(likeBtn).append(icon('heart', this.liked().has(set.id) ? 'fill' : '')); UISounds.click(); } }, icon('heart', liked ? 'fill' : ''));
+    const likeBtn = h(`button.ex-side-btn.like${liked ? '.on' : ''}`, { title: liked ? 'Unlike' : 'Like', 'aria-label': 'Like', onclick: e => { e.stopPropagation(); if (e.detail > 0) e.currentTarget.blur(); this.toggleLike(set.id); likeBtn.classList.toggle('on', this.liked().has(set.id)); clearEl(likeBtn).append(icon('heart', this.liked().has(set.id) ? 'fill' : '')); UISounds.click(); } }, icon('heart', liked ? 'fill' : ''));
     const sideAct = dl && dl.state === 'downloading'
       ? h('div.ex-side-btn.busy', { title: 'Downloading…', style: { '--p': ((dl.progress || 0) * 100).toFixed(0) + '%' } }, h('span.spinner'))
       : this.mpPick ? h('button.ex-side-btn', { title: 'Choose a difficulty', 'aria-label': 'Choose a difficulty', onclick: e => { e.stopPropagation(); this.openSet(set); } }, icon('multi'))
         : owned ? h('button.ex-side-btn.play', { title: 'Play', 'aria-label': 'Play', onclick: e => { e.stopPropagation(); const m = owned.maps.find(x => !x.problems.length) || owned.maps[0]; this.playLocal(m); } }, icon('play'))
-          : h('button.ex-side-btn.dl', { title: !set.video ? 'Download' : Settings.get('online.preferNoVideo') ? 'Download without video' : 'Download with video', 'aria-label': 'Download', onclick: e => { e.stopPropagation(); this.download(set); } }, icon('download'));
-    const card = h(`div.ex-card${owned ? '.owned' : ''}`, { dataset: { id: set.id }, tabindex: '0', role: 'button', 'aria-label': `${artist} - ${title}`, onclick: () => this.openSet(set),
-      onkeydown: e => { if (e.key === 'Enter') { e.stopPropagation(); this.openSet(set); } } },
+          : h('button.ex-side-btn.dl', { title: !set.video ? 'Download' : Settings.get('online.preferNoVideo') ? 'Download without video' : 'Download with video', 'aria-label': 'Download', onclick: e => { e.stopPropagation(); if (e.detail > 0) e.currentTarget.blur(); this.download(set); } }, icon('download'));
+    const card = h(`div.ex-card${owned ? '.owned' : ''}`, { dataset: { id: set.id }, style: { '--card-accent': starColour(Math.max(0, ...set.diffs.map(d => d.stars || 0))) }, tabindex: '0', role: 'button', 'aria-label': `${artist} - ${title}`, onclick: () => this.openSet(set),
+      onkeydown: e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); this.openSet(set); } } },
       bg, h('div.ex-cardshade'),
       h('div.ex-thumbwrap', thumb, playBtn,
         dl && dl.state === 'downloading' ? h('div.ex-thumbprog', { style: { '--p': ((dl.progress || 0) * 100).toFixed(0) + '%' } }) : null),
@@ -751,8 +751,8 @@ const ExplorerScreen = {
           h('div.ex-titles', h('div.ex-t', { title }, h('span.ex-tt', title), set.video ? h('span.ex-vid', { title: 'Has video' }, flatIcon('film', 0.7)) : null), h('div.ex-a', { title: artist }, artist)),
           h('div.ex-counts', h('span', { title: 'Favourites' }, flatIcon('heart', 0.68), fmtCompact(set.favourites)), h('span', { title: 'Play count' }, flatIcon('play', 0.68), fmtCompact(set.playCount)))),
         h('div.ex-m', 'mapped by ', h('b', set.creator)),
-        h('div.ex-foot', h(`span.ex-statuspill.st-${set.status}`, set.status.toUpperCase()), spectrum,
-          h('span.ex-keys', keys.length > 3 ? `${keys[0]}–${keys[keys.length - 1]}K` : keys.map(k => k + 'K').join(' ')),
+        h('div.ex-foot', h(`span.ex-statuspill.st-${set.status}`, h('span', set.status.toUpperCase())), spectrum,
+          h('span.ex-keys', h('span', keys.length > 3 ? `${keys[0]}–${keys[keys.length - 1]}K` : keys.map(k => k + 'K').join(' '))),
           h('span.grow'),
           owned ? h('span.ex-owned', { title: 'In your library' }, flatIcon('check')) : null,
           h('span.ex-length', flatIcon('clock', 0.6), fmtTime(len * 1000)))),
@@ -896,6 +896,9 @@ const ExplorerScreen = {
               h('span.dim.bso-stat', { title: 'Favourites' }, icon('heart'), fmtCompact(set.favourites))].filter(Boolean)),
             h('div.bso-buttons',
               h('button.bso-fav', { title: 'Preview', 'aria-label': 'Preview', onclick: () => { this.togglePreview(set.id); this.renderSet(); } }, icon(playing ? 'pause' : 'play')),
+              h('button.btn.bso-like', { 'aria-label': 'Favourite beatmap', 'aria-pressed': String(this.liked().has(set.id)), onclick: () => {
+                UISounds.click(); this.toggleLike(set.id); if (this.grid?.isConnected) this.renderResults(); this.renderSet();
+              } }, icon('heart', this.liked().has(set.id) ? 'fill' : ''), this.liked().has(set.id) ? 'Favourited' : 'Favourite'),
               ...[main].flat()),
             body.children.length ? body : null),
           h('div.bso-card',
