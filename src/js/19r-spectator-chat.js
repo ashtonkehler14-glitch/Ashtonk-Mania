@@ -62,7 +62,7 @@ const SpectatorChat = {
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
-    document.body.append(panel); this.paint(); this.refresh();
+    document.body.append(panel); this.paint(); this.refresh(); Toolbar.sync();
     if (!Mobile.touch) this.input.focus({ preventScroll: true });
   },
   paint() {
@@ -82,5 +82,5 @@ const SpectatorChat = {
     while (this.list.children.length > 100) this.list.firstChild.remove();
     if (scroll && (atEnd || l.from.pid === Presence.pid())) this.list.scrollTop = this.list.scrollHeight;
   },
-  close() { this.panel?.remove(); this.panel = null; this.list = null; this.input = null; if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
+  close() { this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
 };

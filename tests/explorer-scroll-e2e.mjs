@@ -35,6 +35,7 @@ try {
   });
   await page.evaluate(async()=>Screens.go('explore'));await page.waitForFunction(()=>!Screens.busy && ExplorerScreen.results.length===100);await page.waitForTimeout(700);
   assert.equal(await page.evaluate(()=>window._exploreRequests),1,'Opening explorer fetches only the first page');
+  await page.screenshot({path:'/tmp/explorer-current-cards.png'});
   assert.ok(await page.evaluate(()=>window._coverRequests.size<70),'Most offscreen covers remain unloaded');
   assert.ok(await page.locator('.ex-card').count()<70,'Only nearby cards are mounted');
   await page.evaluate(()=>{const sc=ExplorerScreen._scroller;sc.scrollTop=sc.scrollHeight;});

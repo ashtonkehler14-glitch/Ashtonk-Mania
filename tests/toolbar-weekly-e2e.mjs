@@ -33,11 +33,40 @@ try {
   await page.evaluate(()=>{while(Overlays.top())Overlays.top().close();Settings.set('ui.menuBackground','triangles');});
   await page.evaluate(()=>{HomeScreen.setState('play');HomeScreen._idleAt=performance.now();});
   await page.waitForTimeout(950);
+  const homeButton=page.locator('#toolbar [data-tab=home]');
+  await page.waitForFunction(()=>document.querySelector('#toolbar [data-tab=home]').classList.contains('on'));
+  assert.equal(await page.locator('#toolbar .tb-changelog').count(),0,'Changelog is removed from the top bar');
+  for(const menu of ['settings','music','dialog','chat']) {
+    await page.evaluate(menu=>{
+      if(menu==='settings') SettingsPanel.open();
+      else if(menu==='music') NowPlaying.show();
+      else if(menu==='chat') Chat.open();
+      else Dialog.popup('Toolbar test','Home is not selected behind a dialog.',[{label:'OK',cls:'ok'}]);
+    },menu);
+    await page.waitForFunction(()=>!document.querySelector('#toolbar [data-tab=home]').classList.contains('on'));
+    if(menu==='settings') assert.equal(await page.locator('.sp-footer button').count(),1,'Changelog remains at the bottom of settings');
+    await page.evaluate(()=>{Overlays.closeAll();NowPlaying.hide();});
+    await page.waitForFunction(()=>document.querySelector('#toolbar [data-tab=home]').classList.contains('on'));
+  }
+  await page.waitForFunction(()=>!document.querySelector('.sp-wrap.closing'));
+  await page.evaluate(()=>SettingsPanel.open());await page.locator('.sp-wrap:not(.closing) .sp-search').fill('UI scaling');
+  const scaleInput=page.locator('.sp-wrap:not(.closing)').getByRole('slider',{name:'UI scaling',exact:true});await scaleInput.scrollIntoViewIfNeeded();
+  const initialScale=await page.evaluate(()=>({value:Settings.get('ui.scale'),zoom:Zoom.z}));
+  const scaleBounds=await scaleInput.boundingBox();
+  await page.mouse.move(scaleBounds.x+scaleBounds.width*.2,scaleBounds.y+scaleBounds.height/2);await page.mouse.down();
+  await page.mouse.move(scaleBounds.x+scaleBounds.width*.8,scaleBounds.y+scaleBounds.height/2,{steps:5});
+  assert.equal(await page.evaluate(()=>Settings.get('ui.scale')),initialScale.value,'UI scale is not saved during a drag');
+  assert.equal(await page.evaluate(()=>Zoom.z),initialScale.zoom,'The interface stays stationary during a drag');
+  const pendingScale=Number(await scaleInput.inputValue());assert.notEqual(pendingScale,initialScale.value);
+  await page.mouse.up();await page.waitForFunction(value=>Math.abs(Settings.get('ui.scale')-value)<.001,pendingScale);
+  assert.notEqual(await page.evaluate(()=>Zoom.z),initialScale.zoom,'New scaling is applied on release');
+  await page.evaluate(value=>{Settings.set('ui.scale',value);SettingsPanel.close();},initialScale.value);
   assert.match(await page.locator('.tb-clock .tb-time').textContent(),/^\d{2}:\d{2}:\d{2} (AM|PM)$/);
   assert.equal(await page.locator('.tb-clock .tb-analog, .tb-clock .tb-run').count(),0);
   assert.deepEqual(await page.evaluate(()=>[0,12,23].map(hour=>Toolbar.formatTime(new Date(2026,0,1,hour,2,3)))),['12:02:03 AM','12:02:03 PM','11:02:03 PM']);
   await page.click('.tb-clock');
   await page.waitForFunction(()=>Notifications.isOpen() && Toolbar.clock.getAttribute('aria-expanded')==='true');
+  assert.equal(await homeButton.getAttribute('aria-current'),null,'Home is not highlighted under notifications');
   assert.equal(await page.locator('.tb-clock .tb-st').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(143, 40, 94)');
   await page.click('.tb-clock');
   await page.waitForFunction(()=>!Notifications.isOpen() && Toolbar.clock.getAttribute('aria-expanded')==='false');

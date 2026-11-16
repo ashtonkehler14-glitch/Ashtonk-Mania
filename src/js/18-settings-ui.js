@@ -147,9 +147,11 @@ const SettingsPanel = {
         const s = h('input.slider', { type: 'range', min: it.min, max: it.max, step: it.step, value: val(), 'aria-label': it.l });
         const v = h('div.val');
         const upd = () => { const x = parseFloat(s.value); v.textContent = it.fmt ? it.fmt(x) : x; s.style.setProperty('--p', ((x - it.min) / (it.max - it.min) * 100) + '%'); };
-        s.addEventListener('input', () => { Settings.set(it.k, parseFloat(s.value)); upd(); updReset(); });
+        // Keep the UI scaling control stationary while dragging; its label previews the pending value.
+        const deferred = it.k === 'ui.scale';
+        s.addEventListener('input', () => { if (!deferred) Settings.set(it.k, parseFloat(s.value)); upd(); updReset(); });
         s.addEventListener('keydown', e => e.stopPropagation());
-        s.addEventListener('change', flash);
+        s.addEventListener('change', () => { if (deferred) { Settings.set(it.k, parseFloat(s.value)); updReset(); } flash(); });
         upd();
         // (its help underneath, across the whole box, rather than squeezed into the half beside the slider)
         row = form(`frange${it.hint ? '.hinted' : ''}`, h('div.fleft', it.hint ? h('div.lbl', it.l) : cap, v,

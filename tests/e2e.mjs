@@ -2023,18 +2023,16 @@ await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   });
   check('What\'s new shows every update since the one you last saw (two missed: both), Neru beside it on her phone', wn2.n === 2 && wn2.neru === 'neru-phone.png|true', JSON.stringify(wn2));
   await page.waitForTimeout(400);
-  // the toolbar's changelog button: lazer's ChangelogOverlay — the whole listing as a page, and the button lit while
-  // it's open; pressed again, back to where you were
+  // The whole changelog remains accessible from the settings footer.
   const cl = await page.evaluate(async () => {
-    const wait = ms => new Promise(r => setTimeout(r, ms)), from = AshtonkMania.Screens.currentName, b = document.querySelector('.tb-changelog');
-    b.click(); await wait(900);
-    const out = { screen: AshtonkMania.Screens.currentName, builds: document.querySelectorAll('.chl-build').length, all: CHANGELOG.length, on: b.classList.contains('on'), popup: !!document.querySelector('.cl'),
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    SettingsPanel.open();document.querySelector('.sp-footer button').click();await wait(900);
+    const out = { screen: AshtonkMania.Screens.currentName, builds: document.querySelectorAll('.chl-build').length, all: CHANGELOG.length, shortcut: !!document.querySelector('.tb-changelog'), popup: !!document.querySelector('.cl'),
       first: (document.querySelector('.chl-num') || {}).textContent === CHANGELOG[0].id };
-    b.click(); await wait(900);
-    out.back = AshtonkMania.Screens.currentName === from;
+    AshtonkMania.Screens.back();await wait(900);
     return out;
   });
-  check('the toolbar\'s changelog opens lazer\'s changelog listing as a page (every update, newest first), and toggles back', cl.screen === 'changelog' && cl.builds === cl.all && cl.on && !cl.popup && cl.first && cl.back, JSON.stringify(cl));
+  check('settings footer opens the complete changelog, with no toolbar shortcut', cl.screen === 'changelog' && cl.builds === cl.all && !cl.shortcut && !cl.popup && cl.first, JSON.stringify(cl));
   const clAll = await page.evaluate(async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     WhatsNew.show(); await wait(400); document.querySelector('.cl-all').click(); await wait(900);

@@ -14647,8 +14647,8 @@ window.addEventListener('resize', () => Toast.place());
 const Overlays = {
   stack: [],
   /** push an overlay {el, close(), onKey?} — el appended to #overlay-root */
-  push(o) { this.stack.push(o); $('#overlay-root').appendChild(o.el); return o; },
-  remove(o) { this.stack = this.stack.filter(x => x !== o); },
+  push(o) { this.stack.push(o); $('#overlay-root').appendChild(o.el); if (typeof Toolbar !== 'undefined') Toolbar.sync(); return o; },
+  remove(o) { this.stack = this.stack.filter(x => x !== o); if (typeof Toolbar !== 'undefined') Toolbar.sync(); },
   top() { return this.stack[this.stack.length - 1]; },
   closeAll() { for (const o of [...this.stack].reverse()) o.close(); },
 };
@@ -14925,11 +14925,9 @@ const Toolbar = {
     tb.append(
       h('div.tb-group.tb-left',
         btn('gear', 'settings', `change the way ${APP_NAME} behaves`, () => SettingsPanel.toggle(), { key: 'Ctrl+O', dataset: { ov: 'settings' } }),
-        btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home' })),
+        btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home', dataset: { tab: 'home' } })),
       h('div.tb-spacer'),
       h('div.tb-group.tb-right',
-        // lazer's ToolbarChangelogButton
-        btn('sparkle', 'changelog', 'track recent dev updates in Ashtonk!mania', this.pages.changelog, { right: true, cls: '.tb-changelog', dataset: { tab: 'changelog' } }),
         btn('trophy', 'rankings', 'find out who\'s the best right now', this.pages.rankings, { right: true, dataset: { tab: 'rankings' } }),
         btn('beatmap', 'beatmap listing', 'browse for new beatmaps', this.pages.explore, { key: 'Ctrl+B', right: true, dataset: { tab: 'explore' } }),
         this.chatBtn = btn('chat', 'chat', 'join the real-time discussion', () => Chat.toggle(), { key: 'F8', right: true, dataset: { ov: 'chat' } }),
@@ -14981,7 +14979,13 @@ const Toolbar = {
       $('#app').classList.toggle('side-r', on.notifications && !on.settings);
       $$('#toolbar [data-ov]').forEach(b => b.classList.toggle('on', !!on[b.dataset.ov]));
       if (this.clock) this.clock.setAttribute('aria-expanded', String(on.notifications));
-      $$('#toolbar [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === this._tab));
+      const menuOpen = Overlays.stack.length > 0 || Object.values(on).some(Boolean) || (typeof SpectatorChat !== 'undefined' && !!SpectatorChat.panel);
+      $$('#toolbar [data-tab]').forEach(b => {
+        const home = b.dataset.tab === 'home';
+        const active = home ? Screens.currentName === 'home' && !menuOpen : b.dataset.tab === this._tab;
+        b.classList.toggle('on', active);
+        if (home) { if (active) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
+      });
     });
   },
   /** A compact 12-hour clock doubles as the notification-centre button. */
@@ -25437,6 +25441,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16v', title: 'Clearer toolbar', sections: [
+    { title: 'Interface', items: ['Home is highlighted pink only when you’re on the home screen with no menu open.', 'The changelog shortcut is now only at the bottom of settings.', 'Dragging UI scaling previews the percentage and applies the new size when you release.'] }
+  ] },
   { id: '2026.11.16u', title: 'Cleaner Neru peek', sections: [
     { title: 'Interface', items: ['Neru now leans around the settings sidebar with her body hidden behind it.'] }
   ] },
@@ -27196,9 +27203,11 @@ const SettingsPanel = {
         const s = h('input.slider', { type: 'range', min: it.min, max: it.max, step: it.step, value: val(), 'aria-label': it.l });
         const v = h('div.val');
         const upd = () => { const x = parseFloat(s.value); v.textContent = it.fmt ? it.fmt(x) : x; s.style.setProperty('--p', ((x - it.min) / (it.max - it.min) * 100) + '%'); };
-        s.addEventListener('input', () => { Settings.set(it.k, parseFloat(s.value)); upd(); updReset(); });
+        // Keep the UI scaling control stationary while dragging; its label previews the pending value.
+        const deferred = it.k === 'ui.scale';
+        s.addEventListener('input', () => { if (!deferred) Settings.set(it.k, parseFloat(s.value)); upd(); updReset(); });
         s.addEventListener('keydown', e => e.stopPropagation());
-        s.addEventListener('change', flash);
+        s.addEventListener('change', () => { if (deferred) { Settings.set(it.k, parseFloat(s.value)); updReset(); } flash(); });
         upd();
         // (its help underneath, across the whole box, rather than squeezed into the half beside the slider)
         row = form(`frange${it.hint ? '.hinted' : ''}`, h('div.fleft', it.hint ? h('div.lbl', it.l) : cap, v,
@@ -34911,7 +34920,7 @@ const SpectatorChat = {
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
-    document.body.append(panel); this.paint(); this.refresh();
+    document.body.append(panel); this.paint(); this.refresh(); Toolbar.sync();
     if (!Mobile.touch) this.input.focus({ preventScroll: true });
   },
   paint() {
@@ -34931,7 +34940,7 @@ const SpectatorChat = {
     while (this.list.children.length > 100) this.list.firstChild.remove();
     if (scroll && (atEnd || l.from.pid === Presence.pid())) this.list.scrollTop = this.list.scrollHeight;
   },
-  close() { this.panel?.remove(); this.panel = null; this.list = null; this.input = null; if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
+  close() { this.panel?.remove(); this.panel = null; this.list = null; this.input = null; Toolbar.sync(); if (this.hostButton) this.hostButton.hidden = !this.context()?.host; },
 };
 
 /* ===== 20-app.js ===== */
@@ -34941,7 +34950,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'd5773129bad5';
+const APP_BUILD = 'b4f9608f26bb';
 
 const App = {
   lastReport: null,

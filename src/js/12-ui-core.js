@@ -484,8 +484,8 @@ window.addEventListener('resize', () => Toast.place());
 const Overlays = {
   stack: [],
   /** push an overlay {el, close(), onKey?} — el appended to #overlay-root */
-  push(o) { this.stack.push(o); $('#overlay-root').appendChild(o.el); return o; },
-  remove(o) { this.stack = this.stack.filter(x => x !== o); },
+  push(o) { this.stack.push(o); $('#overlay-root').appendChild(o.el); if (typeof Toolbar !== 'undefined') Toolbar.sync(); return o; },
+  remove(o) { this.stack = this.stack.filter(x => x !== o); if (typeof Toolbar !== 'undefined') Toolbar.sync(); },
   top() { return this.stack[this.stack.length - 1]; },
   closeAll() { for (const o of [...this.stack].reverse()) o.close(); },
 };
@@ -762,11 +762,9 @@ const Toolbar = {
     tb.append(
       h('div.tb-group.tb-left',
         btn('gear', 'settings', `change the way ${APP_NAME} behaves`, () => SettingsPanel.toggle(), { key: 'Ctrl+O', dataset: { ov: 'settings' } }),
-        btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home' })),
+        btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home', dataset: { tab: 'home' } })),
       h('div.tb-spacer'),
       h('div.tb-group.tb-right',
-        // lazer's ToolbarChangelogButton
-        btn('sparkle', 'changelog', 'track recent dev updates in Ashtonk!mania', this.pages.changelog, { right: true, cls: '.tb-changelog', dataset: { tab: 'changelog' } }),
         btn('trophy', 'rankings', 'find out who\'s the best right now', this.pages.rankings, { right: true, dataset: { tab: 'rankings' } }),
         btn('beatmap', 'beatmap listing', 'browse for new beatmaps', this.pages.explore, { key: 'Ctrl+B', right: true, dataset: { tab: 'explore' } }),
         this.chatBtn = btn('chat', 'chat', 'join the real-time discussion', () => Chat.toggle(), { key: 'F8', right: true, dataset: { ov: 'chat' } }),
@@ -818,7 +816,13 @@ const Toolbar = {
       $('#app').classList.toggle('side-r', on.notifications && !on.settings);
       $$('#toolbar [data-ov]').forEach(b => b.classList.toggle('on', !!on[b.dataset.ov]));
       if (this.clock) this.clock.setAttribute('aria-expanded', String(on.notifications));
-      $$('#toolbar [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === this._tab));
+      const menuOpen = Overlays.stack.length > 0 || Object.values(on).some(Boolean) || (typeof SpectatorChat !== 'undefined' && !!SpectatorChat.panel);
+      $$('#toolbar [data-tab]').forEach(b => {
+        const home = b.dataset.tab === 'home';
+        const active = home ? Screens.currentName === 'home' && !menuOpen : b.dataset.tab === this._tab;
+        b.classList.toggle('on', active);
+        if (home) { if (active) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
+      });
     });
   },
   /** A compact 12-hour clock doubles as the notification-centre button. */
