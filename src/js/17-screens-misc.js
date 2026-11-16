@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16h', title: 'A quieter Neru', sections: [
+    { icon: 'home', title: 'Appearance', items: ['Removed Neru’s seasonal weather, falling particles and ambient night stars, along with the seasonal achievement.', 'The top bar now has rounded corners and a small gap at each side. The clock stays readable when notifications are open; the separate bell and mania indicator have been removed.'] },
+  ] },
   { id: '2026.11.16g', title: 'Pink tabs, artwork and a simpler clock', sections: [
     { icon: 'home', title: 'Appearance', items: ['Open toolbar tabs now use a dark pink highlight.', 'The toolbar clock shows a simple 12-hour time. Click it to open notifications.', 'The weekly challenge shows its song artwork clearly, including in performance mode. Imported song backgrounds take priority when available.'] },
   ] },

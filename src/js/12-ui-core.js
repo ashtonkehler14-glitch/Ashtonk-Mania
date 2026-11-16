@@ -705,19 +705,7 @@ const Toolbar = {
       });
       tb.addEventListener('pointerout', e => { const b = e.target.closest('.tb-btn'); if (b && !b.contains(e.relatedTarget)) b.classList.remove('tip-off'); });
       tb.addEventListener('pointerover', e => { const b = e.target.closest('.tb-btn'); if (b && !b.contains(e.relatedTarget)) UISounds.hover(); });
-      // the drifting triangles behind the ruleset: Chrome leaves a CSS animation that (re)started while the bar was
-      // hidden — after every song, as the bar slides back — running on the main thread, a style recalculation every
-      // frame on every screen from then on. Started again once the bar is back in view, it runs on the compositor.
-      const app = $('#app'), hidden = () => app.classList.contains('in-game') || app.classList.contains('hide-toolbar');
-      let was = hidden(), wake = 0;
-      new MutationObserver(() => {
-        const now = hidden(); if (now === was) return; was = now;
-        clearTimeout(wake);
-        if (!now) wake = setTimeout(() => {
-          if (hidden()) return;
-          for (const a of tb.getAnimations({ subtree: true })) if (a.animationName === 'tbTris') { const t = a.currentTime; a.cancel(); a.play(); if (t != null) a.currentTime = t; }
-        }, 600); // (the bar's 500ms slide back in)
-      }).observe(app, { attributes: true, attributeFilter: ['class'] });
+
     }
     const btn = (ic, title, sub, fn, { key, right, cls = '', ...extra } = {}) =>
       h(`button.tb-btn${cls}`, { 'aria-label': title, onclick: () => { UISounds.click(); fn(); }, ...extra },
@@ -728,24 +716,15 @@ const Toolbar = {
     this.npBtn = h('button.tb-btn.tb-music', { 'aria-label': 'now playing', dataset: { ov: 'np' }, onclick: () => { UISounds.click(); NowPlaying.toggle(); } },
       h('span.tb-st'), icon('music'), this.volBar, this.tip('now playing', 'manage the currently playing track', 'F6', true));
     this.npText = h('span'); // (lazer's toolbar shows just the note; the title is in the panel)
-    this.bellCount = h('span.tb-badge', h('span'));
-    this.bell = btn('bell', 'notifications', 'waiting for \'ya', () => Notifications.toggle(), { key: 'Ctrl+N', right: true, dataset: { ov: 'notifications' } });
-    this.bell.append(this.bellCount);
     this.chatCount = h('span.tb-badge', h('span'));
     // like lazer's toolbar toggles: a page's button closes that page when it's already open
     const page = name => () => { if (Screens.currentName === name) Screens.back(); else Screens.go(name); };
     this.pages = { explore: page('explore'), profile: page('profile'), rankings: page('rankings'), changelog: page('changelog') };
     this.clock = h('button.tb-clock', { 'aria-label': 'Time and notifications', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', dataset: { ov: 'notifications' }, onclick: () => { UISounds.click(); Notifications.toggle(); } });
-    // lazer's ToolbarRulesetSelector, here with the one ruleset: its icon in #00ffaa over a darker triangle-patterned
-    // background, with the little white line under the selected one
-    const ruleset = h('div.tb-ruleset',
-      btn('mania', 'osu!mania', 'play some osu!mania', () => {}, { cls: '.tb-rs' }),
-      h('span.tb-rs-line'));
     tb.append(
       h('div.tb-group.tb-left',
         btn('gear', 'settings', `change the way ${APP_NAME} behaves`, () => SettingsPanel.toggle(), { key: 'Ctrl+O', dataset: { ov: 'settings' } }),
         btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home' })),
-      ruleset,
       h('div.tb-spacer'),
       h('div.tb-group.tb-right',
         // lazer's ToolbarChangelogButton
@@ -759,8 +738,7 @@ const Toolbar = {
         // (lazer's order: you, then the clock, then notifications)
         this.profileBtn = h('button.tb-btn.tb-profile', { dataset: { tab: 'profile' }, 'aria-label': 'your profile', onclick: () => { UISounds.click(); this.pages.profile(); },
           oncontextmenu: e => { e.preventDefault(); this.userMenu(e); } }),
-        this.clock,
-        this.bell),
+        this.clock),
     );
     this.chatBtn.append(this.chatCount);
     this.updateProfile();
@@ -768,10 +746,8 @@ const Toolbar = {
     this.tick();
     setInterval(() => this.tick(), 1000);
     Bus.on('music:changed', () => this.updateNp());
-    Bus.on('notif:changed', () => this.updateBell());
     Bus.on('settings:changed', k => { if (k === 'audio.master' || k === '*') this.updateVolume(); });
     Bus.on('screen:changed', () => this.sync());
-    this.updateBell();
     this.updateVolume();
   },
   tip(title, sub, key, right) {
@@ -787,14 +763,6 @@ const Toolbar = {
     if (ctrl && !e.altKey && !e.shiftKey && e.code === 'KeyB') { this.pages.explore(); return true; }
     if (ctrl && !e.altKey && !e.shiftKey && e.code === 'KeyN') { Notifications.toggle(); return true; }
     return false;
-  },
-  updateBell() {
-    const n = Notifications.unread, c = this.bellCount;
-    if (n > (this._lastN || 0)) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
-    this._lastN = n;
-    c.firstChild.textContent = n ? n.toLocaleString('en-US') : '';
-    c.classList.toggle('show', n > 0);
-    this.bell.classList.toggle('has', n > 0);
   },
   updateVolume() { if (this.volFill) this.volFill.style.transform = `scaleY(${clamp(Settings.get('audio.master'), 0, 1)})`; },
   /** the volume bar widens from 3px to 6px while the wheel is changing the volume over it, for a second after */

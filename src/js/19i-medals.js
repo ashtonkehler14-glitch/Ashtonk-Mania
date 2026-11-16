@@ -23,7 +23,6 @@ const MEDALS = [
     ['peek', 'eye', 'You Called?', 'Search for her name.'],
     ['twirl', 'retry', 'Twirl', 'Double-click Neru as one of her own.'],
     ['showoff', 'target', 'Show-off', 'Click Neru after a full combo.'],
-    ['seasons', 'sync', 'Four Seasons', 'See four different times of year around Neru.'],
     ['teto', 'crosscircle', 'Wrong Twin-Tails', 'Show up as a Teto or Miku fan. Neru noticed.'],
     ['fine', 'book', 'The Fine Print', 'Scroll all the way down the settings.'],
     ['song', 'music', 'Her Song', 'Play one of Neru\'s songs.'],
@@ -32,7 +31,7 @@ const MEDALS = [
 
 const Medals = {
   all: MEDALS, queue: [], showing: false,
-  unlocked() { return Settings.get('medals.unlocked') || {}; },
+  unlocked() { return Object.fromEntries(Object.entries(Settings.get('medals.unlocked') || {}).filter(([id]) => id !== 'neru-seasons')); },
   has(id) { return !!this.unlocked()[id]; },
   /** After a play: unlock what it earned (shown once the results are up). */
   check(score) {
