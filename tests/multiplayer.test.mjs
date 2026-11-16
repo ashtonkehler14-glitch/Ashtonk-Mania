@@ -2322,3 +2322,17 @@ test('presence: a picture taken down stays down on every tab, and comes back onc
   p.message('a2', { t: 'status', status: 'menu', avatar: 'preset:miku' });
   for (const id of ['a1', 'a2']) assert.equal(p.users.get(id).avatar, 'preset:miku');
 });
+
+
+test('spectate requests the current play again when a mid-song connection lost its header', () => {
+  const p = new PresenceLogic(() => 0);
+  p.join('a', { name: 'Alice', pid: 'alicepid1', key: 'key-alicepid1-0123456789' });
+  p.join('b', { name: 'Bob', pid: 'bobpid22', key: 'key-bobpid22-0123456789' });
+  p.message('a', { t: 'status', status: 'playing' });
+  const packets = p.message('b', { t: 'watch', to: 'a' });
+  const request = packets.find(x => x.to === 'a' && x.msg.t === 'spectators');
+  assert.equal(request.msg.full, true); assert.equal(request.msg.resume, true);
+  const live = p.message('a', { t: 'play', head: { mapHash: 'abc', title: 'Song', keys: 4, mods: [], rate: 1, seed: 7 } });
+  assert.equal(live.find(x => x.to === 'b').msg.t, 'specStart');
+  assert.deepEqual(p.message('b', { t: 'adminViewRequest', to: 'a' }), [], 'Removed Live View cannot start via an old client');
+});

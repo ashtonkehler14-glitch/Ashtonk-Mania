@@ -5503,15 +5503,6 @@ html.lp-open #toasts { right: 380px; }
 .ov[data-profile-style] .ov-tab.on { color: var(--oc1); }
 .ov[data-profile-style] .ov-icon { background: var(--ob4); color: var(--ohl); }
 
-/* Player-approved admin game-tab viewing. */
-.admin-view-wrap { position: fixed !important; inset: 0 !important; z-index: 5000; }
-.admin-view-panel { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; }
-.admin-view-heading, .admin-view-footer { position: absolute; left: 0; right: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; }
-.admin-view-heading { top: 0; background: linear-gradient(#000b, transparent); }
-.admin-view-footer { bottom: 0; background: linear-gradient(transparent, #000b); }
-.admin-view-heading span, .admin-view-footer > span { font-size: .8rem; color: var(--oc2); }
-.admin-view-stage { position: absolute; inset: 0; background: #000; overflow: hidden; display: flex; }
-.admin-view-video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: none; opacity: 1; }
 .spectator-chat.gp-chat { position: fixed; z-index: 2100; left: max(14px, env(safe-area-inset-left)); right: auto;
   bottom: max(14px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 28px)); max-height: min(300px, calc(100dvh - 80px));
   gap: 6px; opacity: 1; pointer-events: auto; color: #fff; }
@@ -5527,16 +5518,7 @@ html.lp-open #toasts { right: 380px; }
 .spectator-chat-send .icon-btn { width: 32px; height: 32px; background: #0009; border-radius: 6px; }
 .spec-host-chat { position: fixed; z-index: 2050; left: max(14px, env(safe-area-inset-left)); right: auto; bottom: max(14px, env(safe-area-inset-bottom)); font-size: 13px; }
 .spec-host-chat[hidden] { display: none; }
-.admin-view-sharing { position: fixed; z-index: 9500; left: 50%; top: max(8px, env(safe-area-inset-top)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 12px; max-width: calc(100% - 16px); border: 1px solid #ffcc2270; border-radius: 6px; background: #1b1b20; color: #fff; box-shadow: 0 4px 18px #0006; font-size: 13px; }
-.admin-view-sharing > .i { color: #ffcc22; flex: none; }
-.admin-view-sharing > span { min-width: 0; }
-.admin-view-sharing .btn { flex: none; font-size: 12px; padding: 6px 10px; color: #fff; background: #37343e; }
-@media (max-width: 700px) { .admin-view-footer, .admin-view-heading { padding: 10px 14px; flex-wrap: wrap; } .admin-view-sharing { flex-wrap: wrap; justify-content: center; width: max-content; } }
 
-.admin-view-menu { position: absolute; inset: 0; overflow: hidden; background: #18171c; pointer-events: none; }
-.admin-view-menu[hidden] { display: none; }
-.admin-view-menu iframe { position: absolute; border: 0; transform-origin: top left; pointer-events: none; }
-.admin-view-menu-cursor { position: absolute; left: 0; top: 0; color: #fff; text-shadow: 0 0 2px #000, 1px 1px 2px #000; font-size: 20px; line-height: 1; pointer-events: none; }
 
 .gameplay .hl-off { visibility: hidden !important; }
 body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
@@ -21438,8 +21420,6 @@ const GameplayScreen = {
       const s = this.s;
       if (!s) return;
       const w0 = performance.now(), realNow = ts > 0 ? ts : w0;
-      const view = typeof AdminGameView !== 'undefined' && AdminGameView.current?.capture;
-      view?.gameFrameBegin?.(realNow);
       // the display's refresh interval, for the frame limiter
       if (this._lastTs && realNow > this._lastTs) {
         const dt = realNow - this._lastTs;
@@ -21479,7 +21459,7 @@ const GameplayScreen = {
         // refresh that reaches it: the average rate is the limit, and a limit at or above the refresh rate never
         // drops a frame because of timing jitter
         const iv = 1000 / lim;
-        if (this._due && realNow < this._due - this._refresh / 2) { view?.gameFrameEnd?.(realNow, performance.now() - w0, lim, false); return; }
+        if (this._due && realNow < this._due - this._refresh / 2) { return; }
         this._due = this._due && this._due > realNow - iv ? this._due + iv : realNow + iv;
       }
       if (s.running) this.adaptResolution(realNow - this.lastRender, realNow, lim);
@@ -21512,7 +21492,6 @@ const GameplayScreen = {
       if (!this.debugEl.hidden) this.updateDebug(now, realNow);
       FPS.frame(realNow);
       this._work = performance.now() - w0;
-      view?.gameFrameEnd?.(realNow, this._work, lim, true);
     };
     frame(performance.now());
   },
@@ -25327,6 +25306,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16n', title: 'Joining a live song', sections: [
+    { title: 'Spectating', items: ['Joining someone mid-song now reconnects to their current play instead of asking you to wait for another song.'] }
+  ] },
   { id: '2026.11.16m', title: 'Chat profiles and quieter gameplay', sections: [
     { title: 'Chat', items: ['Click a chat profile picture to open that player’s profile.', 'Mentions and announcement pop-ups now wait until after your song.'] }
   ] },
@@ -29020,7 +29002,6 @@ const Presence = {
       else if (m.t === 'myBests') Bus.emit('myBests', m);
       // (another of your devices changed something of yours: fetched now)
       else if (m.t === 'synced') { if (typeof Sync !== 'undefined') Sync.onSynced(m.part); }
-      else if (typeof m.t === 'string' && m.t.startsWith('adminView')) AdminGameView.on(m);
       else if (m.t === 'daily') Daily.on(m);
       else if (m.t === 'tags') UserTags.on(m);
       else if (m.t === 'lb') Bus.emit('lb', m);
@@ -29151,7 +29132,7 @@ const Presence = {
   },
   /** Something that keeps you online while nobody's at the keyboard: a room, spectating or being watched, a song. */
   busy() {
-    return Multiplayer.inRoom() || (typeof AdminGameView !== 'undefined' && !!AdminGameView.current) || (typeof Spectate !== 'undefined' && (Spectate.target || Spectate.host.watchers)) ||
+    return Multiplayer.inRoom() || (typeof Spectate !== 'undefined' && (Spectate.target || Spectate.host.watchers)) ||
       (Screens.currentName === 'gameplay' && typeof GameplayScreen !== 'undefined' && GameplayScreen.s && GameplayScreen.s.running);
   },
   goAway() {
@@ -29637,10 +29618,6 @@ const MultiplayerScreen = {
           const pp = Presence.players.find(x => x.pid === p.pid);
           if (pp) Spectate.watch(pp); else Toast.err('Can\'t spectate right now', `${p.name} isn't on the online service.`);
         } }, icon('film'), 'Spectate') : null,
-        !isMe && p.playing && !p.fin && Presence.isAdmin && p.pid ? h('button.btn.sm.mp-spec', { onclick: () => {
-          const online = Presence.players.find(x => x.pid === p.pid);
-          if (online) AdminGameView.request(online); else Toast.err('Player is offline');
-        } }, icon('film'), 'Live View') : null,
         state ? h(`span.mp-pstate.${state}`, h('i', icon(state === 'playing' ? 'play' : state === 'reconnecting' ? 'sync' : state === 'quit' ? 'x' : 'check')), state) : null,
         // (lazer: the host's buttons at the panel's end — hand over the host, and kick (between matches))
         host && !isMe ? h('button.mp-pact', { title: `Give host to ${p.name}`, 'aria-label': `Give host to ${p.name}`, onclick: () => { UISounds.click(); Multiplayer.send({ t: 'giveHost', id: p.id }); } }, icon('crown')) : null,
@@ -31308,7 +31285,7 @@ const Spectate = {
       return;
     }
     if (m.t === 'specWait') {
-      if (t.room) { this.stop({ quiet: true }); Toast.show(`${t.name} isn't playing right now`); return; }
+      if (t.room && m.status !== 'playing') { this.stop({ quiet: true }); Toast.show(`${t.name} isn't playing right now`); return; }
       t.activity = m.activity || t.activity; t.status = m.status || t.status;
       this.cur = null; SpectatorScreen.paint();
       return;
@@ -31579,7 +31556,7 @@ const Spectate = {
     H.watchers = m.n || 0;
     if (typeof SpectatorChat !== 'undefined') SpectatorChat.refresh();
     this.paintWatchers(m.names || []);
-    if (m.full && H.s && GameplayScreen.s === H.s && !H.s.finished) this.upload(H.s);
+    if (m.full && H.s && GameplayScreen.s === H.s && !H.s.finished) { if (m.resume) this.hostStart(H.s); this.upload(H.s); }
   },
   /** Everything so far, in chunks (the first resets what the server kept, the last says it's complete). */
   upload(s) {
@@ -31713,7 +31690,7 @@ const SpectatorScreen = {
     if (!t) { clearEl(el); return; }
     if (!c || c.ended) {
       const activity = Presence.activityText(t);
-      clearEl(el).append(h('div.spm-idle', t.lost ? [h('span.spinner'), h('span', `${t.name} went offline — waiting for them to come back…`)] : [icon('clock'), h('span', `${activity} · Waiting for ${t.name} to play…`)]));
+      clearEl(el).append(h('div.spm-idle', t.lost ? [h('span.spinner'), h('span', `${t.name} went offline — waiting for them to come back…`)] : [icon('clock'), h('span', t.status === 'playing' ? `Connecting to ${t.name}’s current play…` : `${activity} · Waiting for ${t.name} to play…`)]));
       this._mapSig = this.mapSig(c);
       return;
     }
@@ -31827,7 +31804,6 @@ const UserPanels = {
     const me = this.isMe(u), items = [{ label: 'View profile', icon: 'user', onClick: () => this.profile(u) }];
     if (me) return items;
     if (this.canSpectate(u)) items.push({ label: 'Spectate', icon: 'film', onClick: () => Spectate.watch(u) });
-    if (this.canSpectate(u) && Presence.isAdmin) items.push({ label: 'Live View', icon: 'film', onClick: () => AdminGameView.request(u) });
     if (u.online && u.pid && Friends.has(u.pid)) items.push({ label: 'Send message', icon: 'chat', onClick: () => Chat.message(u) });
     if (this.canInvite(u)) items.push({ label: 'Invite to room', icon: 'multi', onClick: () => { Presence.invite(u.id); Toast.ok('Invited', u.name); } });
     if (Friends.has(u.pid)) items.push({ sep: true }, { label: 'Remove friend', icon: 'x', danger: true, onClick: () => Friends.toggle(u) });
@@ -31884,7 +31860,6 @@ const UserPanels = {
     const friend = Friends.has(u.pid), me = this.isMe(u);
     const acts = [];
     if (this.canSpectate(u)) acts.push({ label: 'Spectate', primary: true, onClick: () => Spectate.watch(u) });
-    if (this.canSpectate(u) && Presence.isAdmin) acts.push({ label: 'Live View', onClick: () => AdminGameView.request(u) });
     if (this.canInvite(u)) acts.push({ label: 'Invite to room', primary: !acts.length, onClick: () => { Presence.invite(u.id); Toast.ok('Invited', u.name); } });
     if (!me && !friend && u.online && u.id) acts.push(Friends.incoming(u.pid) ? { label: 'Accept friend request', primary: true, onClick: () => Friends.answer(u.pid, true) }
       : Friends.requested(u.pid) ? { label: 'Friend request sent', close: false } : { label: 'Add friend', primary: !acts.length, onClick: () => Friends.toggle(u) });
@@ -34680,913 +34655,6 @@ const Staff = {
   },
 };
 
-/* ===== 19q-admin-game-view.js ===== */
-/* Live View shares this game's interface. Exact tab capture is optional and started by the player. No remote control. */
-const AdminGameView = {
-  current: null,
-  init() {
-    Bus.on('presence:changed', () => { if (!Presence.ws) this.stop('The online connection closed.'); });
-    Bus.on('presence:admin', () => { if (this.current && !this.current.host && !Presence.isAdmin) this.stop('Admin access ended.'); });
-    window.addEventListener('pagehide', () => this.stop());
-  },
-  send(t, extra = {}) { const s = this.current; if (s?.session) Presence.send({ t, session: s.session, ...extra }); },
-  request(u) {
-    if (!Staff.on() || !Presence.ws || !u?.id || u.id === Presence.me) return;
-    if (this.current) { Toast.err('Live View already open', 'Finish the current view first.'); return; }
-    if (typeof RTCPeerConnection === 'undefined') { Toast.err('Live View unavailable', 'This browser does not support live game views.'); return; }
-    this.start(u, false);
-  },
-  start(u, notify) {
-    if (!Staff.on() || this.current || !Presence.ws) return;
-    const s = this.current = { host: false, name: u.name || 'Player', session: null };
-    this.viewer(s);
-    s.timer = setTimeout(() => { if (this.current === s) this.stop('The request timed out.'); }, 95000);
-    Presence.send({ t: 'adminViewRequest', to: u.id, direct: true, notify });
-  },
-  viewer(s) {
-    s.video = h('video.admin-view-video', { autoplay: true, muted: true, playsinline: true, 'aria-label': 'Live player game view' });
-    s.status = h('span', { role: 'status', 'aria-live': 'polite' }, 'Connecting to the player’s game…');
-    const panel = h('div.admin-view-panel.ov', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Live View' },
-      h('div.admin-view-heading', h('b', s.name), h('span', 'Live game · View only')),
-      h('div.admin-view-stage', s.video), h('div.admin-view-footer', s.status, h('button.btn', { onclick: () => this.stop() }, 'Stop watching')));
-    s.overlay = makeOverlay(panel, { cls: 'admin-view-wrap', backdrop: false, onClose: () => { if (this.current === s) this.stop(); } });
-    document.body.append(s.overlay.el);
-  },
-  on(m) {
-    if (m.t === 'adminViewReady' && m.host) {
-      if (this.current || typeof RTCPeerConnection === 'undefined') { Presence.send({ t: 'adminViewStop', session: m.session }); return; }
-      const source = this.current = { host: true, session: m.session, name: m.name || 'Admin', menuMirror: typeof MenuView !== 'undefined' };
-      if (m.notify) Toast.show('Live View', `${source.name} is viewing your game.`);
-      this.share(source).then(() => {
-        if (this.current !== source) return;
-        source.timer = setTimeout(() => { if (this.current === source) this.stop('The 30-minute game view ended.'); }, 30 * 60000);
-        return this.ready(source, m.iceServers);
-      }).catch(e => { if (this.current === source) this.stop(e.message || 'The game view could not connect.'); });
-      return;
-    }
-    const s = this.current;
-    if (!s && m.t === 'adminViewPending') { Presence.send({ t: 'adminViewStop', session: m.session }); return; }
-    if (!s) return;
-    if (m.t === 'adminViewError') { this.stop(m.msg); return; }
-    if (m.t === 'adminViewPending' && !s.host && !s.session) { s.session = m.session; return; }
-    if (m.session !== s.session) return;
-    if (m.t === 'adminViewEnd') { this.stop(m.reason, false); return; }
-    if (m.t === 'adminViewReady') {
-      clearTimeout(s.timer); s.timer = setTimeout(() => { if (this.current === s) this.stop('The 30-minute game view ended.'); }, 30 * 60000);
-      this.ready(s, m.iceServers).catch(() => { if (this.current === s) this.stop('The game view could not connect.'); }); return;
-    }
-    if (m.t === 'adminViewState' && !s.host) { s.remotePaused = m.paused; s.menu?.setPaused(m.paused); this.status(s); return; }
-    if (m.t === 'adminViewSignal') {
-      s.signals = (s.signals || Promise.resolve()).then(() => this.signal(s, m.signal)).catch(() => { if (this.current === s) this.stop('The game view could not connect.'); });
-    }
-  },
-  PRIVATE: '.login-panel, .setup-step-account, input[type=password], [data-private]',
-  privateOpen() {
-    const nodes = this.current?.privateNodes || [...document.querySelectorAll(this.PRIVATE)];
-    return nodes.some(el => el.isConnected !== false && el.getClientRects().length);
-  },
-  async share(s) {
-    if (this.current !== s) return;
-    s.privateNodes = null; // Until the observer is installed, privateOpen reads the live document.
-    const capture = await GameViewCapture.create(s, () => this.current === s, () => this.privateOpen());
-    if (!capture) return;
-    if (this.current !== s) { capture.stop(); return; }
-    s.capture = capture; s.stream = capture.stream; s.track = capture.track;
-    try { s.track.contentHint = 'detail'; } catch { /* optional hint */ }
-    this.sharingBar(s);
-    s.privateNodes = [...document.querySelectorAll(this.PRIVATE)];
-    s.observer = new MutationObserver(records => {
-      const relevant = records.some(r => r.type === 'attributes' ? r.target.matches(this.PRIVATE) || s.privateNodes.some(el => r.target === el || r.target.contains(el)) :
-        [...r.addedNodes, ...r.removedNodes].some(el => el.nodeType === 1 && (el.matches(this.PRIVATE) || el.querySelector(this.PRIVATE) || s.privateNodes.some(n => el.contains(n)))));
-      if (!relevant) return;
-      s.privateNodes = [...document.querySelectorAll(this.PRIVATE)]; this.protect(s);
-    });
-    s.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style', 'type', 'data-private'] });
-    this.protect(s);
-  },
-  sharingBar(s) {
-    s.label = h('span', `Sharing your game with ${s.name}`);
-    s.pause = h('button.btn.sm', { onclick: () => { s.paused = !s.paused; this.protect(s); } }, 'Pause sharing');
-    s.exact = typeof TabViewCapture !== 'undefined' && TabViewCapture.supported() ? h('button.btn.sm', { title: 'Share the game tab exactly as it appears, using the browser’s tab-sharing picker.', onclick: () => this.switchCapture(s) }, 'Share exact tab') : null;
-    s.bar = h('div.admin-view-sharing', { role: 'status' }, icon('film'), s.label, s.exact, s.pause,
-      h('button.btn.sm', { onclick: () => this.stop() }, 'Stop sharing'));
-    document.body.append(s.bar);
-  },
-  async switchCapture(s) {
-    if (this.current !== s || !s.host || s.switching) return;
-    const sender = s.pc?.getSenders().find(x => x.track?.kind === 'video');
-    if (!sender || s.pc.connectionState !== 'connected') { Toast.show('Still connecting', 'Try exact tab sharing once the live view connects.'); return; }
-    s.switching = true; if (s.exact) s.exact.disabled = true;
-    let next;
-    try {
-      next = s.capture.native ? await GameViewCapture.create(s, () => this.current === s, () => this.privateOpen()) :
-        await TabViewCapture.create(() => this.current === s, () => this.privateOpen(), () => { if (this.current === s) this.stop('Tab sharing ended.'); });
-      if (!next || this.current !== s) { next?.stop(); return; }
-      const previous = s.capture;
-      if (next.budget && previous.budget) {
-        next.budget.displayMs = Math.min(next.budget.displayMs, previous.budget.displayMs);
-        next.budget.level = Math.min(next.budget.level, previous.budget.level);
-      }
-      s.pendingCapture = next;
-      next.setPaused(!!s.paused || this.privateOpen());
-      try { await sender.replaceTrack(next.track); if (next.track.readyState === 'ended') throw new Error('Tab sharing ended before it connected.'); }
-      catch (e) { if (this.current === s) await sender.replaceTrack(previous.track).catch(() => this.stop('The game-view connection ended.')); throw e; }
-      if (this.current !== s) { next.stop(); return; }
-      s.capture = next; s.stream = next.stream; s.track = next.track;
-      next.onended = () => { if (this.current === s && s.capture === next) this.stop('Tab sharing ended.'); };
-      previous.stop(); next.setSender(sender); this.protect(s);
-      if (s.exact) { s.exact.textContent = next.native ? 'Use lightweight view' : 'Share exact tab'; s.exact.title = next.native ? 'Return to the lightweight game renderer without reconnecting.' : 'Share the game tab exactly as it appears, using the browser’s tab-sharing picker.'; }
-    } catch (e) {
-      next?.stop();
-      if (this.current === s && e.name !== 'NotAllowedError' && e.name !== 'AbortError') Toast.err('Could not switch live view', e.message || 'The current view is still available.');
-    } finally { if (s.pendingCapture === next) s.pendingCapture = null; s.switching = false; if (s.exact) s.exact.disabled = false; }
-  },
-  protect(s) {
-    if (this.current !== s || !s.track) return;
-    const privatePanel = this.privateOpen();
-    const paused = !!s.paused || privatePanel;
-    s.capture?.setPaused(paused); s.pendingCapture?.setPaused(paused); s.menu?.setPaused(paused);
-    // Manual canvas tracks must stay enabled to transmit their black privacy frames.
-    s.track.enabled = !paused || !!s.capture?.manual;
-    const label = privatePanel ? 'Sharing paused while account details are open' : paused ? 'Game sharing paused' : `Sharing your ${s.capture?.native ? 'exact game tab' : 'game'} with ${s.name}`;
-    const button = s.paused ? 'Resume sharing' : 'Pause sharing';
-    if (s.label.textContent !== label) s.label.textContent = label;
-    if (s.pause.textContent !== button) s.pause.textContent = button;
-    if (paused === s.sentPaused) return;
-    s.sentPaused = paused;
-    if (this.current === s) this.send('adminViewState', { paused });
-  },
-  async ready(s, iceServers = []) {
-    if (this.current !== s || s.pc) return;
-    if (s.host && !s.stream) { this.stop('The game view could not start.'); return; }
-    const pc = s.pc = new RTCPeerConnection({ iceServers: iceServers.length ? iceServers : [{ urls: 'stun:stun.cloudflare.com:3478' }] });
-    s.ice = [];
-    if (typeof MenuView !== 'undefined') {
-      const open = channel => { if (channel.label !== 'game-menu-v1' || this.current !== s) { channel.close(); return; } s.menu?.stop(); s.menu = MenuView.open(s, channel, () => this.current === s, () => this.privateOpen()); if (s.host) s.menu.setPaused(!!s.sentPaused); };
-      if (s.host && s.menuMirror) open(pc.createDataChannel('game-menu-v1', { ordered: true }));
-      else pc.ondatachannel = e => open(e.channel);
-    }
-    pc.onicecandidate = e => { if (this.current === s && e.candidate) this.send('adminViewSignal', { signal: { candidate: e.candidate.toJSON() } }); };
-    pc.onconnectionstatechange = () => {
-      if (this.current !== s) return;
-      clearTimeout(s.disconnected);
-      if (pc.connectionState === 'connected') {
-        if (!s.host) this.status(s);
-        else for (const sender of pc.getSenders()) s.capture?.setSender(sender);
-      }
-      else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') this.stop('The game-view connection ended.');
-      else if (pc.connectionState === 'disconnected') s.disconnected = setTimeout(() => { if (this.current === s) this.stop('The game-view connection was lost.'); }, 10000);
-    };
-    s.connecting = setTimeout(() => { if (this.current === s && pc.connectionState !== 'connected') this.stop('Could not connect. A network may be blocking direct game views.'); }, 25000);
-    if (s.host) {
-      for (const track of s.stream.getVideoTracks()) pc.addTrack(track, s.stream);
-      if (typeof TabViewCapture !== 'undefined') await Promise.race([TabViewCapture.preferEfficientCodec(pc), new Promise(r => setTimeout(r, 300))]);
-      if (this.current !== s) return;
-      const offer = await pc.createOffer();
-      if (this.current !== s) return;
-      await pc.setLocalDescription(offer);
-      if (this.current !== s) return;
-      this.send('adminViewSignal', { signal: { description: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } } });
-      s.sentPaused = null; this.protect(s);
-    } else {
-      s.status.textContent = 'Connecting to the player’s game…';
-      pc.ontrack = e => { if (this.current === s) { s.video.srcObject = e.streams[0] || new MediaStream([e.track]); s.video.play().catch(() => {}); this.status(s); } };
-    }
-  },
-  status(s) { s.status.textContent = s.remotePaused ? 'The player paused sharing.' : 'Live · View only'; },
-  async signal(s, signal) {
-    if (this.current !== s || !s.pc || !signal) return;
-    const pc = s.pc;
-    if (signal.description) {
-      await pc.setRemoteDescription(signal.description);
-      if (this.current !== s) return;
-      for (const c of s.ice.splice(0)) await pc.addIceCandidate(c);
-      if (s.host) return;
-      const answer = await pc.createAnswer();
-      if (this.current !== s) return;
-      await pc.setLocalDescription(answer);
-      if (this.current === s) this.send('adminViewSignal', { signal: { description: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } } });
-    } else if (signal.candidate) {
-      if (pc.remoteDescription) await pc.addIceCandidate(signal.candidate); else s.ice.push(signal.candidate);
-    }
-  },
-  stop(reason = '', notify = true) {
-    const s = this.current;
-    if (!s) return;
-    if (notify) this.send('adminViewStop');
-    this.current = null;
-    for (const t of [s.timer, s.connecting, s.disconnected]) clearTimeout(t);
-    s.menu?.stop(); s.pc?.close();
-    s.observer?.disconnect(); s.pendingCapture?.stop(); if (s.capture) s.capture.stop(); else s.stream?.getTracks().forEach(t => t.stop());
-    if (s.video) { s.video.pause(); s.video.srcObject = null; }
-    s.bar?.remove(); s.dialog?.close(); s.overlay?.close();
-    if (reason) Toast.show('Game view ended', reason);
-  },
-};
-
-/* ===== 19q0-view-budget.js ===== */
-/* Stream quality is expendable. The player's configured frame limit and display cadence are not. */
-class GameViewBudget {
-  static TIERS = [
-    { fps: 30, width: 1280, bitrate: 2500000, snapshot: 6000 },
-    { fps: 30, width: 1280, bitrate: 3000000, snapshot: 4000 },
-    { fps: 30, width: 1600, bitrate: 3500000, snapshot: 3000 },
-    { fps: 30, width: 1600, bitrate: 4000000, snapshot: 2200 },
-    { fps: 30, width: 1920, bitrate: 5000000, snapshot: 1500 },
-    { fps: 30, width: 1920, bitrate: 6000000, snapshot: 1000 },
-  ];
-  constructor() {
-    this.level = 5; this.displayMs = 1000 / 60; this.targetMs = this.displayMs;
-    this.work = 0; this.paintCost = .4; this.last = 0; this.lastDraw = 0; this.window = 0;
-    this.frames = 0; this.late = 0; this.healthy = 0; this.blockedUntil = 0; this.lastPaint = -Infinity;
-    this.slices = []; this.encoderPressureUntil = 0; this.changed = false;
-  }
-  get quality() { return GameViewBudget.TIERS[this.level]; }
-  begin(ts) { this.frameStart = ts; }
-  sample(ts, work, limit = 0, drawn = true) {
-    const dt = ts - this.last;
-    if (this.last && dt > 1 && dt < 100) {
-      this.slices.push(dt); if (this.slices.length > 120) this.slices.shift();
-      // Keep the best observed display cadence: a missed frame must not lower the player's FPS goal.
-      if (this.slices.length >= 16 && ts - (this.cadenceAt || 0) >= 500) {
-        this.cadenceAt = ts;
-        const sorted = [...this.slices].sort((a, b) => a - b);
-        this.displayMs = Math.min(this.displayMs, sorted[Math.floor(sorted.length * .2)]);
-      }
-    }
-    this.last = ts;
-    this.targetMs = Math.max(this.displayMs, limit > 0 ? 1000 / limit : this.displayMs);
-    this.work += (Math.max(0, work) - this.work) * .15;
-    if (drawn) {
-      if (this.lastDraw && ts - this.lastDraw < 250) {
-        this.frames++;
-        if (ts - this.lastDraw > this.targetMs + Math.max(this.targetMs * .25, this.displayMs * .75)) this.late++;
-      }
-      this.lastDraw = ts;
-    }
-    if (!this.window) this.window = ts;
-    if (ts - this.window < 750) return;
-    const missed = this.frames ? this.late / this.frames : 0;
-    const busy = this.work > this.displayMs * .65 || missed > .06 || ts < this.encoderPressureUntil;
-    if (busy) {
-      this.lower(ts, missed > .2 || this.work > this.displayMs * .85 ? 2 : 1);
-      this.healthy = 0;
-    } else if (missed < .02 && this.work < this.displayMs * .45) {
-      this.healthy += ts - this.window;
-      if (this.healthy >= 6000 && this.level < GameViewBudget.TIERS.length - 1) { this.level++; this.changed = true; this.healthy = 0; }
-    } else this.healthy = 0;
-    this.window = ts; this.frames = this.late = 0;
-  }
-  lower(now, steps = 1) {
-    const next = Math.max(0, this.level - steps);
-    if (next !== this.level) { this.level = next; this.changed = true; }
-    this.blockedUntil = now + 180; this.healthy = 0;
-  }
-  encoder(now, cpuLimited, encodeMs = 0) {
-    if (cpuLimited || encodeMs > 1000 / this.quality.fps * .7) { this.encoderPressureUntil = now + 2500; this.lower(now); }
-  }
-  slack(now) {
-    const reserve = Math.max(.8, this.displayMs * .2);
-    return Math.max(0, (this.frameStart || 0) + this.displayMs - now - reserve);
-  }
-  canSpend(now, cost = .2) {
-    return now >= this.blockedUntil && this.work < this.displayMs * .85 && this.slack(now) > cost + .25;
-  }
-  slice(now) { return Math.max(0, Math.min(.8, this.displayMs * .08, this.slack(now) * .25)); }
-  due(now) { return now - this.lastPaint >= 1000 / this.quality.fps && this.canSpend(now, this.paintCost); }
-  painted(now, cost) {
-    this.lastPaint = now; this.paintCost += (cost - this.paintCost) * .2;
-    if (cost > Math.min(2, this.displayMs * .2)) this.lower(now);
-  }
-}
-
-/* ===== 19qa-game-capture.js ===== */
-/* Render this app's own UI to a video canvas. No display/tab capture, remote DOM or browser permission is used. */
-const GameViewCapture = {
-  load() {
-    if (window.modernScreenshot) return Promise.resolve(window.modernScreenshot);
-    if (!this.loading) this.loading = new Promise((resolve, reject) => {
-      const script = document.createElement('script'), src = Host.asset('vendor/modern-screenshot.js');
-      // A cached pre-budget renderer has no yield checkpoints. Saved HTML files already contain the matching asset.
-      script.src = /^(blob:|data:)/.test(src) ? src : src + (src.includes('?') ? '&' : '?') + 'v=' + APP_BUILD;
-      const timer = setTimeout(() => { script.remove(); this.loading = null; reject(new Error('The game view renderer timed out. Please try again.')); }, 12000);
-      script.onload = () => { clearTimeout(timer); resolve(window.modernScreenshot); };
-      script.onerror = () => { clearTimeout(timer); script.remove(); this.loading = null; reject(new Error('The game view renderer could not load.')); };
-      document.head.append(script);
-    });
-    return this.loading;
-  },
-  async create(owner, valid, isPrivate) {
-    let renderer = owner.menuMirror ? null : await this.load();
-    if (!valid()) return null;
-    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { alpha: false });
-    if (!canvas.captureStream || !ctx) throw new Error('This browser cannot stream the game view.');
-    const budget = new GameViewBudget(), waiting = new Set();
-    const s = { canvas, budget, paused: false, suspended: !!owner.menuMirror && (Screens.currentName !== 'gameplay' || !GameplayScreen.s?.running), epoch: 0, frame: null, dirty: true, stopped: false, cursor: null,
-      paintedFrames: 0, snapshots: 0, hudSnapshots: 0, fullSnapshots: 0, yielded: 0, skipped: 0 };
-    const alive = () => !s.stopped && valid();
-    const aborted = () => Object.assign(new Error('Game-view work deferred.'), { name: 'AbortError' });
-    const cancelWork = () => {
-      for (const task of waiting) { if (task.idle) cancelIdleCallback(task.id); else clearTimeout(task.id); task.reject(aborted()); }
-      waiting.clear(); s.sliceEnd = 0;
-    };
-    // No timeout forces capture into a busy game frame. At minimum quality, the stream waits when there is no slack.
-    const idle = (cost = .2, check = alive) => new Promise((resolve, reject) => {
-      const task = { reject, id: 0, idle: typeof requestIdleCallback === 'function' }; waiting.add(task);
-      const attempt = deadline => {
-        if (!check()) { waiting.delete(task); reject(aborted()); return; }
-        const now = performance.now();
-        if (budget.canSpend(now, cost) && (!deadline || deadline.timeRemaining() > cost + .3)) {
-          waiting.delete(task); resolve();
-        } else { s.skipped++; schedule(); }
-      };
-      const schedule = () => { task.id = task.idle ? requestIdleCallback(attempt) : setTimeout(() => attempt(null), Math.max(4, Math.ceil(budget.displayMs / 2))); };
-      schedule();
-    });
-    const running = () => Screens.currentName === 'gameplay' && GameplayScreen.s?.running;
-    const inGame = () => Screens.currentName === 'gameplay' && !!GameplayScreen.s;
-    const mode = () => `${Screens.currentName}/${!!running()}/${Overlays.stack.length}/${GameplayScreen.s?.startedReal || 0}`;
-    const emit = () => { if (s.manual) s.track.requestFrame(); };
-    const mask = (send = true) => { ctx.fillStyle = s.paused || isPrivate() ? '#000' : '#18171c'; ctx.fillRect(0, 0, canvas.width, canvas.height); if (send && s.track) emit(); };
-    const dimensions = () => {
-      s.scale = Math.max(720 / Math.min(innerWidth, innerHeight), Math.min(devicePixelRatio || 1, budget.quality.width / innerWidth, 1440 / innerHeight));
-      s.width = innerWidth; s.height = innerHeight;
-      const w = Math.max(1, Math.round(innerWidth * s.scale)), h = Math.max(1, Math.round(innerHeight * s.scale));
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    };
-    dimensions(); mask();
-    let stream = canvas.captureStream(0);
-    if (typeof stream.getVideoTracks()[0]?.requestFrame !== 'function') { stream.getTracks().forEach(t => t.stop()); stream = canvas.captureStream(budget.quality.fps); }
-    s.stream = stream; s.track = stream.getVideoTracks()[0]; s.manual = typeof s.track.requestFrame === 'function';
-    const tune = () => {
-      const q = budget.quality;
-      if (s.sender) {
-        // Serialize setParameters: overlapping encoder changes can silently undo each other.
-        s.senderUpdates = (s.senderUpdates || Promise.resolve()).catch(() => {}).then(async () => {
-          if (!alive()) return;
-          const p = s.sender.getParameters();
-          if (p.encodings?.length) { p.encodings[0].maxBitrate = q.bitrate; p.encodings[0].maxFramerate = q.fps; p.degradationPreference = 'maintain-resolution'; await s.sender.setParameters(p); }
-        }).catch(() => {});
-      }
-      if (!s.manual) s.track.applyConstraints?.({ frameRate: { max: q.fps } }).catch(() => {});
-    };
-    s.setSender = sender => { s.sender = sender; tune(); if (s.suspended) mask(); };
-    const paint = () => {
-      if (!alive() || s.suspended || s.paused || isPrivate() || !s.frame && !running()) return;
-      const start = performance.now();
-      if (!budget.due(start)) return;
-      if (s.level !== budget.level) { dimensions(); s.level = budget.level; if (!running() || !s.activeFrame) s.dirty = true; tune(); }
-      const game = GameplayScreen.s, currentView = mode();
-      const active = running() && !Overlays.top();
-      const base = active && s.activeGame === game ? s.activeFrame : s.frameMode === currentView && s.frameKind === 'ui' ? s.frame : null;
-      if (!active && base) ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
-      else {
-        mask(false);
-        if (active) {
-          if (s.hudOpacity == null) s.hudOpacity = +getComputedStyle(GameplayScreen.hud).opacity;
-          if (s.backgroundGame !== game) {
-            s.backgroundGame = game; s.background = null; s.hud = null; s.layers = null; s.liveHud = null;
-            s.backgroundURL = null;
-          }
-          const backgroundURL = /^url\(["']?(.*?)["']?\)$/.exec(GameplayScreen.bgEl?.style.backgroundImage || '')?.[1] || '';
-          if (backgroundURL !== s.backgroundURL) {
-            s.backgroundURL = backgroundURL; s.background = null;
-            if (backgroundURL) { const image = new Image(); image.onload = () => { if (alive() && s.backgroundGame === game && s.backgroundURL === backgroundURL) s.background = image; }; image.src = backgroundURL; }
-          }
-          if (s.background && !(typeof HudLayout !== 'undefined' && HudLayout.part('background')?.off)) {
-            const k = Math.max(canvas.width / s.background.width, canvas.height / s.background.height);
-            ctx.drawImage(s.background, (canvas.width - s.background.width * k) / 2, (canvas.height - s.background.height * k) / 2, s.background.width * k, s.background.height * k);
-          }
-          const video = GameplayScreen.videoEl;
-          if (video?.readyState >= 2 && video.classList.contains('on') && !(typeof HudLayout !== 'undefined' && HudLayout.part('background')?.off)) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = `rgba(0,0,0,${GameplayScreen.baseDim ?? .7})`; ctx.fillRect(0, 0, canvas.width, canvas.height);
-          // Read geometry once per layout, not once per transmitted frame.
-          if (!s.layers) s.layers = [GameplayScreen.sbCanvas, GameplayScreen.renderer?.canvas, ...GameplayScreen.hud.querySelectorAll('canvas')].filter(el => el && getComputedStyle(el).visibility !== 'hidden').map(el => ({ el, hud: GameplayScreen.hud.contains(el), rect: el.getBoundingClientRect() }));
-          for (const layer of s.layers) {
-            if (layer.hud || !layer.rect.width || !layer.rect.height || !layer.el.width || !layer.el.height) continue;
-            const r = layer.rect;
-            try { ctx.drawImage(layer.el, r.left * s.scale, r.top * s.scale, r.width * s.scale, r.height * s.scale); } catch { /* detached canvas */ }
-          }
-          if (base) ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
-          for (const layer of s.layers) if (layer.hud && layer.rect.width && layer.rect.height && layer.el.width && layer.el.height) {
-            const r = layer.rect, digits = layer.el.classList.contains('skin-digits'), width = digits ? parseFloat(layer.el.style.width) || r.width : r.width, height = digits ? parseFloat(layer.el.style.height) || r.height : r.height;
-            ctx.globalAlpha = s.hudOpacity;
-            try { ctx.drawImage(layer.el, (digits ? r.right - width : r.left) * s.scale, r.top * s.scale, width * s.scale, height * s.scale); } catch { /* detached HUD */ }
-            ctx.globalAlpha = 1;
-          }
-          s.liveFrameMode = currentView;
-          if (!s.hud) s.hud = [GameplayScreen.scoreEl, GameplayScreen.accEl, GameplayScreen.ppEl, ...(GameplayScreen.jc?.items || []).map(i => i.n), ...GameplayScreen.hud.querySelectorAll('.sp-times span')].map(el => {
-            if (!el) return null;
-            const rect = el.getBoundingClientRect(), style = getComputedStyle(el);
-            if (style.visibility === 'hidden') return null;
-            return { el, rect, font: style.font || `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`, color: style.color, opacity: +style.opacity * s.hudOpacity, align: style.textAlign };
-          }).filter(h => h && h.rect.width && h.rect.height);
-          ctx.save(); ctx.scale(s.scale, s.scale); ctx.textBaseline = 'top';
-          for (const h of s.hud) {
-            ctx.font = h.font; ctx.fillStyle = h.color; ctx.globalAlpha = h.opacity;
-            const text = h.el.textContent;
-            const w = ctx.measureText(text).width, x = h.align === 'center' ? h.rect.left + (h.rect.width - w) / 2 : h.align === 'right' || h.align === 'end' ? h.rect.right - w : h.rect.left;
-            ctx.fillText(text, x, h.rect.top);
-          }
-          ctx.restore();
-          if (!s.liveHud) {
-            const bar = (el, fill, kind) => {
-              if (!el) return null;
-              const rect = el.getBoundingClientRect(), style = getComputedStyle(el), ink = fill && getComputedStyle(fill);
-              if (style.visibility === 'hidden') return null;
-              return rect.width && rect.height ? { rect, kind, background: style.backgroundColor, colors: (ink?.backgroundImage.match(/rgba?\([^)]+\)/g) || [ink?.backgroundColor || '#fff']), opacity: s.hudOpacity } : null;
-            };
-            s.liveHud = [bar(GameplayScreen.hpEl?.querySelector('.hp-track'), GameplayScreen.hpFill, 'health'), bar(GameplayScreen.progEl?.parentElement, GameplayScreen.progEl, 'progress')].filter(Boolean);
-          }
-          ctx.save(); ctx.scale(s.scale, s.scale); ctx.globalAlpha = s.hudOpacity;
-          for (const b of s.liveHud) {
-            const r = b.rect, value = b.kind === 'health' ? Math.max(0, Math.min(1, GameplayScreen._hpQ / 400)) : Math.max(0, Math.min(1, GameplayScreen._pq / 400));
-            ctx.globalAlpha = b.opacity; ctx.fillStyle = b.background; ctx.fillRect(r.left, r.top, r.width, r.height);
-            const gradient = ctx.createLinearGradient(r.left, 0, r.right, 0), colors = b.kind === 'health' && GameplayScreen._hpLow ? ['#ff3355', '#ff9f8f'] : b.colors;
-            colors.forEach((c, i) => gradient.addColorStop(colors.length === 1 ? 0 : i / (colors.length - 1), c));
-            ctx.fillStyle = gradient; ctx.fillRect(r.left, r.top, r.width * value, r.height);
-          }
-          const pie = GameplayScreen.pieEl;
-          if (pie?.isConnected) {
-            if (!s.pieRect) s.pieRect = getComputedStyle(pie).visibility === 'hidden' ? { width: 0, height: 0 } : pie.getBoundingClientRect();
-            const r = s.pieRect, radius = r.width / 2, x = r.left + radius, y = r.top + r.height / 2, lead = GameplayScreen._lead;
-            if (r.width && r.height) {
-              ctx.fillStyle = lead ? 'rgba(126,224,122,.18)' : 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
-              ctx.fillStyle = lead ? '#7ee07a' : 'rgba(255,255,255,.92)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (GameplayScreen._pieQ || 0) / 200); ctx.closePath(); ctx.fill();
-              ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
-            }
-          }
-          ctx.restore();
-        }
-      }
-      if (s.cursor) {
-        const { x, y } = s.cursor; ctx.save(); ctx.translate(x * s.scale, y * s.scale); ctx.scale(s.scale, s.scale);
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 20); ctx.lineTo(6, 14); ctx.lineTo(12, 23); ctx.lineTo(16, 20); ctx.lineTo(10, 12); ctx.lineTo(19, 12); ctx.closePath();
-        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#18171c'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.restore();
-      }
-      emit(); s.paintedFrames++; s.paintDirty = false;
-      budget.painted(start, performance.now() - start);
-    };
-    const queuePaint = () => {
-      if (s.paintPending || !alive() || s.suspended || s.paused || !s.frame && !running() || !budget.due(performance.now()) || !running() && !s.paintDirty) return;
-      s.paintPending = true;
-      idle(budget.paintCost).then(paint).catch(() => {}).finally(() => { s.paintPending = false; });
-    };
-    const menuFrame = ts => {
-      s.animation = 0;
-      if (!alive()) return;
-      if (inGame()) return; // Gameplay drives capture after its own frame has finished.
-      const work = s.lastMenu ? Math.max(0, performance.now() - ts) : 0; s.lastMenu = ts;
-      budget.begin(ts); budget.sample(ts, work); queuePaint();
-      s.animation = requestAnimationFrame(menuFrame);
-    };
-    const wakeMenus = () => { if (alive() && !s.animation && !inGame()) s.animation = requestAnimationFrame(menuFrame); };
-    s.gameFrameBegin = ts => { budget.begin(ts); const view = mode(); if (s.lastGameMode !== view) { s.lastGameMode = view; cancelWork(); s.attempted = -Infinity; s.dirty = true; } };
-    s.gameFrameEnd = (ts, work, limit, drawn) => { if (alive()) { budget.sample(ts, work, limit, drawn); if (drawn) queuePaint(); } };
-    const refresh = async () => {
-      if (!alive()) return;
-      if (s.suspended) { if (s.paused || isPrivate()) mask(); s.timer = setTimeout(refresh, 250); return; }
-      const start = performance.now(), epoch = s.epoch, view = mode(), active = !!running() && !Overlays.top();
-      // A rate-limited encoder may drop a single transition frame. Keep a black heartbeat until sharing resumes.
-      if (s.paused || isPrivate()) mask();
-      const check = () => alive() && !s.suspended && !s.paused && !isPrivate() && s.epoch === epoch && mode() === view;
-      const gate = async (heavy = false) => {
-        if (!check()) throw aborted();
-        const now = performance.now();
-        if (!heavy && now < s.sliceEnd && budget.canSpend(now)) return;
-        s.yielded++; await idle(heavy ? Math.max(.4, budget.paintCost) : .2, check);
-        s.sliceEnd = performance.now() + (inGame() ? budget.slice(performance.now()) : Math.min(4, budget.slack(performance.now()) * .5));
-      };
-      try {
-        const interval = active ? Math.max(750, budget.quality.snapshot / 2) : Math.max(250, budget.quality.snapshot / 4);
-        if (check() && (s.dirty || !s.frame || s.frameMode !== view || !active && start - (s.captured || 0) > 5000) && start - (s.attempted || -Infinity) >= interval) {
-          s.attempted = start; s.dirty = false;
-          await gate(true);
-          if (!renderer) renderer = await this.load();
-          if (!check()) throw aborted();
-          const root = active ? GameplayScreen.hud : document.body;
-          const liveText = active ? [GameplayScreen.scoreEl, GameplayScreen.accEl, GameplayScreen.ppEl, ...(GameplayScreen.jc?.items || []).map(i => i.n), ...GameplayScreen.hud.querySelectorAll('.sp-times span'), GameplayScreen.hpEl, GameplayScreen.progEl?.parentElement, GameplayScreen.pieEl] : [];
-          const options = { width: s.width, height: s.height, scale: s.scale, backgroundColor: active ? 'rgba(0,0,0,0)' : '#18171c', timeout: 3000,
-            onBeforeWork: gate, onCloneNode: () => gate(true), onEmbedNode: () => gate(true),
-            filter: node => !(node.nodeType === 1 && (node.hidden || node.style?.display === 'none' || node.matches('#loading-screen.done, #drop-overlay:not(.show)') || ['SCRIPT', 'IFRAME', 'AUDIO'].includes(node.tagName) || node.tagName === 'VIDEO' && node.readyState < 2 ||
-              node.matches('.admin-view-sharing, .admin-view-wrap, .lz-cursor, [data-admin-view-ignore]') ||
-              node.closest('.login-panel, .setup-step-account, input[type=password], [data-private]') ||
-              active && (node.tagName === 'CANVAS' || liveText.includes(node) || node.matches('.hud-lb') && !Settings.get('gameplay.leaderboard') && !GameplayScreen._hudAll))) };
-          if (s.root !== root && s.context) { renderer.destroyContext(s.context); s.context = null; }
-          s.root = root;
-          if (!s.context) s.context = await renderer.createContext(root, options);
-          else Object.assign(s.context, options, { dpi: s.scale === 1 ? null : s.scale * 96 });
-          const image = await renderer.domToCanvas(s.context);
-          if (check() && s.width === innerWidth && s.height === innerHeight) {
-            s.frame = image; s.frameMode = view; s.frameKind = active ? 'hud' : 'ui'; s.captured = performance.now(); s.paintDirty = true; s.snapshots++;
-            if (s.context.requests.size > 128) { renderer.destroyContext(s.context); s.context = null; }
-            if (active) { s.activeFrame = image; s.activeGame = GameplayScreen.s; s.hudSnapshots++; s.hud = s.layers = s.liveHud = s.pieRect = s.hudOpacity = null; } else s.fullSnapshots++; queuePaint();
-          }
-        }
-      } catch (e) {
-        if (s.context) { renderer.destroyContext(s.context); s.context = null; }
-        if (e.name !== 'AbortError' && alive()) {
-          owner.captureError = e.message || 'The game view could not render.';
-          if (!s.frame && (s.failures = (s.failures || 0) + 1) >= 3) AdminGameView.stop('The game view could not render. Please try again.');
-        }
-      } finally { if (alive()) { wakeMenus(); s.timer = setTimeout(refresh, 250); } }
-    };
-    const stats = async () => {
-      if (!alive()) return;
-      try {
-        if (s.sender && !s.paused && !s.suspended) for (const r of (await s.sender.getStats()).values()) if (r.type === 'outbound-rtp' && r.kind === 'video') {
-          const prev = s.encoderSample, frames = prev ? r.framesEncoded - prev.frames : 0;
-          budget.encoder(performance.now(), r.qualityLimitationReason === 'cpu', frames > 0 ? (r.totalEncodeTime - prev.time) * 1000 / frames : 0);
-          s.encoderSample = { frames: r.framesEncoded, time: r.totalEncodeTime };
-        }
-      } catch { /* optional encoder telemetry */ }
-      finally { if (alive()) s.statsTimer = setTimeout(stats, 2000); }
-    };
-    const pointer = e => { s.cursor = { x: e.clientX, y: e.clientY }; s.paintDirty = true; };
-    const resize = () => { s.epoch++; cancelWork(); dimensions(); s.frame = s.activeFrame = null; s.hud = s.layers = s.liveHud = s.pieRect = s.hudOpacity = null; s.dirty = true; s.attempted = -Infinity; mask(); };
-    const offScreen = Bus.on('screen:changed', () => { s.epoch++; s.hud = s.layers = s.liveHud = s.pieRect = s.hudOpacity = null; cancelWork(); s.dirty = true; s.attempted = -Infinity; wakeMenus(); });
-    const observer = new MutationObserver(records => {
-      const active = running() && !Overlays.top(), hud = GameplayScreen.hud;
-      const fast = '.sc, .acc, .hud-pp, .hud-progress, .hud-pie, .hud-hp, .jc-n, .sp-times';
-      if (records.some(r => {
-        const el = r.target.nodeType === 1 ? r.target : r.target.parentElement;
-        if (!el || el.closest('.admin-view-sharing, .admin-view-wrap')) return false;
-        if (active) {
-          if (!hud?.contains(el)) return false;
-          if (r.type === 'childList' && [...r.addedNodes, ...r.removedNodes].some(n => n.nodeType === 1 && (n.tagName === 'CANVAS' || n.querySelector('canvas')))) s.layers = null;
-          if (el.closest(fast)) return false;
-          if (el === GameplayScreen.skipBtn && r.attributeName === 'style') {
-            if (s.skipVisible === GameplayScreen._canSkip) return false;
-            s.skipVisible = GameplayScreen._canSkip;
-          }
-        }
-        return true;
-      })) { s.dirty = true; s.hudOpacity = null; }
-    });
-    observer.observe(document.getElementById('app'), { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'value', 'src'] });
-    const changed = () => { s.dirty = true; s.hud = s.layers = s.liveHud = s.pieRect = s.hudOpacity = null; };
-    document.addEventListener('scroll', changed, true); document.addEventListener('input', changed, true);
-    document.addEventListener('pointermove', pointer, { passive: true }); window.addEventListener('resize', resize);
-    s.setSuspended = suspended => { if (suspended !== s.suspended) { s.suspended = suspended; s.epoch++; cancelWork(); if (!suspended) { s.hud = s.layers = s.liveHud = s.pieRect = s.hudOpacity = null; s.dirty = true; s.attempted = -Infinity; wakeMenus(); } } };
-    s.setPaused = paused => { if (paused !== s.paused) { s.paused = paused; s.epoch++; cancelWork(); s.frame = s.activeFrame = null; s.hud = s.layers = s.liveHud = s.pieRect = s.hudOpacity = null; s.dirty = true; s.attempted = -Infinity; mask(); } };
-    s.stop = () => {
-      s.stopped = true; cancelWork(); clearTimeout(s.timer); clearTimeout(s.statsTimer); cancelAnimationFrame(s.animation); observer.disconnect(); offScreen();
-      document.removeEventListener('scroll', changed, true); document.removeEventListener('input', changed, true);
-      document.removeEventListener('pointermove', pointer); window.removeEventListener('resize', resize);
-      if (s.context) renderer.destroyContext(s.context);
-      stream.getTracks().forEach(t => t.stop()); canvas.width = canvas.height = 0; s.frame = s.activeFrame = s.context = s.background = s.hud = null;
-    };
-    wakeMenus(); refresh(); stats();
-    return s;
-  },
-};
-
-/* ===== 19qb-menu-view.js ===== */
-/* Live View menus: inert DOM updates rendered by the viewer, without source-side page screenshots. */
-const MenuView = {
-  tags: new Set('div span p button img input textarea select option optgroup label h1 h2 h3 h4 h5 h6 ul ol li table tbody thead tfoot tr td th section header footer nav main aside article a strong b em i small time hr br progress meter canvas video svg path circle rect line polyline polygon ellipse g defs lineargradient radialgradient stop clippath mask pattern text tspan use symbol title desc'.split(' ')),
-  svg: new Set('svg path circle rect line polyline polygon ellipse g defs lineargradient radialgradient stop clippath mask pattern text tspan use symbol title desc'.split(' ')),
-  names: { lineargradient: 'linearGradient', radialgradient: 'radialGradient', clippath: 'clipPath' },
-  max: 8 * 1024 * 1024,
-  attr(name) { return /^(id|class|style|title|alt|role|type|value|checked|selected|disabled|hidden|placeholder|width|height|viewBox|d|fill|stroke|stroke-width|stroke-linecap|stroke-linejoin|fill-rule|clip-rule|opacity|transform|cx|cy|r|rx|ry|x|y|x1|y1|x2|y2|points|offset|stop-color|stop-opacity|preserveAspectRatio|xmlns|data-[\w-]+|aria-[\w-]+)$/.test(name); },
-  // Only opaque resource tokens enter attributes. The viewer never fetches URLs supplied by the player.
-  css(value, resolve) {
-    if (String(value || '').includes('\\')) return '';
-    return String(value || '').replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/gi, (_, a, b, c) => `url("${resolve((a ?? b ?? c ?? '').trim())}")`);
-  },
-  open(owner, channel, valid, privateOpen) {
-    const m = { owner, channel, stopped: false, paused: false, active: false, queue: [], parts: new Map(), nodes: new Map(), assets: new Map(), objects: new Set(), bytes: 0, updates: 0 };
-    const alive = () => !m.stopped && valid();
-    const send = (value, urgent = false) => {
-      if (!alive() || channel.readyState !== 'open') return;
-      const json = JSON.stringify(value); if (json.length > this.max) return;
-      const key = ++m.serial, n = Math.ceil(json.length / 8000), chunks = [];
-      for (let i = 0; i < n; i++) chunks.push(JSON.stringify({ k: key, i, n, d: json.slice(i * 8000, (i + 1) * 8000) }));
-      if (urgent) m.queue.unshift(...chunks); else m.queue.push(...chunks);
-      pump();
-    };
-    m.serial = 0;
-    const pump = () => {
-      clearTimeout(m.pumpTimer);
-      if (!alive() || channel.readyState !== 'open') return;
-      let count = 0;
-      while (m.queue.length && channel.bufferedAmount < 65536 && count++ < 8) { const next = m.queue.shift(); channel.send(next); m.bytes += next.length; }
-      if (m.queue.length) m.pumpTimer = setTimeout(pump, 16);
-    };
-    channel.bufferedAmountLowThreshold = 16384; channel.onbufferedamountlow = pump;
-    const receive = raw => {
-      if (!alive() || typeof raw !== 'string' || raw.length > 33000) return;
-      let p; try { p = JSON.parse(raw); } catch { return; }
-      if (!Number.isInteger(p.k) || !Number.isInteger(p.n) || p.n < 1 || p.n > 1100 || !Number.isInteger(p.i) || p.i < 0 || p.i >= p.n || typeof p.d !== 'string' || p.d.length > 8000) return;
-      if (!m.parts.has(p.k)) { if (m.parts.size > 16) { m.parts.clear(); return; } m.parts.set(p.k, { n: p.n, size: 0, got: 0, data: [] }); }
-      const part = m.parts.get(p.k); if (part.n !== p.n || part.data[p.i] !== undefined) return;
-      part.data[p.i] = p.d; part.size += p.d.length; part.got++;
-      if (part.size > this.max) { m.parts.delete(p.k); return; }
-      if (part.got === part.n) { m.parts.delete(p.k); try { const value = JSON.parse(part.data.join('')); if (value && typeof value === 'object') owner.host ? sourceMessage(value) : viewerMessage(value); } catch { /* malformed or expired update */ } }
-    };
-    channel.onmessage = e => receive(e.data);
-    const sourceMessage = value => { if (value.t === 'rendered' && value.epoch === m.currentEpoch) m.rendered = true; if (value.t === 'ready') { m.ready = true; m.disabled = false; clearTimeout(m.fallbackTimer); if (owner.host) invalidate(); } };
-    let invalidate = () => {}, viewerMessage = () => {};
-    const menuActive = () => !owner.capture?.native && (Screens.currentName !== 'gameplay' || !GameplayScreen.s?.running || (typeof Overlays !== 'undefined' && !!Overlays.top()) || (typeof SkinEditor !== 'undefined' && SkinEditor.on));
-    const state = () => { if (!alive() || m.disabled) return; m.active = !!menuActive(); m.observeActive?.(m.active && !m.paused); owner.capture?.setSuspended(m.active); };
-    if (owner.host) {
-      const ids = new WeakMap(), dirty = new Set(), urls = new Map(); let next = 0, assetId = 0, epoch = 0;
-      const id = node => { if (!ids.has(node)) ids.set(node, ++next); return ids.get(node); };
-      const eligible = node => node.nodeType === 3 || node.nodeType === 1 && (node === document.body || this.tags.has(node.localName.toLowerCase())) && !node.matches('.admin-view-sharing, .admin-view-wrap, #lz-cur, [data-admin-view-ignore], #loading-screen.done, #drop-overlay:not(.show)');
-      const resource = url => {
-        if (!url || url[0] === '#') return url || '';
-        if (urls.has(url)) return urls.get(url);
-        const token = 'mv:' + ++assetId; urls.set(url, token);
-        // Asset reads are asynchronous and cached; no rasterization or computed style walk is needed.
-        (async () => {
-          try {
-            const full = new URL(url, location.href); if (!['http:', 'https:', 'data:', 'blob:'].includes(full.protocol)) return;
-            const blob = await (await fetch(full.href)).blob();
-            if (!alive() || blob.size > 3 * 1024 * 1024 || !/^(image\/(png|jpeg|webp|gif|avif|svg\+xml|bmp)|font\/(woff2?|ttf|otf))$/i.test(blob.type)) return;
-            const bytes = new Uint8Array(await blob.arrayBuffer()); let binary = '';
-            for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-            send({ t: 'asset', id: token, mime: blob.type, data: btoa(binary) });
-          } catch { /* a missing public image keeps its placeholder */ }
-        })();
-        return token;
-      };
-      const attrs = node => {
-        const a = {};
-        for (const attr of node.attributes) if (this.attr(attr.name)) a[attr.name] = attr.name === 'style' ? this.css(attr.value, resource) : attr.value.slice(0, 16000);
-        if (node.tagName === 'IMG') a.src = resource(node.currentSrc || node.src);
-        if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') a.value = node.value;
-        if (node.tagName === 'INPUT') { if (node.checked) a.checked = ''; else delete a.checked; }
-        if (node.tagName === 'OPTION') { if (node.selected) a.selected = ''; else delete a.selected; }
-        if (node.tagName === 'USE') { const href = node.getAttribute('href') || node.getAttribute('xlink:href'); if (href?.startsWith('#')) a.href = href; }
-        return a;
-      };
-      let work = 0;
-      const yieldWork = async check => {
-        if (++work % 32) return;
-        await new Promise(resolve => typeof requestIdleCallback === 'function' ? requestIdleCallback(resolve) : setTimeout(resolve, 0));
-        if (!check()) throw new Error('Menu view changed.');
-      };
-      const serialize = async (node, check, depth = 0) => {
-        if (!check() || depth > 64 || !eligible(node)) return null;
-        await yieldWork(check);
-        if (node.nodeType === 3) return { i: id(node), x: (node.nodeValue || '').slice(0, 32000) };
-        if (node.matches('[data-private], input[type=password], .login-panel, .setup-step-account')) return null;
-        const out = { i: id(node), t: node === document.body ? 'body' : ['CANVAS', 'VIDEO'].includes(node.tagName) ? 'img' : node.localName, a: attrs(node), c: [], sx: node.scrollLeft || 0, sy: node.scrollTop || 0 };
-        if (['CANVAS', 'VIDEO'].includes(node.tagName)) { delete out.a.src; out.a['data-mv-canvas'] = String(out.i); }
-        for (const child of node.childNodes) { const c = await serialize(child, check, depth + 1); if (c) out.c.push(c); }
-        return out;
-      };
-      const blocked = () => m.paused || privateOpen();
-      const flush = async () => {
-        if (!alive() || m.disabled || m.busy || !m.ready || !m.active || blocked()) return;
-        if (!m.reset && (m.queue.length > 32 || channel.bufferedAmount > 65536)) return;
-        m.busy = true; const at = epoch, check = () => alive() && epoch === at && m.active && !blocked();
-        try {
-          if (dirty.has(document.body)) m.reset = true;
-          const roots = m.reset ? [document.body] : [...dirty].filter(n => n.isConnected && ![...dirty].some(p => p !== n && p.nodeType === 1 && p.contains(n)));
-          dirty.clear(); const reset = m.reset; m.reset = false;
-          for (const node of roots) {
-            const tree = await serialize(node, check); if (!tree || !check()) continue;
-            send(reset ? { t: 'snapshot', epoch: at, tree, html: attrs(document.documentElement), w: innerWidth, h: innerHeight } : { t: 'patch', epoch: at, tree }, reset); m.updates++;
-          }
-        } catch (e) { m.error = e.message; if (alive()) m.reset = true; }
-        finally { m.busy = false; }
-      };
-      invalidate = () => { epoch++; m.currentEpoch = epoch; m.rendered = false; canvasAt = new WeakMap(); state(); m.videoAt = owner.capture?.paintedFrames || 0; m.videoNotified = false; m.reset = true; dirty.clear(); send({ t: 'mode', active: m.active, blocked: blocked(), epoch }, true); };
-      const observer = new MutationObserver(records => {
-        if (!m.active || blocked()) return;
-        for (const r of records) { const node = r.target; if (node.nodeType === 1 && node.closest('.admin-view-sharing, .admin-view-wrap, #lz-cur')) continue; if (node.parentElement?.closest('.admin-view-sharing, .admin-view-wrap, #lz-cur')) continue; dirty.add(node); }
-      });
-      m.observeActive = active => { if (m.observing === active) return; m.observing = active; if (active) observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'src', 'value', 'checked', 'selected', 'disabled'] }); else observer.disconnect(); };
-      const scroll = e => { if (m.active && !blocked()) { const n = e.target === document ? document.scrollingElement : e.target; if (n?.nodeType === 1) send({ t: 'scroll', id: id(n), x: n.scrollLeft, y: n.scrollTop }); } };
-      const input = e => { if (m.active && !blocked()) dirty.add(e.target); };
-      const pointer = e => { m.pointer = { x: e.clientX, y: e.clientY, id: e.target?.nodeType === 1 ? id(e.target) : 0 }; };
-      document.addEventListener('scroll', scroll, true); document.addEventListener('input', input, true); document.addEventListener('pointermove', pointer, { passive: true });
-      const off = Bus.on('screen:changed', invalidate); window.addEventListener('resize', invalidate);
-      let canvasAt = new WeakMap(); const canvasPending = new WeakSet();
-      const canvases = () => {
-        if (!m.ready || !m.rendered || !m.active || blocked() || m.queue.length > 16) return;
-        for (const node of document.querySelectorAll('#app canvas, #app video')) {
-          if (!ids.has(node) || canvasPending.has(node) || node.closest('[data-private]')) continue;
-          const before = canvasAt.get(node), now = performance.now();
-          if (before && (Screens.currentName === 'gameplay' && !(typeof SkinEditor !== 'undefined' && SkinEditor.on) || now - before < 500)) continue;
-          const rect = node.getBoundingClientRect(); if (!rect.width || !rect.height || node.tagName === 'VIDEO' && node.readyState < 2) continue;
-          const at = epoch, n = id(node), width = node.width || node.videoWidth, height = node.height || node.videoHeight;
-          if (!width || !height) continue;
-          canvasPending.add(node); canvasAt.set(node, now);
-          try {
-            const canvas = document.createElement('canvas'), scale = Math.min(1, 1024 / width, 768 / height);
-            canvas.width = Math.max(1, Math.round(width * scale)); canvas.height = Math.max(1, Math.round(height * scale));
-            canvas.getContext('2d').drawImage(node, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(blob => {
-              canvasPending.delete(node); if (!blob || !alive() || epoch !== at || blocked() || !m.active) return;
-              const reader = new FileReader(); reader.onload = () => { if (alive() && epoch === at && !blocked() && m.active) send({ t: 'canvas', epoch: at, id: n, mime: blob.type, data: String(reader.result).split(',')[1] }); }; reader.readAsDataURL(blob);
-            }, 'image/webp', .9);
-          } catch { canvasPending.delete(node); }
-        }
-      };
-      let lastState = '', lastPointer = '', lastCanvas = 0;
-      m.timer = setInterval(() => {
-        if (!alive()) return;
-        const signature = `${Screens.currentName}/${!!GameplayScreen.s?.running}/${!!menuActive()}`;
-        if (signature !== lastState) { lastState = signature; invalidate(); }
-        flush();
-        if (!m.active && !m.videoNotified && (owner.capture?.native ? owner.capture.ready : (owner.capture?.paintedFrames || 0) > m.videoAt && owner.capture?.liveFrameMode?.startsWith('gameplay/true'))) { m.videoNotified = true; send({ t: 'video', epoch }, true); }
-        if (performance.now() - lastCanvas > 250) { lastCanvas = performance.now(); canvases(); }
-        const p = JSON.stringify(m.pointer); if (m.active && !blocked() && p && p !== lastPointer) { lastPointer = p; send({ t: 'pointer', ...m.pointer }); }
-      }, 33);
-      m.setPaused = paused => { if (m.paused === paused) return; m.paused = paused; m.observeActive(m.active && !paused); epoch++; m.currentEpoch = epoch; m.rendered = false; canvasAt = new WeakMap(); m.queue.length = 0; m.reset = true; dirty.clear(); send({ t: 'mode', active: m.active, blocked: paused, epoch }, true); };
-      m.cleanup = () => { observer.disconnect(); off(); window.removeEventListener('resize', invalidate); document.removeEventListener('scroll', scroll, true); document.removeEventListener('input', input, true); document.removeEventListener('pointermove', pointer); };
-      channel.onopen = () => { state(); send({ t: 'hello' }); };
-      m.fallbackTimer = setTimeout(() => { if (alive() && !m.ready) { m.disabled = true; m.observeActive(false); owner.capture?.setSuspended(false); } }, 5000); state();
-    } else {
-      const wrap = m.el = h('div.admin-view-menu', { hidden: true });
-      const frame = m.iframe = h('iframe', { title: 'Live menu view', sandbox: 'allow-same-origin', tabindex: '-1', 'aria-hidden': 'true' });
-      const cursor = m.cursor = h('div.admin-view-menu-cursor'); cursor.innerHTML = '<svg width=22 height=27 viewBox="-2 -2 24 29"><path d="M0 0V20L6 14L12 23L16 20L10 12H19Z" fill="white" stroke="#18171c" stroke-width="1.5"/></svg>'; wrap.append(frame, cursor); owner.video.parentElement.append(wrap);
-      frame.srcdoc = '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src \'self\' blob: data:; font-src \'self\' blob: data:; connect-src \'none\'; frame-src \'none\'; object-src \'none\'; base-uri \'none\'"></head><body inert></body></html>';
-      let doc, loaded = false, epoch = -1;
-      const ruleCSS = rule => typeof rule.selectorText === 'string' ? rule.selectorText.replace(/:hover/g, '[data-mv-hover]') + '{' + rule.style.cssText + '}' : rule.cssRules ? rule.cssText.slice(0, rule.cssText.indexOf('{') + 1) + [...rule.cssRules].map(ruleCSS).join('\n') + '}' : rule.cssText;
-      const css = [...document.querySelectorAll('style')].map(s => { try { return [...s.sheet.cssRules].map(ruleCSS).join('\n'); } catch { return s.textContent; } }).join('\n');
-      m.canvasURLs = new Map();
-      const resolve = token => token?.startsWith('#') ? token : m.assets.get(token) || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-      const setAttrs = (el, values) => {
-        for (const a of [...el.attributes]) if (a.name !== 'inert') el.removeAttribute(a.name);
-        for (const [name, value] of Object.entries(values || {})) {
-          if (typeof value !== 'string' || value.length > 32000) continue;
-          if (name === 'src' && el.tagName === 'IMG' && /^mv:\d+$/.test(value)) { el.dataset.mvResource = value; el.src = resolve(value); }
-          else if (name === 'href' && value.startsWith('#') && el.namespaceURI === 'http://www.w3.org/2000/svg') el.setAttribute(name, value);
-          else if (this.attr(name) && name !== 'src') {
-            if (name === 'style') { el.dataset.mvStyle = value; el.style.cssText = this.css(value, token => /^mv:\d+$/.test(token) || token.startsWith('#') ? resolve(token) : ''); }
-            else el.setAttribute(name, /^(fill|stroke)$/.test(name) ? this.css(value, token => token.startsWith('#') ? token : '') : value);
-          }
-        }
-        if ('value' in (values || {}) && 'value' in el && !(el.tagName === 'INPUT' && el.type === 'file')) el.value = values.value;
-      };
-      const remove = el => { if (!el) return; for (const [id, node] of m.nodes) if (node === el || el.contains?.(node)) m.nodes.delete(id); };
-      const pruneCanvases = () => { for (const [id, url] of m.canvasURLs) if (!m.nodes.has(id)) { URL.revokeObjectURL(url); m.canvasURLs.delete(id); } };
-      let count = 0;
-      const build = (n, depth = 0) => {
-        if (!n || !Number.isInteger(n.i) || n.i < 1 || m.nodes.size >= 20000 || ++count > 20000 || depth > 64) return doc.createTextNode('');
-        if (typeof n.x === 'string') { const text = doc.createTextNode(n.x.slice(0, 32000)); m.nodes.set(n.i, text); return text; }
-        const tag = String(n.t || '').toLowerCase(); if (!this.tags.has(tag)) return doc.createTextNode('');
-        if (tag === 'input' && String(n.a?.type).toLowerCase() === 'password') return doc.createTextNode('');
-        const el = this.svg.has(tag) ? doc.createElementNS('http://www.w3.org/2000/svg', this.names[tag] || tag) : doc.createElement(tag === 'canvas' || tag === 'video' ? 'img' : tag);
-        setAttrs(el, n.a); m.nodes.set(n.i, el);
-        for (const child of (Array.isArray(n.c) ? n.c : []).slice(0, 20000)) el.append(build(child, depth + 1));
-        if (el.tagName === 'IMG' && el.hasAttribute('data-mv-canvas') && m.canvasURLs.has(n.i)) el.src = m.canvasURLs.get(n.i);
-        if (Number.isFinite(n.sx)) el.scrollLeft = n.sx; if (Number.isFinite(n.sy)) el.scrollTop = n.sy;
-        return el;
-      };
-      const fit = () => {
-        if (!m.width || !m.height) return;
-        const scale = Math.min(wrap.clientWidth / m.width, wrap.clientHeight / m.height); m.scale = scale;
-        const left = (wrap.clientWidth - m.width * scale) / 2, top = (wrap.clientHeight - m.height * scale) / 2;
-        frame.style.cssText = `width:${m.width}px;height:${m.height}px;left:${left}px;top:${top}px;transform:scale(${scale})`;
-        m.offsetX = left; m.offsetY = top;
-      };
-      const show = () => { const visible = loaded && m.hasSnapshot && ((m.active && m.snapshotEpoch === epoch) || m.holdMenu || m.keepMenu) && !m.paused && !owner.remotePaused; wrap.hidden = !visible; owner.video.style.visibility = visible || m.paused || owner.remotePaused ? 'hidden' : ''; fit(); };
-      frame.onload = () => { doc = frame.contentDocument; const style = doc.createElement('style'); style.textContent = css; doc.head.append(style); loaded = true; send({ t: 'ready' }, true); };
-      viewerMessage = v => {
-        if (v.t === 'hello') { if (loaded) send({ t: 'ready' }, true); return; }
-        if (v.t === 'mode') { const visible = !wrap.hidden; m.active = !!v.active; m.paused = !!v.blocked; epoch = v.epoch; m.epoch = epoch; m.holdMenu = m.active && visible; m.keepMenu = !m.active && visible; m.videoTime = owner.video.currentTime; show(); return; }
-        if (v.t === 'video' && !m.active && v.epoch === epoch) {
-          const reveal = () => { if (!alive() || m.active || m.paused || owner.remotePaused) return; if (owner.video.currentTime > m.videoTime) { m.keepMenu = false; show(); } else m.videoCheck = setTimeout(reveal, 33); }; reveal(); return;
-        }
-        if (v.t === 'asset' && /^mv:\d+$/.test(v.id) && typeof v.data === 'string' && v.data.length < 4500000 && /^(image\/(png|jpeg|webp|gif|avif|svg\+xml|bmp)|font\/(woff2?|ttf|otf))$/i.test(v.mime)) {
-          if (m.assets.size > 512) return; const bytes = Uint8Array.from(atob(v.data), c => c.charCodeAt(0)), url = URL.createObjectURL(new Blob([bytes], { type: v.mime })); const before = m.assets.get(v.id); if (before) { URL.revokeObjectURL(before); m.objects.delete(before); } m.objects.add(url); m.assets.set(v.id, url);
-          if (loaded) for (const el of doc.querySelectorAll('[data-mv-resource], [data-mv-style]')) { if (el.dataset.mvResource === v.id) el.src = url; if (el.dataset.mvStyle?.includes(v.id)) el.style.cssText = this.css(el.dataset.mvStyle, resolve); }
-          return;
-        }
-        if (!loaded || v.epoch !== undefined && v.epoch !== epoch || m.paused || owner.remotePaused) return;
-        if (v.t === 'canvas' && Number.isInteger(v.id) && typeof v.data === 'string' && v.data.length < 1500000 && /^image\/(png|jpeg|webp)$/.test(v.mime)) { const el = m.nodes.get(v.id); if (el?.tagName === 'IMG' && el.hasAttribute('data-mv-canvas')) { const bytes = Uint8Array.from(atob(v.data), c => c.charCodeAt(0)), url = URL.createObjectURL(new Blob([bytes], { type: v.mime })); const before = m.canvasURLs.get(v.id); if (before) URL.revokeObjectURL(before); m.canvasURLs.set(v.id, url); el.src = url; } return; }
-        if (v.t === 'snapshot' && v.tree?.t === 'body' && Number.isFinite(v.w) && v.w > 0 && v.w <= 10000 && Number.isFinite(v.h) && v.h > 0 && v.h <= 10000) {
-          m.nodes.clear(); count = 0; setAttrs(doc.documentElement, v.html); setAttrs(doc.body, v.tree.a); doc.body.inert = true; doc.body.replaceChildren(); m.nodes.set(v.tree.i, doc.body);
-          for (const child of v.tree.c || []) doc.body.append(build(child)); pruneCanvases(); m.width = v.w; m.height = v.h; m.hasSnapshot = true; m.snapshotEpoch = epoch; m.holdMenu = false; m.keepMenu = false; m.active = true; m.updates++; show(); send({ t: 'rendered', epoch });
-        } else if (v.t === 'patch') {
-          const old = m.nodes.get(v.tree?.i); if (!old) return;
-          remove(old); count = 0; old.replaceWith(build(v.tree)); pruneCanvases(); m.updates++;
-        } else if (v.t === 'scroll') { const el = m.nodes.get(v.id); if (el && Number.isFinite(v.x) && Number.isFinite(v.y)) { el.scrollLeft = v.x; el.scrollTop = v.y; } }
-        else if (v.t === 'pointer' && Number.isFinite(v.x) && Number.isFinite(v.y)) { cursor.style.transform = `translate(${m.offsetX + v.x * m.scale}px,${m.offsetY + v.y * m.scale}px)`;
-          for (const el of m.hover || []) el.removeAttribute('data-mv-hover'); m.hover = [];
-          let el = m.nodes.get(v.id); while (el?.nodeType === 1 && el !== doc.body) { el.setAttribute('data-mv-hover', ''); m.hover.push(el); el = el.parentElement; } }
-      };
-      const resize = new ResizeObserver(fit); resize.observe(wrap); m.cleanup = () => { resize.disconnect(); wrap.remove(); owner.video.style.visibility = ''; };
-      m.setPaused = paused => { m.paused = paused; show(); if (!paused) send({ t: 'ready' }, true); };
-      channel.onopen = () => { if (loaded) send({ t: 'ready' }, true); };
-    }
-    channel.onclose = () => { if (alive()) { m.active = false; m.disabled = true; m.observeActive?.(false); owner.capture?.setSuspended(false); if (m.el) { m.el.hidden = true; owner.video.style.visibility = ''; } } };
-    m.stop = () => { m.stopped = true; clearInterval(m.timer); clearTimeout(m.pumpTimer); clearTimeout(m.fallbackTimer); clearTimeout(m.videoCheck); m.cleanup?.(); m.queue.length = 0; m.parts.clear(); for (const url of m.objects) URL.revokeObjectURL(url); for (const url of m.canvasURLs?.values() || []) URL.revokeObjectURL(url); channel.close(); };
-    return m;
-  },
-};
-
-/* ===== 19qc-tab-view.js ===== */
-/* Optional, player-initiated native capture of this game tab. The browser handles compositing and capture. */
-const TabViewCapture = {
-  async preferEfficientCodec(pc) {
-    if (typeof navigator === 'undefined' || !navigator.mediaCapabilities?.encodingInfo || typeof RTCRtpSender === 'undefined') return;
-    try {
-      const codecs = RTCRtpSender.getCapabilities?.('video')?.codecs || [], choices = [...new Set(codecs.map(c => c.mimeType).filter(m => /^video\/(VP8|VP9|H264|AV1)$/i.test(m)))];
-      const results = await Promise.all(choices.map(async mime => {
-        try { const r = await navigator.mediaCapabilities.encodingInfo({ type: 'webrtc', video: { contentType: mime, width: 1280, height: 720, bitrate: 2500000, framerate: 30 } }); return r.supported && r.smooth && r.powerEfficient ? mime : null; } catch { return null; }
-      }));
-      const best = results.find(Boolean); if (!best) return;
-      const ordered = [...codecs.filter(c => c.mimeType === best), ...codecs.filter(c => c.mimeType !== best)];
-      for (const t of pc.getTransceivers()) if (t.sender.track?.kind === 'video') t.setCodecPreferences?.(ordered);
-    } catch { /* Keep the browser's codec order when capability information is unavailable. */ }
-  },
-  canCrop() { return typeof CropTarget !== 'undefined' && typeof CropTarget.fromElement === 'function' && typeof BrowserCaptureMediaStreamTrack !== 'undefined' && typeof BrowserCaptureMediaStreamTrack.prototype.cropTo === 'function'; },
-  canVerifyHandle() { return typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.setCaptureHandleConfig === 'function' && typeof MediaStreamTrack !== 'undefined' && typeof MediaStreamTrack.prototype.getCaptureHandle === 'function'; },
-  supported() {
-    return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia && (this.canVerifyHandle() || this.canCrop());
-  },
-  async create(valid, privateOpen, onended = () => {}) {
-    if (!this.supported()) throw new Error('Exact tab sharing needs a browser with current-tab capture support. The lightweight view is still available.');
-    // Verify this tab using its per-request browser capture handle. This keeps the direct compositor path;
-    // cropping the entire document is a compatibility fallback, since region capture can add GPU readbacks.
-    let handle = '', stream, track, verification;
-    // Local HTML documents have an opaque/file origin, which is not a valid origin allowlist entry. Expose only
-    // a fresh, non-identifying nonce there; matching it still proves the chosen tab is this document. The browser
-    // picker and player controls remain mandatory. Website captures keep their exact-origin allowlist.
-    const opaqueOrigin = location.protocol === 'file:' || location.origin === 'null' || location.origin === 'file://';
-    const clearHandle = () => { if (handle) try { navigator.mediaDevices.setCaptureHandleConfig({ handle: '', exposeOrigin: false, permittedOrigins: [] }); } catch {} };
-    if (this.canVerifyHandle()) try {
-      handle = crypto.randomUUID(); navigator.mediaDevices.setCaptureHandleConfig({ handle, exposeOrigin: !opaqueOrigin, permittedOrigins: opaqueOrigin ? ['*'] : [location.origin] });
-    } catch { handle = ''; }
-    try {
-      // This call must stay in the player's click handler, before any asynchronous work consumes activation.
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: 'browser', width: { ideal: Math.round(720 * Math.max(1, innerWidth / innerHeight)), max: Math.round(720 * Math.max(1, innerWidth / innerHeight)) }, height: { ideal: Math.round(720 * Math.max(1, innerHeight / innerWidth)), max: Math.round(720 * Math.max(1, innerHeight / innerWidth)) }, frameRate: { ideal: 30, max: 30 } },
-        audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', monitorTypeSurfaces: 'exclude', surfaceSwitching: 'exclude', systemAudio: 'exclude',
-      });
-      track = stream.getVideoTracks()[0];
-      if (track) { track.enabled = false; track.onended = () => { if (valid()) onended(); }; }
-      if (track?.readyState === 'ended') { if (valid()) onended(); stream.getTracks().forEach(t => t.stop()); clearHandle(); return null; }
-      if (!valid()) { stream.getTracks().forEach(t => t.stop()); clearHandle(); return null; }
-      if (!track || track.getSettings().displaySurface !== 'browser') throw new Error('Choose this game’s tab to share.');
-      const identity = handle && track.getCaptureHandle?.();
-      const sameOrigin = identity && (opaqueOrigin ? identity.origin == null || identity.origin === 'null' || identity.origin === 'file://' : identity.origin === location.origin);
-      if (identity?.handle === handle && sameOrigin) verification = 'handle';
-      else {
-        if (identity?.handle || !this.canCrop() || typeof track.cropTo !== 'function') throw new Error('The selected tab is not this game.');
-        await track.cropTo(await CropTarget.fromElement(document.documentElement)); verification = 'crop';
-      }
-      if (!valid()) { stream.getTracks().forEach(t => t.stop()); clearHandle(); return null; }
-    } catch (e) {
-      stream?.getTracks().forEach(t => t.stop()); clearHandle();
-      if (e.name === 'NotAllowedError' || e.name === 'AbortError') throw e;
-      throw new Error('Exact sharing could not capture this game tab. Choose the current game tab, or keep using the lightweight view.');
-    }
-    const budget = new GameViewBudget(), s = { native: true, manual: false, stream, track, budget, verification, ready: false, paused: false, stopped: false, metrics: {} };
-    budget.level = 0;
-    const alive = () => !s.stopped && valid();
-    track.contentHint = 'detail';
-    const tune = () => {
-      const q = budget.quality, ratio = innerWidth / innerHeight, shortSide = [720, 720, 900, 900, 1080, 1080][budget.level];
-      const height = Math.round(shortSide / Math.min(1, ratio)), width = Math.round(height * ratio);
-      s.tuning = (s.tuning || Promise.resolve()).catch(() => {}).then(async () => {
-        if (!alive()) return;
-        // Keep 30fps and readable text as targets; browser congestion control still manages the real network rate.
-        await track.applyConstraints({ width: { ideal: width, max: width }, height: { ideal: height, max: height }, frameRate: { ideal: 30, max: 30 } }).catch(() => {});
-        if (!alive() || !s.sender) return;
-        const p = s.sender.getParameters();
-        if (p.encodings?.length) { p.encodings[0].maxBitrate = q.bitrate; p.encodings[0].maxFramerate = 30; p.degradationPreference = 'maintain-resolution'; await s.sender.setParameters(p); }
-      }).catch(() => {});
-      s.level = budget.level;
-    };
-    const stats = async () => {
-      if (!alive()) return;
-      try {
-        if (s.sender) for (const r of (await s.sender.getStats()).values()) if (r.type === 'outbound-rtp' && r.kind === 'video') {
-          if (!alive()) return;
-          const previous = s.metrics, frames = r.framesEncoded - (previous.framesEncoded || 0);
-          if (previous.framesEncoded !== undefined && frames > 0) s.ready = true;
-          const encodeMs = frames > 0 && previous.totalEncodeTime !== undefined ? (r.totalEncodeTime - previous.totalEncodeTime) * 1000 / frames : 0;
-          budget.encoder(performance.now(), r.qualityLimitationReason === 'cpu', encodeMs);
-          s.metrics = { framesEncoded: r.framesEncoded, framesPerSecond: r.framesPerSecond, width: r.frameWidth, height: r.frameHeight, totalEncodeTime: r.totalEncodeTime, encodeMs, qualityLimitationReason: r.qualityLimitationReason };
-        }
-        if (s.level !== budget.level) tune();
-      } catch { /* Browser telemetry is optional. */ }
-      finally { if (alive()) s.statsTimer = setTimeout(stats, s.ready ? 2000 : 100); }
-    };
-    s.setSender = sender => {
-      if (s.sender === sender) return;
-      s.sender = sender; tune(); stats();
-      // A static tab may emit just one frame, and some browsers omit encoding counters. Do not make optional
-      // telemetry a prerequisite for viewing; the receiver still waits for its video clock to advance.
-      s.readyTimer = setTimeout(() => { if (alive()) s.ready = true; }, 750);
-    };
-    s.gameFrameBegin = ts => budget.begin(ts);
-    s.gameFrameEnd = (ts, work, limit, drawn) => budget.sample(ts, work, limit, drawn);
-    s.setSuspended = () => {}; // Native capture already includes menus and gameplay, with no duplicate JS renderer.
-    s.setPaused = paused => { s.paused = !!paused; track.enabled = alive() && !s.paused && !privateOpen(); };
-    track.onended = () => { if (alive()) (s.onended || onended)(); };
-    s.stop = () => { s.stopped = true; clearTimeout(s.statsTimer); clearTimeout(s.readyTimer); window.removeEventListener('resize', tune); track.onended = null; stream.getTracks().forEach(t => t.stop()); clearHandle(); };
-    window.addEventListener('resize', tune); tune();
-    return s;
-  },
-};
-
 /* ===== 19r-spectator-chat.js ===== */
 /* The room/lounge chat controls, shared by the watched player and their current spectators. */
 const SpectatorChat = {
@@ -35682,7 +34750,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '8aa58ea70647';
+const APP_BUILD = '2249f5909f05';
 
 const App = {
   lastReport: null,
@@ -35716,7 +34784,6 @@ const App = {
     Zoom.init(); RenderScale.init();
     Toolbar.build();
     GameDropdowns.init();
-    AdminGameView.init();
     SpectatorChat.init();
     NeruMenuSecrets.init();
     Tooltip.init();
@@ -35753,7 +34820,6 @@ const App = {
     if (DB.memory) Toast.show('Storage is blocked', 'This browser isn\'t letting the game save anything here (private window or blocked site data?). You can play, but beatmaps, scores and settings are lost when the tab closes.', { type: 'err', timeout: 20000 });
     else if (failed.length) Toast.err('Some saved data couldn\'t be loaded', `Problem with: ${failed.join(', ')}. Everything else works; Settings → Maintenance can export or reset your data.`);
     this.globalLoop();
-    window.AshtonkMania.AdminGameView = AdminGameView;
     window.AshtonkMania.SpectatorChat = SpectatorChat;
     this.initPWA();
     HtmlFile.watch();

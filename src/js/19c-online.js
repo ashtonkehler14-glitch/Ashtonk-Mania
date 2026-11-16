@@ -119,7 +119,7 @@ const Spectate = {
       return;
     }
     if (m.t === 'specWait') {
-      if (t.room) { this.stop({ quiet: true }); Toast.show(`${t.name} isn't playing right now`); return; }
+      if (t.room && m.status !== 'playing') { this.stop({ quiet: true }); Toast.show(`${t.name} isn't playing right now`); return; }
       t.activity = m.activity || t.activity; t.status = m.status || t.status;
       this.cur = null; SpectatorScreen.paint();
       return;
@@ -390,7 +390,7 @@ const Spectate = {
     H.watchers = m.n || 0;
     if (typeof SpectatorChat !== 'undefined') SpectatorChat.refresh();
     this.paintWatchers(m.names || []);
-    if (m.full && H.s && GameplayScreen.s === H.s && !H.s.finished) this.upload(H.s);
+    if (m.full && H.s && GameplayScreen.s === H.s && !H.s.finished) { if (m.resume) this.hostStart(H.s); this.upload(H.s); }
   },
   /** Everything so far, in chunks (the first resets what the server kept, the last says it's complete). */
   upload(s) {
@@ -524,7 +524,7 @@ const SpectatorScreen = {
     if (!t) { clearEl(el); return; }
     if (!c || c.ended) {
       const activity = Presence.activityText(t);
-      clearEl(el).append(h('div.spm-idle', t.lost ? [h('span.spinner'), h('span', `${t.name} went offline — waiting for them to come back…`)] : [icon('clock'), h('span', `${activity} · Waiting for ${t.name} to play…`)]));
+      clearEl(el).append(h('div.spm-idle', t.lost ? [h('span.spinner'), h('span', `${t.name} went offline — waiting for them to come back…`)] : [icon('clock'), h('span', t.status === 'playing' ? `Connecting to ${t.name}’s current play…` : `${activity} · Waiting for ${t.name} to play…`)]));
       this._mapSig = this.mapSig(c);
       return;
     }
@@ -638,7 +638,6 @@ const UserPanels = {
     const me = this.isMe(u), items = [{ label: 'View profile', icon: 'user', onClick: () => this.profile(u) }];
     if (me) return items;
     if (this.canSpectate(u)) items.push({ label: 'Spectate', icon: 'film', onClick: () => Spectate.watch(u) });
-    if (this.canSpectate(u) && Presence.isAdmin) items.push({ label: 'Live View', icon: 'film', onClick: () => AdminGameView.request(u) });
     if (u.online && u.pid && Friends.has(u.pid)) items.push({ label: 'Send message', icon: 'chat', onClick: () => Chat.message(u) });
     if (this.canInvite(u)) items.push({ label: 'Invite to room', icon: 'multi', onClick: () => { Presence.invite(u.id); Toast.ok('Invited', u.name); } });
     if (Friends.has(u.pid)) items.push({ sep: true }, { label: 'Remove friend', icon: 'x', danger: true, onClick: () => Friends.toggle(u) });
@@ -695,7 +694,6 @@ const UserPanels = {
     const friend = Friends.has(u.pid), me = this.isMe(u);
     const acts = [];
     if (this.canSpectate(u)) acts.push({ label: 'Spectate', primary: true, onClick: () => Spectate.watch(u) });
-    if (this.canSpectate(u) && Presence.isAdmin) acts.push({ label: 'Live View', onClick: () => AdminGameView.request(u) });
     if (this.canInvite(u)) acts.push({ label: 'Invite to room', primary: !acts.length, onClick: () => { Presence.invite(u.id); Toast.ok('Invited', u.name); } });
     if (!me && !friend && u.online && u.id) acts.push(Friends.incoming(u.pid) ? { label: 'Accept friend request', primary: true, onClick: () => Friends.answer(u.pid, true) }
       : Friends.requested(u.pid) ? { label: 'Friend request sent', close: false } : { label: 'Add friend', primary: !acts.length, onClick: () => Friends.toggle(u) });

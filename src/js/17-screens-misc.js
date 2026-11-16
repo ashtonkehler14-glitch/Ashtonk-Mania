@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16n', title: 'Joining a live song', sections: [
+    { title: 'Spectating', items: ['Joining someone mid-song now reconnects to their current play instead of asking you to wait for another song.'] }
+  ] },
   { id: '2026.11.16m', title: 'Chat profiles and quieter gameplay', sections: [
     { title: 'Chat', items: ['Click a chat profile picture to open that player’s profile.', 'Mentions and announcement pop-ups now wait until after your song.'] }
   ] },
