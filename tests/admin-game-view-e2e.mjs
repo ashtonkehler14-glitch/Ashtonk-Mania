@@ -290,10 +290,10 @@ try {
   await admin.getByRole('textbox', { name: 'Spectator chat message', exact: true }).fill('Hello from spectator');
   await admin.getByRole('textbox', { name: 'Spectator chat message', exact: true }).press('Enter');
   await player.getByRole('button', { name: 'Open spectator chat', exact: true }).click();
-  await player.locator('.spectator-chat .mp-msg').filter({ hasText: 'Hello from spectator' }).waitFor();
+  await player.locator('.spectator-chat .gp-chat-l').filter({ hasText: 'Hello from spectator' }).waitFor();
   await player.getByRole('textbox', { name: 'Spectator chat message', exact: true }).fill('Hello from player');
   await player.getByRole('textbox', { name: 'Spectator chat message', exact: true }).press('Enter');
-  await admin.locator('.spectator-chat .mp-msg').filter({ hasText: 'Hello from player' }).waitFor();
+  await admin.locator('.spectator-chat .gp-chat-l').filter({ hasText: 'Hello from player' }).waitFor();
   await admin.evaluate(() => { window.spectatorScreens = []; AshtonkMania.Bus.on('screen:changed', name => window.spectatorScreens.push(name)); });
   for (let i = 0; i < 2; i++) {
     await admin.evaluate(() => { window.beforeSpectatorRetry = AshtonkMania.GameplayScreen.s; });
@@ -305,7 +305,7 @@ try {
     assert.equal(await player.locator('.spectator-chat').count(), 1);
   }
   assert.equal(await admin.evaluate(() => window.spectatorScreens.includes('spectator')), false);
-  assert.equal(await admin.locator('.spectator-chat .mp-msg').count(), 2);
+  assert.equal(await admin.locator('.spectator-chat .gp-chat-l').count(), 2);
   if (process.env.SHOT_DIR) await admin.screenshot({ path: join(process.env.SHOT_DIR, 'spectator-shared-chat.png') });
   await admin.evaluate(() => AshtonkMania.Spectate.stop({ quiet: true }));
   await player.waitForFunction(() => !AshtonkMania.SpectatorChat.panel && AshtonkMania.Spectate.host.watchers === 0);

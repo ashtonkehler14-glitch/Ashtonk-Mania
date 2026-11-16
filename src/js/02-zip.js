@@ -98,7 +98,7 @@ const Inflate = (() => {
 const CRC32 = (() => {
   const t = new Uint32Array(256);
   for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; }
-  return bytes => { let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  return (bytes, previous = 0) => { let c = previous ^ 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
 })();
 
 class ZipReader {
@@ -234,6 +234,36 @@ function writeZip(files) {
     offset += 30 + name.length + data.length;
   }
   const cdSize = central.reduce((a, c) => a + c.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
+/** Store Blob-backed files without retaining a second in-memory copy of the library. */
+async function writeZipBlobs(files, yieldTask = async () => {}) {
+  if (files.length > 65535) throw new Error('Too many files for one archive. Export smaller beatmap sets separately.');
+  const enc = new TextEncoder(), chunks = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), size = f.blob.size;
+    if (name.length > 65535 || offset + 30 + name.length + size > 0xFFFFFFFF) throw new Error('This archive is too large. Export smaller beatmap sets separately.');
+    let crc = 0;
+    for (let at = 0; at < size; at += 1024 * 1024) {
+      crc = CRC32(new Uint8Array(await f.blob.slice(at, at + 1024 * 1024).arrayBuffer()), crc);
+      await yieldTask();
+    }
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x800, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
+    chunks.push(new Uint8Array(lh.buffer), name, f.blob);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x800, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name); offset += 30 + name.length + size;
+  }
+  const cdSize = central.reduce((a, c) => a + c.length, 0);
+  if (offset + cdSize > 0xFFFFFFFF) throw new Error('This archive is too large. Export smaller beatmap sets separately.');
   const end = new DataView(new ArrayBuffer(22));
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
   end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);

@@ -47,17 +47,19 @@ const SpectatorChat = {
     const c = this.context();
     if (!c) return;
     if (this.panel) return;
-    if (Chat.o) Chat.close();
+    MainMenus.close('spectator');
     this.unread = 0;
-    this.list = h('div.mp-chat-list', { role: 'log', 'aria-live': 'polite', 'aria-label': 'Spectator messages' });
-    this.input = h('input.input', { type: 'text', maxlength: 300, placeholder: 'Type a message…', 'aria-label': 'Spectator chat message', autocomplete: 'off' });
+    this.list = h('div.gp-chat-list', { role: 'log', 'aria-live': 'polite', 'aria-label': 'Spectator messages' });
+    this.input = h('input.gp-chat-in', { type: 'text', maxlength: 300, placeholder: 'Type a message…', 'aria-label': 'Spectator chat message', autocomplete: 'off' });
     const send = () => { const text = this.input.value.trim(); if (!text || !Presence.ws || !this.context()) return; Presence.send({ t: 'specChat', to: this.id, text }); this.input.value = ''; };
     this.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') this.close(); });
     this.input.addEventListener('keyup', e => e.stopPropagation());
-    const panel = this.panel = h('section.spectator-chat.mp-side.ov', { role: 'region', 'aria-label': 'Spectator chat' },
+    this.input.addEventListener('focus', () => this.panel?.classList.add('typing'));
+    this.input.addEventListener('blur', () => this.panel?.classList.remove('typing'));
+    const panel = this.panel = h('section.spectator-chat.gp-chat.open', { role: 'region', 'aria-label': 'Spectator chat' },
       h('div.spectator-chat-head', h('div', h('h3', 'Spectator chat'), h('span', c.host ? 'You and your spectators' : `${c.name} and their spectators`)),
         h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x'))),
-      h('div.mp-tabpane', this.list, h('div.spectator-chat-send', this.input, h('button.btn.sm', { onclick: send }, 'Send'))));
+      this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
     document.body.append(panel); this.paint(); this.refresh();
@@ -66,15 +68,15 @@ const SpectatorChat = {
   paint() {
     if (!this.list) return;
     clearEl(this.list);
-    if (!this.lines.length) this.list.append(h('div.mp-msg.sys', 'Messages here are shared with the player and their current spectators.'));
+    if (!this.lines.length) this.list.append(h('div.gp-chat-l.sys', 'Messages here are shared with the player and their current spectators.'));
     else for (const l of this.lines) this.append(l, false);
     this.list.scrollTop = this.list.scrollHeight;
   },
   append(l, scroll = true) {
     if (!this.list) return;
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
-    this.list.querySelector('.mp-msg.sys')?.remove();
-    const line = h(`div.mp-msg${l.from.pid === Presence.pid() ? '.mine' : ''}`, h('b', l.from.name), h('span', l.text));
+    this.list.querySelector('.gp-chat-l.sys')?.remove();
+    const line = h(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, h('b', l.from.name), h('span', l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(line);
     while (this.list.children.length > 100) this.list.firstChild.remove();

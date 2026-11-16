@@ -481,120 +481,51 @@ const StatisticsManager = {
 };
 
 const DataManager = {
-  /** Export all data: one JSON file, written a part at a time with each play and replay on a line of its own — a
-   *  long-time player's plays (with their timing) and replays come to hundreds of MB: as one string, more than a phone
-   *  can hold, and past 512 MB more than any browser can. importFile reads it back the same way. */
+  /** A portable beatmap pack; account records never enter the archive. */
   async exportAll() {
-    const head = {
-      app: APP_NAME, kind: 'backup', version: APP_VERSION, date: Date.now(),
-      pid: typeof Presence !== 'undefined' ? Presence.pid() : '', // (whose save it is: no hint about codes on the same player's device)
-      settings: Settings.export(), profile: ProfileManager.profile, favorites: [...Favorites.set], collections: Collections.list,
-      note: 'Beatmap and skin files are not included; re-import your .osz/.osk files after restoring.',
-    };
-    const parts = [JSON.stringify(head).slice(0, -1)];
-    for (const store of ['scores', 'replays']) {
-      parts.push(`,"${store}":[`);
-      let n = 0;
-      // (a hundred at a time into the file's parts — the browser keeps those, not this page — each play with its
-      // timing)
-      await DB.eachBatch(store, async list => {
-        if (store === 'scores') {
-          const t = await DB.getMany('kv', list.map(s => ScoreManager.timingKey(s.id)));
-          list = list.map((s, i) => t[i] && t[i].hitErrors ? { ...s, hitErrors: t[i].hitErrors, healthTimeline: t[i].healthTimeline } : s);
+    const sets = BeatmapManager.sets;
+    if (!sets.length) { Toast.err('No beatmaps to export', 'Import some songs first.'); return; }
+    const progress = Toast.progress('Exporting beatmaps', 'Preparing song files…');
+    try {
+      const files = [];
+      for (let i = 0; i < sets.length; i++) {
+        const set = sets[i], title = `${set.artist || 'Unknown'} - ${set.title || 'Untitled'}`.replace(/[\\/:*?"<>|]/g, '_').slice(0, 120);
+        const folder = `${String(i + 1).padStart(4, '0')} ${title}`;
+        progress.set(i / sets.length * .5, `${i + 1}/${sets.length}: ${title}`);
+        for (const real of new Set(Object.values(set.fileIndex || {}))) {
+          const path = normPath(real);
+          if (!path || path.startsWith('/') || path.split('/').includes('..')) continue;
+          const blob = await DB.get('files', `${set.id}/${real}`);
+          if (blob instanceof Blob) files.push({ name: `${folder}/${path}`, blob });
+          await BeatmapManager.breathe();
         }
-        parts.push(new Blob([list.map((x, i) => (n + i ? ',\n' : '\n') + JSON.stringify(x)).join('')]));
-        n += list.length;
-      });
-      parts.push('\n]');
-    }
-    parts.push('}');
-    downloadBlob(new Blob(parts, { type: 'application/json' }), `ashtonk-mania-backup-${new Date().toISOString().slice(0, 10)}.json`);
+      }
+      if (!files.some(f => /\.osu$/i.test(f.name))) throw new Error('No beatmap files were available to export.');
+      let read = 0, total = files.reduce((sum, f) => sum + Math.ceil(f.blob.size / 1048576), 0);
+      const blob = await writeZipBlobs(files, async () => { progress.set(.5 + .5 * ++read / Math.max(1, total), 'Packing song files…'); await BeatmapManager.breathe(); });
+      downloadBlob(blob, `ashtonk-mania-beatmaps-${new Date().toISOString().slice(0, 10)}.zip`);
+      progress.done('Beatmaps exported', 'Import the ZIP to restore your songs. Scores and medals stay with your account.');
+      return blob;
+    } catch (e) { progress.fail('Export failed', friendlyError(e)); return null; }
   },
-  /** A data file: a backup that Export all data wrote a line at a time is read that way (a part at a time — see
-   *  exportAll), anything else whole. */
-  async importFile(f) {
-    // (a browser that can't read a file a part at a time reads it whole, as before)
-    if (typeof TextDecoderStream === 'undefined' || !f.stream) { let obj = null; try { obj = JSON.parse(await f.text()); } catch { /* below */ } return this.importAll(obj); }
-    const rd = f.stream().pipeThrough(new TextDecoderStream()).getReader();
-    let buf = '', head = null;
-    // (its first line: everything but the plays and replays)
-    for (;;) {
-      const i = buf.indexOf('\n');
-      if (i >= 0) { if (buf.slice(0, i).endsWith(',"scores":[')) { head = buf.slice(0, i); buf = buf.slice(i + 1); } break; }
-      const { done, value } = await rd.read();
-      if (done || buf.length > 16e6) break;
-      buf += value;
-    }
-    if (!head) {
-      rd.cancel().catch(() => {});
-      let obj = null;
-      try { obj = JSON.parse(await f.text()); } catch { /* below */ }
-      return this.importAll(obj);
-    }
-    const obj = JSON.parse(head.slice(0, -',"scores":['.length) + '}');
-    if (!obj || obj.app !== APP_NAME) throw new Error('Not an Ashtonk!mania data file');
-    await this.importHead(obj);
-    let store = 'scores', batch = [], scores = 0;
-    const flush = async () => { if (batch.length) { await DB.putMany(batch); batch = []; } };
-    const line = async l => {
-      if (l.startsWith('],"replays":[')) { await flush(); store = 'replays'; return; }
-      if (!l.startsWith('{')) return;
-      const v = JSON.parse(l.endsWith(',') ? l.slice(0, -1) : l);
-      if (!(store === 'scores' ? ScoreManager.valid(v) : ReplayManager.ok(v))) return;
-      batch.push(...(store === 'scores' ? ScoreManager.stored(this.imported(v)) : [{ store, value: v }]));
-      if (store === 'scores') scores++;
-      if (batch.length >= 100) await flush();
-    };
-    for (;;) {
-      for (let i; (i = buf.indexOf('\n')) >= 0;) { await line(buf.slice(0, i)); buf = buf.slice(i + 1); }
-      const { done, value } = await rd.read();
-      if (done) break;
-      buf += value;
-    }
-    await line(buf);
-    await flush();
-    await this.importDone(obj, scores);
+  /** Only schema-defined preferences and per-skin layouts are portable; account progress is not. */
+  settingsOnly(values) {
+    const allowed = new Set([...Settings.schema.keys(), 'hud.profiles', 'hud.activeProfile']);
+    return Object.fromEntries(Object.entries(Settings.clean(values && typeof values === 'object' ? values : {})).filter(([key]) => allowed.has(key)));
   },
-  // (a backup's scores are marked as imported: they're yours to look at here, but never go online — the rankings and
-  // leaderboards only take plays the server judged as they were played)
-  imported(s) { return { ...s, imported: s.imported || 'backup' }; },
   exportSettings() {
-    downloadJSON({ app: APP_NAME, kind: 'settings', version: APP_VERSION, date: Date.now(), settings: Settings.export() }, 'ashtonk-mania-settings.json');
+    downloadJSON({ app: APP_NAME, kind: 'settings', version: APP_VERSION, date: Date.now(), settings: this.settingsOnly(Settings.export()) }, 'ashtonk-mania-settings.json');
+  },
+  async importFile(f) {
+    if (f.size > 16 * 1024 * 1024) throw new Error('Account backups are no longer imported. Import beatmaps from .osz or .zip files, and use your account code for progress.');
+    let obj; try { obj = JSON.parse(await f.text()); } catch { throw new Error('Not an Ashtonk!mania settings file'); }
+    return this.importAll(obj);
   },
   async importAll(obj) {
     if (!obj || obj.app !== APP_NAME) throw new Error('Not an Ashtonk!mania data file');
-    await this.importHead(obj);
-    if (obj.kind === 'settings') return;
-    const scores = Array.isArray(obj.scores) ? obj.scores.filter(s => ScoreManager.valid(s)) : [];
-    await DB.putMany(scores.flatMap(s => ScoreManager.stored(this.imported(s))));
-    if (Array.isArray(obj.replays)) await DB.putMany(obj.replays.filter(r => ReplayManager.ok(r)).map(r => ({ store: 'replays', value: r })));
-    await this.importDone(obj, scores.length);
-  },
-  /** A data file's settings — and, for a backup, profile, favourites and collections. */
-  async importHead(obj) {
-    if (obj.settings) await Settings.import(obj.settings);
-    if (obj.kind === 'settings') return;
-    if (obj.profile) {
-      ProfileManager.profile = { ...ProfileManager.profile, ...obj.profile };
-      await ProfileManager.save();
-    }
-    if (Array.isArray(obj.favorites)) { for (const f of obj.favorites) Favorites.set.add(f); await DB.kvSet('favorites', [...Favorites.set]); }
-    if (Array.isArray(obj.collections)) {
-      for (const c of obj.collections) {
-        const ex = Collections.list.find(x => x.id === c.id || x.name === c.name);
-        if (ex) ex.hashes = [...new Set([...ex.hashes, ...(c.hashes || [])])]; else Collections.list.push(c);
-      }
-      await Collections.save();
-    }
-  },
-  /** A backup's plays and replays are in: the game takes them up. `scores`: how many plays it had. */
-  async importDone(obj, scores) {
-    await ScoreManager.init(); await ReplayManager.init();
-    Bus.emit('scores:changed'); Bus.emit('replays:changed'); Bus.emit('favorites:changed');
-    // (a save from another device: typing your code here keeps you one player online, not one for each device)
-    const same = obj.pid && typeof Presence !== 'undefined' && obj.pid === Presence.pid();
-    if (scores && typeof Account !== 'undefined' && !same && Multiplayer.available())
-      setTimeout(() => Toast.show('Playing on more than one device?', `Get your code on your other device (${Account.where()}) and type it here under Use a code, so you're one player on the rankings — not one for each device.`, { timeout: 12000 }), 1200);
+    if (obj.kind !== 'settings') throw new Error('Account backups are no longer imported. Import beatmaps from .osz or .zip files, and use your account code for progress.');
+    // Existing account-owned values are retained, never replaced by file contents.
+    await Settings.import({ ...Settings.values, ...this.settingsOnly(obj.settings) });
   },
   async resetEverything() {
     // (what was sent from here is forgotten too: a device playing through a code gets everything kept for you back

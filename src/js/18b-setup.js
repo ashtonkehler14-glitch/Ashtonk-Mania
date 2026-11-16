@@ -336,8 +336,7 @@ const Onboarding = {
     return [h('label.setup-lbl', 'Your code'), this.codeIn, toggle, help];
   },
 
-  /** osu!lazer's "import from osu!stable" page, for Web-Osu-Mania: its backup brings keybinds, settings, beatmaps,
-   *  scores and collections across in one go. */
+  /** osu!lazer's "import from osu!stable" page, for Web-Osu-Mania: its backup supplies stored beatmaps only. */
   step_wom() {
     const yes = this.womAnswer === 'yes';
     const choice = (v, ic, t, sub) => h(`button.setup-choice${this.womAnswer === v ? '.on' : ''}`, { dataset: { id: v }, onclick: () => {
@@ -348,13 +347,13 @@ const Onboarding = {
     const out = [
       // (once it's yes, the question makes room for the import steps: the page's title asks it too)
       yes ? null : h('p.setup-lead', 'Did you play Web-Osu-Mania before?'),
-      h(`div.setup-choices.two${yes ? '.compact' : ''}`, choice('yes', 'upload', 'Yes', 'Bring my keybinds and beatmaps'), choice('no', 'user-plus', 'No', 'I\'m new here'))];
+      h(`div.setup-choices.two${yes ? '.compact' : ''}`, choice('yes', 'upload', 'Yes', 'Bring my beatmaps'), choice('no', 'user-plus', 'No', 'I\'m new here'))];
     if (yes) out.push(h('div.setup-wom',
       this.womDone
-        ? h('div.setup-wom-done', icon('check'), h('span', `Imported ${this.womDone}. Your keybinds and settings are in place — check them on the next pages.`))
+        ? h('div.setup-wom-done', icon('check'), h('span', `Imported ${this.womDone}. Your songs are ready. Set your preferences on the next pages.`))
         : [h('ol.setup-wom-steps',
             h('li', 'In Web-Osu-Mania, open ', h('b', 'Settings → Backup & Restore'), '.'),
-            h('li', 'Tick ', h('b', 'Settings & Keybinds'), ', ', h('b', 'Stored Beatmaps'), ' and ', h('b', 'Collections'), ' (scores too, if you like) and export. Songs in your collections are downloaded for you.'),
+            h('li', 'Tick ', h('b', 'Stored Beatmaps'), ' and export. Only the stored songs are imported.'),
             h('li', 'Import the .zip it saves here.')),
           this.womStatus ? h('div.setup-wom-busy', h('span.spinner'), this.womStatus)
             : h('button.btn.primary.setup-wom-btn', { onclick: () => this.importWom() }, icon('upload'), 'Import my Web-Osu-Mania backup')]));

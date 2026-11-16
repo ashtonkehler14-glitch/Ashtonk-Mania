@@ -97,7 +97,7 @@ svg.i.phi { fill: currentColor; stroke: none; }
 /* ── toolbar: osu!lazer's Toolbar. 40px of Gray(0.1); slides up out of the way (500ms OutQuint) in game */
 #toolbar {
   --oq: cubic-bezier(.22, 1, .36, 1);
-  position: absolute; top: 0; left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); height: var(--toolbar-h); z-index: 30; border-radius: 10px; box-shadow: inset 0 0 0 1px #ffffff0c;
+  position: absolute; top: 0; left: max(14px, env(safe-area-inset-left)); right: max(14px, env(safe-area-inset-right)); height: var(--toolbar-h); z-index: 30; border-radius: 0 0 12px 12px; box-shadow: inset 0 0 0 1px #ffffff0c;
   display: flex; align-items: stretch; background: #1a1a1a;
   transition: transform 500ms var(--oq), opacity 125ms var(--oq);
 }
@@ -5501,16 +5501,20 @@ html.lp-open #toasts { right: 380px; }
 .admin-view-heading span, .admin-view-footer > span { font-size: .8rem; color: var(--oc2); }
 .admin-view-stage { position: absolute; inset: 0; background: #000; overflow: hidden; display: flex; }
 .admin-view-video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: none; opacity: 1; }
-.spectator-chat.mp-side { position: fixed; z-index: 2100; right: 20px; bottom: 20px; width: min(400px, calc(100vw - 24px)); height: min(360px, calc(100dvh - 80px)); min-height: 0; background: var(--ob5); border: 1px solid var(--line); box-shadow: 0 8px 32px #0008; color: var(--oc1); }
-.spectator-chat-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; background: var(--ob4); }
-.spectator-chat-head h3 { margin: 0 0 4px; font-size: 15px; }
-.spectator-chat-head span { color: var(--oc2); font-size: 12px; }
-.spectator-chat .mp-chat-list { min-height: 0; font-size: 13px; overflow-wrap: anywhere; }
-.spectator-chat-send { display: flex; gap: 8px; }
-.spectator-chat-send .input { flex: 1; min-width: 0; font-size: 14px; }
-.gp-loader.spec-retry > :not(.spec-retry-status) { display: none; }
-.spec-retry-status { justify-self: center; display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.spec-host-chat { position: fixed; z-index: 2050; right: 20px; bottom: 20px; font-size: 13px; }
+.spectator-chat.gp-chat { position: fixed; z-index: 2100; left: max(14px, env(safe-area-inset-left)); right: auto;
+  bottom: max(14px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 28px)); max-height: min(300px, calc(100dvh - 80px));
+  gap: 6px; opacity: 1; pointer-events: auto; color: #fff; }
+.spectator-chat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-shadow: 0 1px 3px #000c; }
+.spectator-chat-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.spectator-chat-head span { display: block; font-size: 11px; color: #d3cadb; }
+.spectator-chat-head .icon-btn { width: 28px; height: 28px; background: #0005; border-radius: 7px; }
+.spectator-chat .gp-chat-list { overflow-y: auto; max-height: min(200px, 30dvh); min-height: 0; scrollbar-width: thin; }
+.spectator-chat .gp-chat-l { flex: none; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+.spectator-chat .gp-chat-l.sys { white-space: normal; }
+.spectator-chat-send { display: flex; gap: 6px; }
+.spectator-chat-send .gp-chat-in { flex: 1; min-width: 0; height: 32px; }
+.spectator-chat-send .icon-btn { width: 32px; height: 32px; background: #0009; border-radius: 6px; }
+.spec-host-chat { position: fixed; z-index: 2050; left: max(14px, env(safe-area-inset-left)); right: auto; bottom: max(14px, env(safe-area-inset-bottom)); font-size: 13px; }
 .spec-host-chat[hidden] { display: none; }
 .admin-view-sharing { position: fixed; z-index: 9500; left: 50%; top: max(8px, env(safe-area-inset-top)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 12px; max-width: calc(100% - 16px); border: 1px solid #ffcc2270; border-radius: 6px; background: #1b1b20; color: #fff; box-shadow: 0 4px 18px #0006; font-size: 13px; }
 .admin-view-sharing > .i { color: #ffcc22; flex: none; }
@@ -5590,3 +5594,50 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 /* Solid tips keep text readable over the colourful artwork. */
 .lz-menu .lz-tipbox { background: #3d3745f2; color: #f8f7f3; }
 .lz-menu .lz-tip-t { color: #ffd966; }
+
+/* Floating Groups: rounded setting groups, with home-style slanted section tabs. */
+.settings-panel { --ob4: #35303f; --ob5: #2c2735; --ob6: #25212d; --oc2: #f0e4f2;
+  top: calc(var(--toolbar-h) + 10px); bottom: 12px; left: 12px; width: min(620px, calc(100 * var(--vw) - 24px));
+  border: 1px solid #ffffff24; border-radius: 20px; background: #302a38; box-shadow: 0 10px 36px #0005; overflow: hidden; }
+#app.in-game .settings-panel, #app.hide-toolbar .settings-panel { top: 10px; }
+.sp-nav { width: 152px; padding: 16px 8px; gap: 5px; background: #25212d; overflow-y: auto; }
+.sp-nb { flex-shrink: 0; height: 43px; margin: 0; padding: 8px 10px; gap: 9px; border-radius: 11px; color: #d9cde2; font-size: 12px; }
+.sp-nb:hover { background: #ffffff0c; color: #fff; }
+.sp-nb.active { background: #8f285e; color: #fff; }
+.sp-nb .i { position: static; width: 18px; height: 18px; margin: 0; }
+.sp-nb > span:last-child { position: static; white-space: normal; }
+.sp-nb-ind { display: none; }
+.sp-head { padding: 20px 18px 16px; }
+.sp-head h2 { font-size: 2rem; font-weight: 600; }
+.sp-head .sub { font-size: .78rem; color: #cbbdd2; margin-top: 7px; max-width: calc(100% - 24px); }
+.sp-search { border-radius: 999px; border: 1px solid #ffffff28; background: #211e28; }
+.sp-search:focus { border-color: #f281b6; background: #211e28; }
+.sp-scroll { padding: 4px 18px 36px; scrollbar-width: thin; }
+.settings-panel .sp-section { padding: 10px 0 14px; border: 0; }
+.sp-section > h3 { position: relative; display: table; margin: 0 0 -10px 12px; padding: 8px 20px; border-radius: 9px;
+  background: var(--section-accent); border-left: 5px solid #edbb3a; transform: skewX(-12deg); font-size: 1.15rem; font-weight: 700; z-index: 1; }
+.sp-section > h3 > span { display: block; transform: skewX(12deg); }
+.sp-group-card { padding: 18px 12px 10px; margin: 0 0 16px; border: 1px solid #ffffff24; border-radius: 17px; background: #ffffff05; }
+.sp-group { margin: 0 4px 8px; font-size: .95rem; font-weight: 600; color: #f5e7f3; }
+.settings-panel .sp-group-card .set-row.form { margin: 0; padding: 12px 10px; border-radius: 9px; background: transparent; box-shadow: none; }
+.settings-panel .sp-group-card .set-row.form + .set-row.form { border-top: 1px solid #ffffff10; }
+.settings-panel .sp-group-card .set-row.form:hover { background: #ffffff06; box-shadow: none; }
+.settings-panel .sp-group-card .set-row.form:focus-within { background: #ffffff09; box-shadow: inset 0 0 0 1px #f281b680; }
+.settings-panel .set-row.form .lbl { color: #fff; }
+.settings-panel .set-row.form .lbl .hint, .settings-panel .frange .fhint { color: #c5b6ce; line-height: 1.45; }
+.settings-panel .set-row .reset { right: -7px; width: 5px; border-radius: 999px; }
+.settings-panel .btn { border-radius: 9px; background: #a72e6c; border-color: #ffffff0c; color: #fff; box-shadow: none; }
+.settings-panel .btn:hover { background: #bd397e; }
+.settings-panel .fsel .select, .settings-panel .fsel .input { background-color: #211d2880; border: 1px solid #ffffff18; border-radius: 8px; min-height: 32px; padding-left: 8px; }
+.settings-panel .toggle, .settings-panel .toggle.on { width: 48px; height: 26px; border-radius: 999px; background: #655b70; }
+.settings-panel .toggle.on { background: #ce3f87; }
+.settings-panel .toggle::after, .settings-panel .toggle.on::after { top: 3px; left: 3px; width: 20px; height: 20px; translate: none; border: 0; border-radius: 50%; background: #fff; transform: none; transition: transform var(--t-fast); }
+.settings-panel .toggle.on::after { transform: translateX(22px); }
+.settings-panel .set-row:hover .toggle.on::after { background: #fff; }
+.settings-panel .toggle:active::after, .settings-panel .toggle.on:active::after { width: 20px; }
+@media (max-width: 520px) and (orientation: portrait) {
+  .settings-panel { left: 8px; width: calc(100 * var(--vw) - 16px); }
+  .sp-nav { width: 118px; padding-inline: 5px; }
+  .sp-nb { padding-inline: 7px; gap: 7px; font-size: 11px; }
+  .sp-head, .sp-scroll { padding-inline: 12px; }
+}

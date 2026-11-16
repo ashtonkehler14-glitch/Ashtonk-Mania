@@ -104,6 +104,7 @@ const Chat = {
   open(key) {
     if (key && this.channels.has(key)) this.cur = key;
     if (this.o) { this.paint(); return; }
+    MainMenus.close('chat');
     UISounds.click();
     Presence.start();
     // (connecting / offline / back online: the empty channel says which)

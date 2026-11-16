@@ -112,7 +112,7 @@ svg.i.phi { fill: currentColor; stroke: none; }
 /* ── toolbar: osu!lazer's Toolbar. 40px of Gray(0.1); slides up out of the way (500ms OutQuint) in game */
 #toolbar {
   --oq: cubic-bezier(.22, 1, .36, 1);
-  position: absolute; top: 0; left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); height: var(--toolbar-h); z-index: 30; border-radius: 10px; box-shadow: inset 0 0 0 1px #ffffff0c;
+  position: absolute; top: 0; left: max(14px, env(safe-area-inset-left)); right: max(14px, env(safe-area-inset-right)); height: var(--toolbar-h); z-index: 30; border-radius: 0 0 12px 12px; box-shadow: inset 0 0 0 1px #ffffff0c;
   display: flex; align-items: stretch; background: #1a1a1a;
   transition: transform 500ms var(--oq), opacity 125ms var(--oq);
 }
@@ -5512,16 +5512,20 @@ html.lp-open #toasts { right: 380px; }
 .admin-view-heading span, .admin-view-footer > span { font-size: .8rem; color: var(--oc2); }
 .admin-view-stage { position: absolute; inset: 0; background: #000; overflow: hidden; display: flex; }
 .admin-view-video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: none; opacity: 1; }
-.spectator-chat.mp-side { position: fixed; z-index: 2100; right: 20px; bottom: 20px; width: min(400px, calc(100vw - 24px)); height: min(360px, calc(100dvh - 80px)); min-height: 0; background: var(--ob5); border: 1px solid var(--line); box-shadow: 0 8px 32px #0008; color: var(--oc1); }
-.spectator-chat-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; background: var(--ob4); }
-.spectator-chat-head h3 { margin: 0 0 4px; font-size: 15px; }
-.spectator-chat-head span { color: var(--oc2); font-size: 12px; }
-.spectator-chat .mp-chat-list { min-height: 0; font-size: 13px; overflow-wrap: anywhere; }
-.spectator-chat-send { display: flex; gap: 8px; }
-.spectator-chat-send .input { flex: 1; min-width: 0; font-size: 14px; }
-.gp-loader.spec-retry > :not(.spec-retry-status) { display: none; }
-.spec-retry-status { justify-self: center; display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.spec-host-chat { position: fixed; z-index: 2050; right: 20px; bottom: 20px; font-size: 13px; }
+.spectator-chat.gp-chat { position: fixed; z-index: 2100; left: max(14px, env(safe-area-inset-left)); right: auto;
+  bottom: max(14px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 28px)); max-height: min(300px, calc(100dvh - 80px));
+  gap: 6px; opacity: 1; pointer-events: auto; color: #fff; }
+.spectator-chat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-shadow: 0 1px 3px #000c; }
+.spectator-chat-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.spectator-chat-head span { display: block; font-size: 11px; color: #d3cadb; }
+.spectator-chat-head .icon-btn { width: 28px; height: 28px; background: #0005; border-radius: 7px; }
+.spectator-chat .gp-chat-list { overflow-y: auto; max-height: min(200px, 30dvh); min-height: 0; scrollbar-width: thin; }
+.spectator-chat .gp-chat-l { flex: none; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+.spectator-chat .gp-chat-l.sys { white-space: normal; }
+.spectator-chat-send { display: flex; gap: 6px; }
+.spectator-chat-send .gp-chat-in { flex: 1; min-width: 0; height: 32px; }
+.spectator-chat-send .icon-btn { width: 32px; height: 32px; background: #0009; border-radius: 6px; }
+.spec-host-chat { position: fixed; z-index: 2050; left: max(14px, env(safe-area-inset-left)); right: auto; bottom: max(14px, env(safe-area-inset-bottom)); font-size: 13px; }
 .spec-host-chat[hidden] { display: none; }
 .admin-view-sharing { position: fixed; z-index: 9500; left: 50%; top: max(8px, env(safe-area-inset-top)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 12px; max-width: calc(100% - 16px); border: 1px solid #ffcc2270; border-radius: 6px; background: #1b1b20; color: #fff; box-shadow: 0 4px 18px #0006; font-size: 13px; }
 .admin-view-sharing > .i { color: #ffcc22; flex: none; }
@@ -5601,6 +5605,53 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 /* Solid tips keep text readable over the colourful artwork. */
 .lz-menu .lz-tipbox { background: #3d3745f2; color: #f8f7f3; }
 .lz-menu .lz-tip-t { color: #ffd966; }
+
+/* Floating Groups: rounded setting groups, with home-style slanted section tabs. */
+.settings-panel { --ob4: #35303f; --ob5: #2c2735; --ob6: #25212d; --oc2: #f0e4f2;
+  top: calc(var(--toolbar-h) + 10px); bottom: 12px; left: 12px; width: min(620px, calc(100 * var(--vw) - 24px));
+  border: 1px solid #ffffff24; border-radius: 20px; background: #302a38; box-shadow: 0 10px 36px #0005; overflow: hidden; }
+#app.in-game .settings-panel, #app.hide-toolbar .settings-panel { top: 10px; }
+.sp-nav { width: 152px; padding: 16px 8px; gap: 5px; background: #25212d; overflow-y: auto; }
+.sp-nb { flex-shrink: 0; height: 43px; margin: 0; padding: 8px 10px; gap: 9px; border-radius: 11px; color: #d9cde2; font-size: 12px; }
+.sp-nb:hover { background: #ffffff0c; color: #fff; }
+.sp-nb.active { background: #8f285e; color: #fff; }
+.sp-nb .i { position: static; width: 18px; height: 18px; margin: 0; }
+.sp-nb > span:last-child { position: static; white-space: normal; }
+.sp-nb-ind { display: none; }
+.sp-head { padding: 20px 18px 16px; }
+.sp-head h2 { font-size: 2rem; font-weight: 600; }
+.sp-head .sub { font-size: .78rem; color: #cbbdd2; margin-top: 7px; max-width: calc(100% - 24px); }
+.sp-search { border-radius: 999px; border: 1px solid #ffffff28; background: #211e28; }
+.sp-search:focus { border-color: #f281b6; background: #211e28; }
+.sp-scroll { padding: 4px 18px 36px; scrollbar-width: thin; }
+.settings-panel .sp-section { padding: 10px 0 14px; border: 0; }
+.sp-section > h3 { position: relative; display: table; margin: 0 0 -10px 12px; padding: 8px 20px; border-radius: 9px;
+  background: var(--section-accent); border-left: 5px solid #edbb3a; transform: skewX(-12deg); font-size: 1.15rem; font-weight: 700; z-index: 1; }
+.sp-section > h3 > span { display: block; transform: skewX(12deg); }
+.sp-group-card { padding: 18px 12px 10px; margin: 0 0 16px; border: 1px solid #ffffff24; border-radius: 17px; background: #ffffff05; }
+.sp-group { margin: 0 4px 8px; font-size: .95rem; font-weight: 600; color: #f5e7f3; }
+.settings-panel .sp-group-card .set-row.form { margin: 0; padding: 12px 10px; border-radius: 9px; background: transparent; box-shadow: none; }
+.settings-panel .sp-group-card .set-row.form + .set-row.form { border-top: 1px solid #ffffff10; }
+.settings-panel .sp-group-card .set-row.form:hover { background: #ffffff06; box-shadow: none; }
+.settings-panel .sp-group-card .set-row.form:focus-within { background: #ffffff09; box-shadow: inset 0 0 0 1px #f281b680; }
+.settings-panel .set-row.form .lbl { color: #fff; }
+.settings-panel .set-row.form .lbl .hint, .settings-panel .frange .fhint { color: #c5b6ce; line-height: 1.45; }
+.settings-panel .set-row .reset { right: -7px; width: 5px; border-radius: 999px; }
+.settings-panel .btn { border-radius: 9px; background: #a72e6c; border-color: #ffffff0c; color: #fff; box-shadow: none; }
+.settings-panel .btn:hover { background: #bd397e; }
+.settings-panel .fsel .select, .settings-panel .fsel .input { background-color: #211d2880; border: 1px solid #ffffff18; border-radius: 8px; min-height: 32px; padding-left: 8px; }
+.settings-panel .toggle, .settings-panel .toggle.on { width: 48px; height: 26px; border-radius: 999px; background: #655b70; }
+.settings-panel .toggle.on { background: #ce3f87; }
+.settings-panel .toggle::after, .settings-panel .toggle.on::after { top: 3px; left: 3px; width: 20px; height: 20px; translate: none; border: 0; border-radius: 50%; background: #fff; transform: none; transition: transform var(--t-fast); }
+.settings-panel .toggle.on::after { transform: translateX(22px); }
+.settings-panel .set-row:hover .toggle.on::after { background: #fff; }
+.settings-panel .toggle:active::after, .settings-panel .toggle.on:active::after { width: 20px; }
+@media (max-width: 520px) and (orientation: portrait) {
+  .settings-panel { left: 8px; width: calc(100 * var(--vw) - 16px); }
+  .sp-nav { width: 118px; padding-inline: 5px; }
+  .sp-nb { padding-inline: 7px; gap: 7px; font-size: 11px; }
+  .sp-head, .sp-scroll { padding-inline: 12px; }
+}
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -6469,7 +6520,7 @@ const Inflate = (() => {
 const CRC32 = (() => {
   const t = new Uint32Array(256);
   for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; }
-  return bytes => { let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  return (bytes, previous = 0) => { let c = previous ^ 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
 })();
 
 class ZipReader {
@@ -6605,6 +6656,36 @@ function writeZip(files) {
     offset += 30 + name.length + data.length;
   }
   const cdSize = central.reduce((a, c) => a + c.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
+/** Store Blob-backed files without retaining a second in-memory copy of the library. */
+async function writeZipBlobs(files, yieldTask = async () => {}) {
+  if (files.length > 65535) throw new Error('Too many files for one archive. Export smaller beatmap sets separately.');
+  const enc = new TextEncoder(), chunks = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), size = f.blob.size;
+    if (name.length > 65535 || offset + 30 + name.length + size > 0xFFFFFFFF) throw new Error('This archive is too large. Export smaller beatmap sets separately.');
+    let crc = 0;
+    for (let at = 0; at < size; at += 1024 * 1024) {
+      crc = CRC32(new Uint8Array(await f.blob.slice(at, at + 1024 * 1024).arrayBuffer()), crc);
+      await yieldTask();
+    }
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x800, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
+    chunks.push(new Uint8Array(lh.buffer), name, f.blob);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x800, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name); offset += 30 + name.length + size;
+  }
+  const cdSize = central.reduce((a, c) => a + c.length, 0);
+  if (offset + cdSize > 0xFFFFFFFF) throw new Error('This archive is too large. Export smaller beatmap sets separately.');
   const end = new DataView(new ArrayBuffer(22));
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
   end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
@@ -9272,7 +9353,7 @@ const SETTINGS_SCHEMA = [
   { s: 'Graphics', g: 'Layout', k: 'ui.scale', l: 'UI scaling', t: 'range', d: TOUCH_DEVICE ? 1.25 : 0.9, min: 0.75, max: 1.5, step: 0.05, fmt: v => `${Math.round(v * 100)}%` },
   { x: 1, s: 'User Interface', g: 'Style', k: 'ui.animSpeed', l: 'Animation speed', t: 'range', d: 1, min: 0, max: 2, step: 0.1, fmt: v => v === 0 ? 'Off' : `${v.toFixed(1)}×` },
   { s: 'User Interface', g: 'General', k: 'ui.parallax', l: 'Parallax', t: 'bool', d: true },
-  { s: 'User Interface', g: 'Main Menu', k: 'ui.menuBackground', l: 'Background source', t: 'select', d: 'skin', o: [['skin', 'Skin'], ['beatmap', 'Beatmap']], hint: 'lazer\'s: the menu\'s triangle picture (in the playing song\'s colour), or the playing song\'s own background.' },
+  { s: 'User Interface', g: 'Main Menu', k: 'ui.menuBackground', l: 'Background source', t: 'select', d: 'beatmap', o: [['skin', 'Triangles'], ['beatmap', 'Beatmap']], hint: 'Use the song background on Home, with triangles when no song background is available.' },
   { s: 'User Interface', g: 'Main Menu', k: 'ui.mascot', l: 'Show Neru', t: 'bool', d: true, hint: 'On the main menu, and around the game: she reacts to your results, teases you when you fail and keeps you company while things load.',
     // (a Teto, Miku or Neru fan: she stays — it looks as always, but try turning her off and she won't have it)
     stays: () => typeof NeruEggs !== 'undefined' && NeruEggs.stays(), refuse: () => NeruEggs.refuse() },
@@ -13528,120 +13609,51 @@ const StatisticsManager = {
 };
 
 const DataManager = {
-  /** Export all data: one JSON file, written a part at a time with each play and replay on a line of its own — a
-   *  long-time player's plays (with their timing) and replays come to hundreds of MB: as one string, more than a phone
-   *  can hold, and past 512 MB more than any browser can. importFile reads it back the same way. */
+  /** A portable beatmap pack; account records never enter the archive. */
   async exportAll() {
-    const head = {
-      app: APP_NAME, kind: 'backup', version: APP_VERSION, date: Date.now(),
-      pid: typeof Presence !== 'undefined' ? Presence.pid() : '', // (whose save it is: no hint about codes on the same player's device)
-      settings: Settings.export(), profile: ProfileManager.profile, favorites: [...Favorites.set], collections: Collections.list,
-      note: 'Beatmap and skin files are not included; re-import your .osz/.osk files after restoring.',
-    };
-    const parts = [JSON.stringify(head).slice(0, -1)];
-    for (const store of ['scores', 'replays']) {
-      parts.push(`,"${store}":[`);
-      let n = 0;
-      // (a hundred at a time into the file's parts — the browser keeps those, not this page — each play with its
-      // timing)
-      await DB.eachBatch(store, async list => {
-        if (store === 'scores') {
-          const t = await DB.getMany('kv', list.map(s => ScoreManager.timingKey(s.id)));
-          list = list.map((s, i) => t[i] && t[i].hitErrors ? { ...s, hitErrors: t[i].hitErrors, healthTimeline: t[i].healthTimeline } : s);
+    const sets = BeatmapManager.sets;
+    if (!sets.length) { Toast.err('No beatmaps to export', 'Import some songs first.'); return; }
+    const progress = Toast.progress('Exporting beatmaps', 'Preparing song files…');
+    try {
+      const files = [];
+      for (let i = 0; i < sets.length; i++) {
+        const set = sets[i], title = `${set.artist || 'Unknown'} - ${set.title || 'Untitled'}`.replace(/[\\/:*?"<>|]/g, '_').slice(0, 120);
+        const folder = `${String(i + 1).padStart(4, '0')} ${title}`;
+        progress.set(i / sets.length * .5, `${i + 1}/${sets.length}: ${title}`);
+        for (const real of new Set(Object.values(set.fileIndex || {}))) {
+          const path = normPath(real);
+          if (!path || path.startsWith('/') || path.split('/').includes('..')) continue;
+          const blob = await DB.get('files', `${set.id}/${real}`);
+          if (blob instanceof Blob) files.push({ name: `${folder}/${path}`, blob });
+          await BeatmapManager.breathe();
         }
-        parts.push(new Blob([list.map((x, i) => (n + i ? ',\n' : '\n') + JSON.stringify(x)).join('')]));
-        n += list.length;
-      });
-      parts.push('\n]');
-    }
-    parts.push('}');
-    downloadBlob(new Blob(parts, { type: 'application/json' }), `ashtonk-mania-backup-${new Date().toISOString().slice(0, 10)}.json`);
+      }
+      if (!files.some(f => /\.osu$/i.test(f.name))) throw new Error('No beatmap files were available to export.');
+      let read = 0, total = files.reduce((sum, f) => sum + Math.ceil(f.blob.size / 1048576), 0);
+      const blob = await writeZipBlobs(files, async () => { progress.set(.5 + .5 * ++read / Math.max(1, total), 'Packing song files…'); await BeatmapManager.breathe(); });
+      downloadBlob(blob, `ashtonk-mania-beatmaps-${new Date().toISOString().slice(0, 10)}.zip`);
+      progress.done('Beatmaps exported', 'Import the ZIP to restore your songs. Scores and medals stay with your account.');
+      return blob;
+    } catch (e) { progress.fail('Export failed', friendlyError(e)); return null; }
   },
-  /** A data file: a backup that Export all data wrote a line at a time is read that way (a part at a time — see
-   *  exportAll), anything else whole. */
-  async importFile(f) {
-    // (a browser that can't read a file a part at a time reads it whole, as before)
-    if (typeof TextDecoderStream === 'undefined' || !f.stream) { let obj = null; try { obj = JSON.parse(await f.text()); } catch { /* below */ } return this.importAll(obj); }
-    const rd = f.stream().pipeThrough(new TextDecoderStream()).getReader();
-    let buf = '', head = null;
-    // (its first line: everything but the plays and replays)
-    for (;;) {
-      const i = buf.indexOf('\n');
-      if (i >= 0) { if (buf.slice(0, i).endsWith(',"scores":[')) { head = buf.slice(0, i); buf = buf.slice(i + 1); } break; }
-      const { done, value } = await rd.read();
-      if (done || buf.length > 16e6) break;
-      buf += value;
-    }
-    if (!head) {
-      rd.cancel().catch(() => {});
-      let obj = null;
-      try { obj = JSON.parse(await f.text()); } catch { /* below */ }
-      return this.importAll(obj);
-    }
-    const obj = JSON.parse(head.slice(0, -',"scores":['.length) + '}');
-    if (!obj || obj.app !== APP_NAME) throw new Error('Not an Ashtonk!mania data file');
-    await this.importHead(obj);
-    let store = 'scores', batch = [], scores = 0;
-    const flush = async () => { if (batch.length) { await DB.putMany(batch); batch = []; } };
-    const line = async l => {
-      if (l.startsWith('],"replays":[')) { await flush(); store = 'replays'; return; }
-      if (!l.startsWith('{')) return;
-      const v = JSON.parse(l.endsWith(',') ? l.slice(0, -1) : l);
-      if (!(store === 'scores' ? ScoreManager.valid(v) : ReplayManager.ok(v))) return;
-      batch.push(...(store === 'scores' ? ScoreManager.stored(this.imported(v)) : [{ store, value: v }]));
-      if (store === 'scores') scores++;
-      if (batch.length >= 100) await flush();
-    };
-    for (;;) {
-      for (let i; (i = buf.indexOf('\n')) >= 0;) { await line(buf.slice(0, i)); buf = buf.slice(i + 1); }
-      const { done, value } = await rd.read();
-      if (done) break;
-      buf += value;
-    }
-    await line(buf);
-    await flush();
-    await this.importDone(obj, scores);
+  /** Only schema-defined preferences and per-skin layouts are portable; account progress is not. */
+  settingsOnly(values) {
+    const allowed = new Set([...Settings.schema.keys(), 'hud.profiles', 'hud.activeProfile']);
+    return Object.fromEntries(Object.entries(Settings.clean(values && typeof values === 'object' ? values : {})).filter(([key]) => allowed.has(key)));
   },
-  // (a backup's scores are marked as imported: they're yours to look at here, but never go online — the rankings and
-  // leaderboards only take plays the server judged as they were played)
-  imported(s) { return { ...s, imported: s.imported || 'backup' }; },
   exportSettings() {
-    downloadJSON({ app: APP_NAME, kind: 'settings', version: APP_VERSION, date: Date.now(), settings: Settings.export() }, 'ashtonk-mania-settings.json');
+    downloadJSON({ app: APP_NAME, kind: 'settings', version: APP_VERSION, date: Date.now(), settings: this.settingsOnly(Settings.export()) }, 'ashtonk-mania-settings.json');
+  },
+  async importFile(f) {
+    if (f.size > 16 * 1024 * 1024) throw new Error('Account backups are no longer imported. Import beatmaps from .osz or .zip files, and use your account code for progress.');
+    let obj; try { obj = JSON.parse(await f.text()); } catch { throw new Error('Not an Ashtonk!mania settings file'); }
+    return this.importAll(obj);
   },
   async importAll(obj) {
     if (!obj || obj.app !== APP_NAME) throw new Error('Not an Ashtonk!mania data file');
-    await this.importHead(obj);
-    if (obj.kind === 'settings') return;
-    const scores = Array.isArray(obj.scores) ? obj.scores.filter(s => ScoreManager.valid(s)) : [];
-    await DB.putMany(scores.flatMap(s => ScoreManager.stored(this.imported(s))));
-    if (Array.isArray(obj.replays)) await DB.putMany(obj.replays.filter(r => ReplayManager.ok(r)).map(r => ({ store: 'replays', value: r })));
-    await this.importDone(obj, scores.length);
-  },
-  /** A data file's settings — and, for a backup, profile, favourites and collections. */
-  async importHead(obj) {
-    if (obj.settings) await Settings.import(obj.settings);
-    if (obj.kind === 'settings') return;
-    if (obj.profile) {
-      ProfileManager.profile = { ...ProfileManager.profile, ...obj.profile };
-      await ProfileManager.save();
-    }
-    if (Array.isArray(obj.favorites)) { for (const f of obj.favorites) Favorites.set.add(f); await DB.kvSet('favorites', [...Favorites.set]); }
-    if (Array.isArray(obj.collections)) {
-      for (const c of obj.collections) {
-        const ex = Collections.list.find(x => x.id === c.id || x.name === c.name);
-        if (ex) ex.hashes = [...new Set([...ex.hashes, ...(c.hashes || [])])]; else Collections.list.push(c);
-      }
-      await Collections.save();
-    }
-  },
-  /** A backup's plays and replays are in: the game takes them up. `scores`: how many plays it had. */
-  async importDone(obj, scores) {
-    await ScoreManager.init(); await ReplayManager.init();
-    Bus.emit('scores:changed'); Bus.emit('replays:changed'); Bus.emit('favorites:changed');
-    // (a save from another device: typing your code here keeps you one player online, not one for each device)
-    const same = obj.pid && typeof Presence !== 'undefined' && obj.pid === Presence.pid();
-    if (scores && typeof Account !== 'undefined' && !same && Multiplayer.available())
-      setTimeout(() => Toast.show('Playing on more than one device?', `Get your code on your other device (${Account.where()}) and type it here under Use a code, so you're one player on the rankings — not one for each device.`, { timeout: 12000 }), 1200);
+    if (obj.kind !== 'settings') throw new Error('Account backups are no longer imported. Import beatmaps from .osz or .zip files, and use your account code for progress.');
+    // Existing account-owned values are retained, never replaced by file contents.
+    await Settings.import({ ...Settings.values, ...this.settingsOnly(obj.settings) });
   },
   async resetEverything() {
     // (what was sent from here is forgotten too: a device playing through a code gets everything kept for you back
@@ -14489,6 +14501,16 @@ const Overlays = {
   closeAll() { for (const o of [...this.stack].reverse()) o.close(); },
 };
 
+/** Top-level menu panels replace one another; their own dialogs can still open normally. */
+const MainMenus = {
+  close(except = '') {
+    Overlays.closeAll();
+    if (except !== 'music' && typeof NowPlaying !== 'undefined' && NowPlaying.open) NowPlaying.hide();
+    if (except !== 'notifications' && typeof Notifications !== 'undefined' && Notifications.isOpen()) Notifications.close();
+    if (except !== 'spectator' && typeof SpectatorChat !== 'undefined' && SpectatorChat.panel) SpectatorChat.close();
+  },
+};
+
 /** (`flags`: page-wide classes — BodyFlag — on while it's up, until it's gone from the page; `cls`: a class for its wrapper) */
 function makeOverlay(contentEl, { backdrop = true, onClose, onKey, animOutClass = 'out', dismissable = true, flags = [], cls = '' } = {}) {
   const wrap = h('div', { class: cls || null, style: { position: 'absolute', inset: '0' } });
@@ -15004,6 +15026,7 @@ const NowPlaying = {
   show() {
     this.ensure();
     if (this.open) return;
+    MainMenus.close('music');
     this.open = true;
     this.el.classList.add('show'); BodyFlag.set('np', true);
     this.render();
@@ -15390,6 +15413,7 @@ const Notifications = {
   isOpen() { return !!(this.el && this.el.classList.contains('open')); },
   toggle() { this.isOpen() ? this.close() : this.open(); },
   open() {
+    MainMenus.close('notifications');
     if (!this.el) {
       this.listEl = h('div.nf-list');
       this.el = h('div.nf-panel', { role: 'dialog', 'aria-label': 'Notifications' },
@@ -15542,7 +15566,7 @@ const Screens = {
       const prev = this.current;
       if (prev) {
         if (prev.canLeave && !(await prev.canLeave())) return;
-        if (!replace && prevName && !prev.transient) this.history.push(prevName);
+        if ((next.inGame || next.transient) && !replace && prevName && !prev.transient) this.history.push(prevName);
         if (this.history.length > 20) this.history.shift();
         const oldEl = prev.el;
         prev.leave && prev.leave();
@@ -15558,6 +15582,7 @@ const Screens = {
           setTimeout(() => oldEl.remove(), fromMenu ? 460 : 220);
         }
       }
+      if (!next.inGame && !next.transient) { this.history = name === 'home' ? [] : ['home']; MainMenus.close(); }
       this.current = next; this.currentName = name;
       if (next.keepParams) next._lastParams = params; // (Back returns to the same one: someone's profile, not yours)
       let el;
@@ -16149,6 +16174,7 @@ const HomeScreen = {
   // ButtonSystemState order: a button shows between its min and max state, contracts below and explodes above
   ORDER: { initial: 1, top: 2, play: 3, multi: 4, edit: 5, entering: 6 },
   enter() {
+    this._homeToken = {};
     this.logo = this.buildLogo();
     this.left = h('div.lz-left'); this.right = h('div.lz-right');
     this.buildButtons();
@@ -16157,7 +16183,7 @@ const HomeScreen = {
     // lazer's SongTicker: the new song's title and artist at the top right for a few seconds
     this.ticker = h('div.lz-ticker', this.tkTitle = h('div.lz-tk-t'), this.tkArtist = h('div.lz-tk-a'));
     // lazer's background source: the skin's menu background (the triangles) or the beatmap's
-    const el = h('div.home.lz-menu', { dataset: { state: 'initial' } }, Settings.get('ui.menuBackground') === 'beatmap' ? null : MenuTriangles.mount(), this.flashL, this.flashR,
+    const el = h('div.home.lz-menu', { dataset: { state: 'initial' } }, this.usesTriangles() ? MenuTriangles.mount() : null, this.flashL, this.flashR,
       h('div.lz-stage', this.area, this.logo), this.ticker, NeruMascot.build(),
       this.fountainCv = h('canvas.lz-fountain', { style: { visibility: 'hidden' } }));
     this._parts = []; this._spewers = [];
@@ -16183,12 +16209,11 @@ const HomeScreen = {
     for (const ev of ['pointermove', 'pointerdown', 'keydown', 'wheel']) window.addEventListener(ev, this._poke, { passive: true });
     this._offMusic = Bus.on('music:changed', m => this.showTicker(m));
     this._offDaily = Bus.on('daily', () => this.paintDaily());
-    // (the background source changed in settings: the triangles come or go straight away)
-    this._offBgSrc = Bus.on('settings:changed', k => {
-      if (k !== 'ui.menuBackground' || !this.el) return;
-      const tri = this.el.querySelector(':scope > .lz-tri'), want = Settings.get('ui.menuBackground') !== 'beatmap';
-      if (want && !tri) this.el.prepend(MenuTriangles.mount());
-      else if (!want && tri) { MenuTriangles.stop(); tri.remove(); }
+    this._offBgSrc = Bus.on('settings:changed', k => { if (k === 'ui.menuBackground') this.syncBackground(); });
+    this._offHomeBg = Bus.on('bg:changed', url => this.syncBackground(url));
+    this._offHomeLibrary = Bus.on('library:changed', () => {
+      this.syncBackground();
+      if (!Background.current || !Music.meta) this.startMenuMusic();
     });
     if (Presence.ws) Daily.ask();
     this.paintDaily(); this._dailyT = setInterval(() => this.paintDaily(), 1000);
@@ -16196,12 +16221,25 @@ const HomeScreen = {
     return el;
   },
   leave() {
+    this._homeToken = null;
     cancelAnimationFrame(this._raf); clearTimeout(this._perfT); NeruMascot.stop(); MenuTriangles.stop();
     for (const ev of ['pointermove', 'pointerdown', 'keydown', 'wheel']) window.removeEventListener(ev, this._poke);
     if (this._offMusic) this._offMusic();
     if (this._offDaily) this._offDaily(); clearInterval(this._dailyT);
     if (this._offBgSrc) this._offBgSrc();
+    if (this._offHomeBg) this._offHomeBg();
+    if (this._offHomeLibrary) this._offHomeLibrary();
     clearTimeout(this._tbT); $('#app').classList.remove('hide-toolbar');
+  },
+
+  usesTriangles(url = Background.current) {
+    return Settings.get('ui.menuBackground') !== 'beatmap' || !BeatmapManager.playableMaps().length || !url;
+  },
+  syncBackground(url = Background.current) {
+    if (!this.el) return;
+    const tri = this.el.querySelector(':scope > .lz-tri'), want = this.usesTriangles(url);
+    if (want && !tri) this.el.prepend(MenuTriangles.mount());
+    else if (!want && tri) { MenuTriangles.stop(); tri.remove(); }
   },
 
   /** The buttons, in lazer's flow order (left of the logo: settings, back; right: the multi, play, edit and top-level
@@ -16621,12 +16659,13 @@ const HomeScreen = {
     this.ticker.animate([{ opacity: 0 }, { opacity: 1, offset: 400 / 5200 }, { opacity: 1, offset: 4400 / 5200 }, { opacity: 0 }], { duration: 5200 });
   },
   async startMenuMusic() {
+    const homeToken = this._homeToken;
     const id = Settings.get('last.map');
     let map = id && BeatmapManager.maps.get(id);
     if (!map || map.problems.length) { const all = BeatmapManager.playableMaps(); map = all[Math.floor(Math.random() * all.length)]; }
     if (!map) { Background.set(null); return; }
     const seq = Music._seq, url = await BeatmapManager.bgURL(map) || await BeatmapManager.thumbURL(BeatmapManager.setById.get(map.setId));
-    if (seq !== Music._seq) return; // (left already for a screen that started its own song, with its own background)
+    if (seq !== Music._seq || homeToken !== this._homeToken) return; // (left already for a screen that started its own song, with its own background)
     Background.set(url);
     if (Music.meta && Music.loaded && (Music.playing || MenuMusic.paused)) { Music.onEnded = () => MenuMusic.autoNext(); return; }
     if (Settings.get('audio.autoplay') !== false) await MenuMusic.play(map);
@@ -25208,6 +25247,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16i', title: 'Floating settings and simpler menus', sections: [
+    { icon: 'gear', title: 'Menus', items: ['Settings now uses rounded groups with colourful slanted headings.', 'Menu pages replace one another: closing a menu returns Home instead of reopening an older page.', 'The top bar is inset a little further, with rounding only on its bottom corners.'] },
+    { icon: 'music', title: 'Backgrounds and chat', items: ['Home uses song backgrounds by default, with triangles until a beatmap background is available.', 'Spectator chat sits at the bottom left and shares the gameplay chat styling.', 'Full backups now export only beatmap files. Backup imports no longer restore scores or medals; settings files carry preferences only.'] },
+  ] },
   { id: '2026.11.16h', title: 'A quieter Neru', sections: [
     { icon: 'home', title: 'Appearance', items: ['Removed Neru’s seasonal weather, falling particles and ambient night stars, along with the seasonal achievement.', 'The top bar now has rounded corners and a small gap at each side. The clock stays readable when notifications are open; the separate bell and mania indicator have been removed.'] },
   ] },
@@ -26759,6 +26802,7 @@ const SettingsPanel = {
   toggle() { this.o ? this.close() : this.open(); },
   open(section) {
     if (this.o) { if (section) this.scrollTo(section); return; }
+    MainMenus.close('settings');
     UISounds.click();
     const nav = h('div.sp-nav');
     const search = h('input.input.sp-search', { type: 'search', placeholder: 'Search settings…', 'aria-label': 'Search settings' });
@@ -26836,11 +26880,14 @@ const SettingsPanel = {
     const rank = sec => { const i = ORDER.indexOf(sec); return i < 0 ? ORDER.length : i; };
     const sorted = new Map([...bySec].sort((a, b) => rank(a[0]) - rank(b[0])));
     bySec.clear(); for (const [k, v] of sorted) bySec.set(k, v);
+    let sectionIndex = 0;
     for (const [sec, groups] of bySec) {
-      const secEl = h('div.sp-section', { dataset: { section: sec } }, h('h3', sec));
+      const accent = ['#ce3f87', '#8d50d6', '#bb870e'][sectionIndex++ % 3];
+      const secEl = h('div.sp-section', { dataset: { section: sec }, style: { '--section-accent': accent } }, h('h3', h('span', sec)));
       for (const [g, items] of groups) {
-        secEl.append(h('div.sp-group', g));
-        for (const it of items) secEl.append(this.row(it));
+        const card = h('div.sp-group-card', g !== sec ? h('h4.sp-group', g) : null);
+        for (const it of items) card.append(this.row(it));
+        secEl.append(card);
       }
       scroll.append(secEl);
     }
@@ -26849,7 +26896,7 @@ const SettingsPanel = {
     // (and past everything, at the very bottom: Neru, bored at her desk — NeruEggs.finePrint)
     const neru = !q && typeof NeruCameo !== 'undefined' ? NeruCameo.make('finePrint', 'nc-fine', { delay: 0 }) : null;
     if (neru) { scroll.append(neru); NeruEggs.finePrint(neru, scroll); }
-    clearEl(this.nav).append(...[...bySec.keys()].map(sec => h('button.sp-nb', { 'aria-label': sec, dataset: { sec }, onclick: () => { UISounds.click(); this.scrollTo(sec); } }, h('span.sp-nb-ind'), icon(SECTION_ICONS[sec] || 'gear'), h('span', sec.toLowerCase()))));
+    clearEl(this.nav).append(...[...bySec.keys()].map(sec => h('button.sp-nb', { 'aria-label': sec, dataset: { sec }, onclick: () => { UISounds.click(); this.scrollTo(sec); } }, h('span.sp-nb-ind'), icon(SECTION_ICONS[sec] || 'gear'), h('span', sec === 'User Interface' ? 'interface' : sec.toLowerCase()))));
     this.syncNav();
   },
   /** One setting as osu!lazer's form controls (SettingsItemV2): a rounded box with the caption inside, the control on
@@ -27136,15 +27183,15 @@ const DataPanel = {
     const kept = navigator.storage && navigator.storage.persisted ? navigator.storage.persisted().catch(() => null) : null;
     Promise.all([DB.estimate(), kept]).then(([e, k]) => {
       info.textContent = (e ? `Using ${fmtBytes(e.usage || 0)} of ${fmtBytes(e.quota || 0)} browser storage.` : 'Storage estimate unavailable.') +
-        (DB.memory || k == null ? '' : k ? ' The browser keeps it even when space runs low.' : ' The browser may clear it if the device runs low on space — installing the game keeps it, and Export all data saves a copy.');
+        (DB.memory || k == null ? '' : k ? ' The browser keeps it even when space runs low.' : ' The browser may clear it if the device runs low on space — installing the game keeps it, and Export beatmaps saves a copy of your songs.');
     });
     const btn = (label, ic, fn, cls = '') => h(`button.btn.sm${cls}`, { onclick: fn }, icon(ic), label);
     const confirmClear = async (what, fn) => { if (await Dialog.confirm(`Clear ${what}?`, 'This cannot be undone.', { ok: 'Clear', danger: true })) { await fn(); Toast.ok(`${what[0].toUpperCase() + what.slice(1)} cleared`); } };
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } }, info,
       h('div.row.wrap',
-        btn('Export all data', 'download', () => DataManager.exportAll()),
-        btn('Import data', 'upload', () => importViaPicker('.json')),
-        btn('Import Web-Osu-Mania backup', 'upload', () => WomImport.pickAndImport()),
+        btn('Export beatmaps', 'download', () => DataManager.exportAll()),
+        btn('Import beatmaps', 'upload', () => importViaPicker('.osz,.zip,.osu')),
+        btn('Import Web-Osu-Mania beatmaps', 'upload', () => WomImport.pickAndImport()),
         btn('Export settings', 'download', () => DataManager.exportSettings()),
         btn('Import settings', 'upload', async () => { const [f] = await pickFiles({ accept: '.json', multiple: false }); if (!f) return; try { const o = JSON.parse(await f.text()); await DataManager.importAll({ ...o, kind: 'settings' }); Toast.ok('Settings imported'); SettingsPanel.o && SettingsPanel.build(''); } catch (e) { Toast.err('Import failed', e.message); } }),
         btn('Keep data persistent', 'save', async () => { const ok = await DB.persist(); Toast.show(ok ? 'Storage marked persistent' : 'The browser declined persistent storage'); }),
@@ -27731,8 +27778,7 @@ const Onboarding = {
     return [h('label.setup-lbl', 'Your code'), this.codeIn, toggle, help];
   },
 
-  /** osu!lazer's "import from osu!stable" page, for Web-Osu-Mania: its backup brings keybinds, settings, beatmaps,
-   *  scores and collections across in one go. */
+  /** osu!lazer's "import from osu!stable" page, for Web-Osu-Mania: its backup supplies stored beatmaps only. */
   step_wom() {
     const yes = this.womAnswer === 'yes';
     const choice = (v, ic, t, sub) => h(`button.setup-choice${this.womAnswer === v ? '.on' : ''}`, { dataset: { id: v }, onclick: () => {
@@ -27743,13 +27789,13 @@ const Onboarding = {
     const out = [
       // (once it's yes, the question makes room for the import steps: the page's title asks it too)
       yes ? null : h('p.setup-lead', 'Did you play Web-Osu-Mania before?'),
-      h(`div.setup-choices.two${yes ? '.compact' : ''}`, choice('yes', 'upload', 'Yes', 'Bring my keybinds and beatmaps'), choice('no', 'user-plus', 'No', 'I\'m new here'))];
+      h(`div.setup-choices.two${yes ? '.compact' : ''}`, choice('yes', 'upload', 'Yes', 'Bring my beatmaps'), choice('no', 'user-plus', 'No', 'I\'m new here'))];
     if (yes) out.push(h('div.setup-wom',
       this.womDone
-        ? h('div.setup-wom-done', icon('check'), h('span', `Imported ${this.womDone}. Your keybinds and settings are in place — check them on the next pages.`))
+        ? h('div.setup-wom-done', icon('check'), h('span', `Imported ${this.womDone}. Your songs are ready. Set your preferences on the next pages.`))
         : [h('ol.setup-wom-steps',
             h('li', 'In Web-Osu-Mania, open ', h('b', 'Settings → Backup & Restore'), '.'),
-            h('li', 'Tick ', h('b', 'Settings & Keybinds'), ', ', h('b', 'Stored Beatmaps'), ' and ', h('b', 'Collections'), ' (scores too, if you like) and export. Songs in your collections are downloaded for you.'),
+            h('li', 'Tick ', h('b', 'Stored Beatmaps'), ' and export. Only the stored songs are imported.'),
             h('li', 'Import the .zip it saves here.')),
           this.womStatus ? h('div.setup-wom-busy', h('span.spinner'), this.womStatus)
             : h('button.btn.primary.setup-wom-btn', { onclick: () => this.importWom() }, icon('upload'), 'Import my Web-Osu-Mania backup')]));
@@ -27943,10 +27989,8 @@ const Onboarding = {
 };
 
 /* ===== 18c-wom-import.js ===== */
-/* Web-Osu-Mania backups — the .zip from WOM's Settings → Backup & Restore — brought into Ashtonk!mania:
- * the stored beatmaps (beatmapFiles/*.osz), settings and keybinds (settings.json), high scores (highScores.json)
- * and collections (collections.json, or the older savedBeatmapSets.json). WOM's .womr replays and custom sounds
- * have no counterpart here, so scores arrive without their replays. */
+/* Web-Osu-Mania backup import: only the stored beatmap archives are restored.
+ * Settings, scores, collections and account progress are not imported from backups. */
 
 const WomImport = {
   /** Does this zip look like a WOM backup (rather than a beatmap or skin archive)? */
@@ -27961,10 +28005,8 @@ const WomImport = {
     const zip = await ZipReader.fromFile(file); // (a part at a time: with its beatmaps, a backup can be gigabytes)
     if (!this.looksLike(zip)) throw new Error('This isn\'t a Web-Osu-Mania backup. In Web-Osu-Mania, open Settings → Backup & Restore and export one.');
     const out = { sets: [], scores: 0, settings: false, collections: 0, skipped: 0, errors: [] };
-    const byName = new Map(zip.entries.map(e => [e.name, e]));
-    const json = async name => byName.has(name) ? this.state(await zip.readText(byName.get(name))) : null;
 
-    // beatmaps first: scores and collections point at them
+    // Import the original song files, without consuming backup account records.
     const osz = zip.entries.filter(e => /^beatmapFiles\/\d+.*\.osz$/i.test(e.name));
     const report = { sets: [], skins: [], replays: [], errors: [], warnings: [] };
     for (let i = 0; i < osz.length; i++) {
@@ -27980,191 +28022,9 @@ const WomImport = {
     out.errors.push(...report.errors);
     if (out.sets.length) Bus.emit('library:changed');
 
-    onStatus('Importing settings…');
-    try { const st = await json('settings.json'); if (st) out.settings = this.applySettings(st); } catch (err) { out.errors.push(`settings.json: ${friendlyError(err)}`); }
-
-    // collections before scores: their songs that aren't in the backup are downloaded, so scores can land on them too
-    try {
-      const cols = await json('collections.json');
-      const saved = await json('savedBeatmapSets.json');
-      const all = { ...(cols && typeof cols === 'object' ? cols : {}) };
-      if (saved && Array.isArray(saved.savedBeatmapSets)) all.Saved = saved.savedBeatmapSets;
-      out.collections = await this.importCollections(all, out, onStatus);
-    } catch (err) { out.errors.push(`collections: ${friendlyError(err)}`); }
-
-    onStatus('Importing scores…');
-    try { const hs = await json('highScores.json'); if (hs) Object.assign(out, await this.importScores(hs.highScores || hs, out)); } catch (err) { out.errors.push(`highScores.json: ${friendlyError(err)}`); }
+    // Backup files only supply beatmaps; account progress and settings are left alone.
     onStatus(null);
     return out;
-  },
-
-  /** The WOM settings that mean the same thing here (volumes, scroll, background, offset, keys, a few toggles). */
-  applySettings(w) {
-    const num = (v, lo, hi) => typeof v === 'number' && isFinite(v) ? clamp(v, lo, hi) : null;
-    const set = (k, v) => { if (v !== null && v !== undefined) Settings.set(k, v); };
-    set('audio.master', num(w.volume, 0, 1));
-    set('audio.music', num(w.musicVolume, 0, 1));
-    set('audio.effects', num(w.sfxVolume, 0, 1));
-    set('audio.offset', num(w.audioOffset, -300, 300)); // (same sign: positive makes notes arrive later)
-    set('gameplay.scrollSpeed', num(w.scrollSpeed, 1, 40) && Math.round(w.scrollSpeed)); // the same scale as WOM's
-    set('gameplay.bgDim', num(w.backgroundDim, 0, 1));
-    set('gameplay.bgBlur', num(w.backgroundBlur, 0, 1));
-    if (typeof w.upscroll === 'boolean') set('gameplay.scrollDirection', w.upscroll ? 'up' : 'down');
-    if (typeof w.show300g === 'boolean') set('gameplay.showMax', w.show300g);
-    if (typeof w.showFpsCounter === 'boolean') set('graphics.showFps', w.showFpsCounter);
-    if (typeof w.performanceMode === 'boolean') set('graphics.performanceMode', w.performanceMode);
-    if (typeof w.preferMetadataInOriginalLanguage === 'boolean') set('ui.unicodeMetadata', w.preferMetadataInOriginalLanguage);
-    // keybinds: WOM's keyModes[keyCount - 1][column] = [first key, second key] (KeyboardEvent.code, like ours)
-    const km = w.keybinds && Array.isArray(w.keybinds.keyModes) ? w.keybinds.keyModes : null;
-    if (km) {
-      const binds = { ...Settings.get('input.keybinds') };
-      km.forEach((cols, i) => {
-        if (!Array.isArray(cols) || cols.length !== i + 1) return;
-        const b = cols.map(c => (Array.isArray(c) ? c : [c]).filter(k => typeof k === 'string' && k).slice(0, 2));
-        if (b.every(c => c.length)) binds[i + 1] = b;
-      });
-      Settings.set('input.keybinds', binds);
-    }
-    // beatmap sources (WOM's "Sources" settings)
-    const prov = { 'Mino (catboy.best)': 'mino', NeriNyan: 'nerinyan', SayoBot: 'sayobot', 'osu.direct': 'osudirect', Nekoha: 'nekoha', Custom: 'custom' }[w.beatmapProvider];
-    if (prov) set('online.downloadSource', prov);
-    if (typeof w.customBeatmapProvider === 'string' && w.customBeatmapProvider.includes('$setId')) set('online.customDownload', w.customBeatmapProvider);
-    if (typeof w.proxyBeatmapDownloads === 'boolean') set('online.proxyDownloads', w.proxyBeatmapDownloads);
-    this.applySkin(w);
-    return true;
-  },
-
-  /** WOM's skin — its note style, colours (one hue or a colour per column), judgement set and stage layout — so the
-   *  game looks the way it did there: the Custom skin is selected with the same note type and options. */
-  applySkin(w) {
-    const num = (v, lo, hi) => typeof v === 'number' && isFinite(v) ? clamp(v, lo, hi) : null;
-    const set = (k, v) => { if (v !== null && v !== undefined) Settings.set(k, v); };
-    const sk = w.skin && typeof w.skin === 'object' ? w.skin : {}, ui = w.ui && typeof w.ui === 'object' ? w.ui : {};
-    const colors = sk.colors && typeof sk.colors === 'object' ? sk.colors : null;
-    // (older backups kept the hue at the top level)
-    set('wom.hue', num(colors && colors.simple ? colors.simple.hue : w.hue, 0, 360));
-    if (colors && Array.isArray(colors.custom)) set('wom.customColors', colors.custom.map(k => Array.isArray(k) ? k.map(c => ({ tap: String(c && c.tap || ''), holdHead: String(c && c.holdHead || ''), hold: String(c && c.hold || '') })) : null));
-    // (the colour comes across as WOM's simple mode — white outer columns, the colour inside — whatever mode the
-    // backup used; its per-column colours are kept)
-    set('wom.colorMode', 'simple');
-    if (WOM.JUDGEMENT_SETS.some(j => j[0] === sk.judgementSet)) set('wom.judgements', sk.judgementSet);
-    if (typeof w.darkerHoldNotes === 'boolean') set('wom.darkerHolds', w.darkerHoldNotes);
-    set('wom.noteScale', num(w.noteScale, 0.3, 1.5));
-    set('wom.hitPositionOffset', num(w.hitPositionOffset, 0, 600));
-    set('wom.laneWidthAdjustment', num(w.laneWidthAdjustment, -50, 100));
-    set('wom.laneSpacing', num(w.laneSpacing, 0, 100));
-    set('wom.stagePosition', num(w.stagePosition, -1, 1));
-    set('wom.stageOpacity', num(w.stageOpacity, 0, 1));
-    set('wom.stageSidesOpacity', num(w.stageSidesOpacity, 0, 1));
-    set('wom.receptorOpacity', num(ui.receptorOpacity, 0, 1));
-    if (typeof ui.receptorLighting === 'boolean') set('wom.receptorLighting', ui.receptorLighting);
-    set('wom.hudY', num(ui.stageHudYPosition, 0, 1));
-    if ([-1, 200, 300, 320].includes(ui.earlyLateThreshold)) set('wom.earlyLate', ui.earlyLateThreshold);
-    // (WOM's note style is the Custom skin's note type)
-    set('wom.style', WOM.STYLES.some(s => s[0] === w.style) ? w.style : 'bars');
-    SkinManager.select('default').catch(() => {});
-  },
-
-  /** WOM mod names → ours (and the playback rate they imply). */
-  mods(list) {
-    const mods = [], names = { 'Easy': 'EZ', 'No Fail': 'NF', 'Half Time': 'HT', 'Hard Rock': 'HR', 'Sudden Death': 'SD', 'Perfect': 'PF', 'Perfect (SS)': 'PSS',
-      'Double Time': 'DT', 'Autoplay': 'AT', 'Random': 'RD', 'Mirror': 'MR', 'Constant Speed': 'CS', 'Hold Off': 'NLN' };
-    let rate = 1;
-    for (const m of Array.isArray(list) ? list : []) {
-      if (typeof m !== 'string') continue;
-      if (names[m]) mods.push(names[m]);
-      else if (m.startsWith('Accuracy Challenge')) mods.push('AC');
-      else if (m.startsWith('Fade In')) mods.push('FI');
-      else if (m.startsWith('Fade Out')) mods.push('HD');
-      else if (m.startsWith('Percy')) mods.push('PC');
-      else if (/Override/.test(m)) mods.push('DA');
-      else if (m.startsWith('Song Speed')) { const r = parseFloat(m.split(':')[1]); if (r > 0) { rate = r; mods.push('RT'); } }
-    }
-    if (mods.includes('DT')) rate = 1.5;
-    if (mods.includes('HT')) rate = 0.75;
-    return { mods: [...new Set(mods)], rate };
-  },
-
-  /** highScores[setId][beatmapId] = [{timestamp, mods, results, replayId}] → scores on the matching difficulties. */
-  async importScores(hs, out) {
-    let scores = 0, skipped = 0;
-    const have = new Set(ScoreManager.scores.map(s => s.id));
-    for (const [setId, maps] of Object.entries(hs || {})) {
-      for (const [mapId, list] of Object.entries(maps || {})) {
-        const set = BeatmapManager.sets.find(s => s.onlineId === Number(setId));
-        const map = BeatmapManager.sets.flatMap(s => s.maps).find(m => m.onlineId === Number(mapId)) || (set && set.maps.length === 1 ? set.maps[0] : null);
-        for (const h of Array.isArray(list) ? list : [list]) {
-          const r = h && h.results;
-          if (!r) continue;
-          if (!map) { skipped++; continue; }
-          const id = `sc-wom-${h.replayId || h.timestamp || uid()}`;
-          if (have.has(id)) continue;
-          const counts = [r[320], r[300], r[200], r[100], r[50], r[0]].map(n => Math.max(0, Math.round(Number(n) || 0)));
-          const acc = Number(r.accuracy) > 1 ? Number(r.accuracy) / 100 : Number(r.accuracy) || OsuMath.accuracy(counts);
-          const { mods, rate } = this.mods(h.mods);
-          const stars = map.stars || 0;
-          const score = {
-            id, mapHash: map.hash, mapId: map.id, setId: map.setId,
-            title: map.title, artist: map.artist, version: map.version, creator: map.creator,
-            keys: map.keys, stars, mods, rate, score: Math.round(Number(r.score) || 0), accuracy: acc, maxCombo: Math.round(Number(r.maxCombo) || 0),
-            counts, grade: ScoreSystem.gradeFor(acc, false, mods, counts), passed: true, date: Number(h.timestamp) || Date.now(),
-            player: ProfileManager.profile.name, replayId: null, imported: 'wom', srVersion: SR_VERSION,
-          };
-          score.pp = mods.includes('AT') ? 0 : OsuMath.pp(stars, counts, mods);
-          await DB.put('scores', score);
-          ScoreManager.scores.push(score); have.add(id);
-          scores++;
-        }
-      }
-    }
-    if (scores) { ScoreManager.scores.sort((a, b) => a.date - b.date); ScoreManager._reindex(); Bus.emit('scores:changed'); }
-    return { scores, skipped: out.skipped + skipped };
-  },
-
-  /** WOM collections hold online beatmap sets: any that aren't in the library yet are downloaded (from the same
-   *  mirrors as the explorer's downloads), then each collection is made here with the same name. */
-  async importCollections(all, out, onStatus = () => {}) {
-    const have = id => BeatmapManager.sets.find(s => s.onlineId === Number(id));
-    const missing = new Map();
-    for (const sets of Object.values(all)) if (Array.isArray(sets)) for (const ws of sets) {
-      const id = Number(ws && ws.id);
-      if (id > 0 && !have(id) && !missing.has(id)) missing.set(id, { id, title: String(ws.title || ''), artist: String(ws.artist || ''), creator: String(ws.creator || '') });
-    }
-    if (missing.size && navigator.onLine === false) out.errors.push(`${plural(missing.size, 'song')} from your collections couldn't be downloaded: you're offline`);
-    else {
-      // three at a time (a big collection used to take one song after another, and one stuck song held the rest)
-      let done = 0, failed = 0, full = false;
-      const queue = [...missing.values()];
-      onStatus(`Downloading songs from your collections… 0/${missing.size}`);
-      const worker = async () => {
-        for (let set; (set = queue.shift());) {
-          try { const r = await OnlineBeatmaps.downloadAndImport(set, null, { quiet: true }); out.sets.push(...r.sets); out.downloaded = (out.downloaded || 0) + 1; }
-          catch (err) {
-            // (no room left: the rest wouldn't fit either — not downloaded only to be thrown away)
-            if (storageFull(err)) {
-              if (!full) out.errors.push(friendlyError(err)); // (once: the downloads still going hit it too)
-              if (queue.length) out.errors.push(`${plural(queue.length, 'more song')} from your collections ${queue.length === 1 ? 'wasn\'t' : 'weren\'t'} downloaded: there's no room left.`);
-              full = true; done += queue.length; queue.length = 0;
-            } else { failed++; if (failed <= 3) out.errors.push(`${set.artist} - ${set.title}: ${friendlyError(err)}`); }
-          }
-          onStatus(`Downloading songs from your collections… ${++done}/${missing.size}`);
-        }
-      };
-      await Promise.all([worker(), worker(), worker()]);
-      if (failed > 3) out.errors.push(`…and ${failed - 3} more songs couldn't be downloaded`);
-    }
-    let n = 0;
-    for (const [name, sets] of Object.entries(all)) {
-      if (!Array.isArray(sets)) continue;
-      const hashes = [];
-      for (const ws of sets) { const local = ws && have(ws.id); if (local) hashes.push(...local.maps.map(m => m.hash)); }
-      let c = Collections.list.find(x => x.name === name);
-      if (!c) { if (!hashes.length && !sets.length) continue; c = await Collections.create(name); }
-      c.hashes = [...new Set([...c.hashes, ...hashes])];
-      n++;
-    }
-    if (n) await Collections.save();
-    return n;
   },
 
   /** A short "what came across" line for toasts and the setup screen. */
@@ -28189,7 +28049,7 @@ const WomImport = {
     $('#app').appendChild(pill);
     try {
       const r = await this.run(f, { onStatus: m => { if (m) pill.lastChild.textContent = m; } });
-      Toast.ok('Web-Osu-Mania backup imported', WomImport.summary(r) + (r.skipped ? ` (${plural(r.skipped, 'score')} for beatmaps that weren't in the backup were left out)` : ''));
+      Toast.ok('Web-Osu-Mania beatmaps imported', WomImport.summary(r) + (r.skipped ? ` (${plural(r.skipped, 'score')} for beatmaps that weren't in the backup were left out)` : ''));
       if (r.errors.length) Toast.err('Some of it couldn\'t be imported', r.errors.slice(0, 5).join('\n'));
       if (r.sets.length) App.keepStorage && App.keepStorage();
       return r;
@@ -32704,6 +32564,7 @@ const Chat = {
   open(key) {
     if (key && this.channels.has(key)) this.cur = key;
     if (this.o) { this.paint(); return; }
+    MainMenus.close('chat');
     UISounds.click();
     Presence.start();
     // (connecting / offline / back online: the empty channel says which)
@@ -33747,7 +33608,7 @@ const HtmlFile = {
     const note = t => h('div.muted', { style: { fontSize: '.8rem' } }, t);
     if (!Host.standalone) return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
       h('div.row.wrap', btn(kbHint('Save as an HTML file (Ctrl+S)', 'Save as an HTML file'), 'download', () => this.save())),
-      note('One file with the whole game inside: open it in a browser on any device to play without this website — offline too, or where the site is blocked. Multiplayer, beatmap search and rankings still connect to this site. Its beatmaps, scores and settings are its own: move them with Export all data / Import data.'));
+      note('One file with the whole game inside: open it in a browser on any device to play without this website — offline too, or where the site is blocked. Multiplayer, beatmap search and rankings still connect to this site. Move songs with Export beatmaps / Import beatmaps. Use your account code to sync your progress.'));
     const inp = h('input.input', { value: Host.server(), placeholder: 'https://…', 'aria-label': 'Game website', spellcheck: 'false', autocomplete: 'off', style: { flex: '1', minWidth: '180px' } });
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') apply(); });
     const apply = () => {
@@ -35680,17 +35541,19 @@ const SpectatorChat = {
     const c = this.context();
     if (!c) return;
     if (this.panel) return;
-    if (Chat.o) Chat.close();
+    MainMenus.close('spectator');
     this.unread = 0;
-    this.list = h('div.mp-chat-list', { role: 'log', 'aria-live': 'polite', 'aria-label': 'Spectator messages' });
-    this.input = h('input.input', { type: 'text', maxlength: 300, placeholder: 'Type a message…', 'aria-label': 'Spectator chat message', autocomplete: 'off' });
+    this.list = h('div.gp-chat-list', { role: 'log', 'aria-live': 'polite', 'aria-label': 'Spectator messages' });
+    this.input = h('input.gp-chat-in', { type: 'text', maxlength: 300, placeholder: 'Type a message…', 'aria-label': 'Spectator chat message', autocomplete: 'off' });
     const send = () => { const text = this.input.value.trim(); if (!text || !Presence.ws || !this.context()) return; Presence.send({ t: 'specChat', to: this.id, text }); this.input.value = ''; };
     this.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') this.close(); });
     this.input.addEventListener('keyup', e => e.stopPropagation());
-    const panel = this.panel = h('section.spectator-chat.mp-side.ov', { role: 'region', 'aria-label': 'Spectator chat' },
+    this.input.addEventListener('focus', () => this.panel?.classList.add('typing'));
+    this.input.addEventListener('blur', () => this.panel?.classList.remove('typing'));
+    const panel = this.panel = h('section.spectator-chat.gp-chat.open', { role: 'region', 'aria-label': 'Spectator chat' },
       h('div.spectator-chat-head', h('div', h('h3', 'Spectator chat'), h('span', c.host ? 'You and your spectators' : `${c.name} and their spectators`)),
         h('button.icon-btn', { 'aria-label': 'Close spectator chat', onclick: () => this.close() }, icon('x'))),
-      h('div.mp-tabpane', this.list, h('div.spectator-chat-send', this.input, h('button.btn.sm', { onclick: send }, 'Send'))));
+      this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
     document.body.append(panel); this.paint(); this.refresh();
@@ -35699,15 +35562,15 @@ const SpectatorChat = {
   paint() {
     if (!this.list) return;
     clearEl(this.list);
-    if (!this.lines.length) this.list.append(h('div.mp-msg.sys', 'Messages here are shared with the player and their current spectators.'));
+    if (!this.lines.length) this.list.append(h('div.gp-chat-l.sys', 'Messages here are shared with the player and their current spectators.'));
     else for (const l of this.lines) this.append(l, false);
     this.list.scrollTop = this.list.scrollHeight;
   },
   append(l, scroll = true) {
     if (!this.list) return;
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
-    this.list.querySelector('.mp-msg.sys')?.remove();
-    const line = h(`div.mp-msg${l.from.pid === Presence.pid() ? '.mine' : ''}`, h('b', l.from.name), h('span', l.text));
+    this.list.querySelector('.gp-chat-l.sys')?.remove();
+    const line = h(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, h('b', l.from.name), h('span', l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(line);
     while (this.list.children.length > 100) this.list.firstChild.remove();
@@ -35723,7 +35586,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '13d9e1c31f19';
+const APP_BUILD = 'f557165509aa';
 
 const App = {
   lastReport: null,

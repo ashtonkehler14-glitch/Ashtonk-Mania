@@ -143,7 +143,7 @@ const SETTINGS_SCHEMA = [
   { s: 'Graphics', g: 'Layout', k: 'ui.scale', l: 'UI scaling', t: 'range', d: TOUCH_DEVICE ? 1.25 : 0.9, min: 0.75, max: 1.5, step: 0.05, fmt: v => `${Math.round(v * 100)}%` },
   { x: 1, s: 'User Interface', g: 'Style', k: 'ui.animSpeed', l: 'Animation speed', t: 'range', d: 1, min: 0, max: 2, step: 0.1, fmt: v => v === 0 ? 'Off' : `${v.toFixed(1)}×` },
   { s: 'User Interface', g: 'General', k: 'ui.parallax', l: 'Parallax', t: 'bool', d: true },
-  { s: 'User Interface', g: 'Main Menu', k: 'ui.menuBackground', l: 'Background source', t: 'select', d: 'skin', o: [['skin', 'Skin'], ['beatmap', 'Beatmap']], hint: 'lazer\'s: the menu\'s triangle picture (in the playing song\'s colour), or the playing song\'s own background.' },
+  { s: 'User Interface', g: 'Main Menu', k: 'ui.menuBackground', l: 'Background source', t: 'select', d: 'beatmap', o: [['skin', 'Triangles'], ['beatmap', 'Beatmap']], hint: 'Use the song background on Home, with triangles when no song background is available.' },
   { s: 'User Interface', g: 'Main Menu', k: 'ui.mascot', l: 'Show Neru', t: 'bool', d: true, hint: 'On the main menu, and around the game: she reacts to your results, teases you when you fail and keeps you company while things load.',
     // (a Teto, Miku or Neru fan: she stays — it looks as always, but try turning her off and she won't have it)
     stays: () => typeof NeruEggs !== 'undefined' && NeruEggs.stays(), refuse: () => NeruEggs.refuse() },

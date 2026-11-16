@@ -51,8 +51,8 @@ try {
     await page.setViewportSize(viewport);
     await page.evaluate(()=>{HomeScreen.setState('top');HomeScreen._idleAt=performance.now();});
     await page.waitForTimeout(950);
-    const frame=await page.locator('#toolbar').evaluate(el=>{const r=el.getBoundingClientRect(),css=getComputedStyle(el);return {left:r.left,right:r.right,width:innerWidth,radius:parseFloat(css.borderTopLeftRadius)};});
-    assert.ok(frame.left>0 && frame.right<frame.width && frame.radius>=8,'Toolbar is inset and rounded');
+    const frame=await page.locator('#toolbar').evaluate(el=>{const r=el.getBoundingClientRect(),css=getComputedStyle(el);return {left:r.left,right:r.right,width:innerWidth,radius:parseFloat(css.borderBottomLeftRadius),topRadius:parseFloat(css.borderTopLeftRadius)};});
+    assert.ok(frame.left>0 && frame.right<frame.width && frame.radius>=8 && frame.topRadius===0,'Toolbar is inset and rounded');
     const clock=await page.locator('.tb-clock').boundingBox();assert.ok(clock.x>=frame.left && clock.x+clock.width<=frame.right+1,'Toolbar clock stays inside frame');
     assert.equal(await page.locator('#toolbar .tb-ruleset, #toolbar [data-icon="bell"]').count(),0,'Redundant bell and ruleset selector removed');
     await page.click('.tb-clock');await page.waitForFunction(()=>Notifications.isOpen());

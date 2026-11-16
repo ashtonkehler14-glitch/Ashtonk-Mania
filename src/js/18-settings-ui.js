@@ -8,6 +8,7 @@ const SettingsPanel = {
   toggle() { this.o ? this.close() : this.open(); },
   open(section) {
     if (this.o) { if (section) this.scrollTo(section); return; }
+    MainMenus.close('settings');
     UISounds.click();
     const nav = h('div.sp-nav');
     const search = h('input.input.sp-search', { type: 'search', placeholder: 'Search settings…', 'aria-label': 'Search settings' });
@@ -85,11 +86,14 @@ const SettingsPanel = {
     const rank = sec => { const i = ORDER.indexOf(sec); return i < 0 ? ORDER.length : i; };
     const sorted = new Map([...bySec].sort((a, b) => rank(a[0]) - rank(b[0])));
     bySec.clear(); for (const [k, v] of sorted) bySec.set(k, v);
+    let sectionIndex = 0;
     for (const [sec, groups] of bySec) {
-      const secEl = h('div.sp-section', { dataset: { section: sec } }, h('h3', sec));
+      const accent = ['#ce3f87', '#8d50d6', '#bb870e'][sectionIndex++ % 3];
+      const secEl = h('div.sp-section', { dataset: { section: sec }, style: { '--section-accent': accent } }, h('h3', h('span', sec)));
       for (const [g, items] of groups) {
-        secEl.append(h('div.sp-group', g));
-        for (const it of items) secEl.append(this.row(it));
+        const card = h('div.sp-group-card', g !== sec ? h('h4.sp-group', g) : null);
+        for (const it of items) card.append(this.row(it));
+        secEl.append(card);
       }
       scroll.append(secEl);
     }
@@ -98,7 +102,7 @@ const SettingsPanel = {
     // (and past everything, at the very bottom: Neru, bored at her desk — NeruEggs.finePrint)
     const neru = !q && typeof NeruCameo !== 'undefined' ? NeruCameo.make('finePrint', 'nc-fine', { delay: 0 }) : null;
     if (neru) { scroll.append(neru); NeruEggs.finePrint(neru, scroll); }
-    clearEl(this.nav).append(...[...bySec.keys()].map(sec => h('button.sp-nb', { 'aria-label': sec, dataset: { sec }, onclick: () => { UISounds.click(); this.scrollTo(sec); } }, h('span.sp-nb-ind'), icon(SECTION_ICONS[sec] || 'gear'), h('span', sec.toLowerCase()))));
+    clearEl(this.nav).append(...[...bySec.keys()].map(sec => h('button.sp-nb', { 'aria-label': sec, dataset: { sec }, onclick: () => { UISounds.click(); this.scrollTo(sec); } }, h('span.sp-nb-ind'), icon(SECTION_ICONS[sec] || 'gear'), h('span', sec === 'User Interface' ? 'interface' : sec.toLowerCase()))));
     this.syncNav();
   },
   /** One setting as osu!lazer's form controls (SettingsItemV2): a rounded box with the caption inside, the control on
@@ -385,15 +389,15 @@ const DataPanel = {
     const kept = navigator.storage && navigator.storage.persisted ? navigator.storage.persisted().catch(() => null) : null;
     Promise.all([DB.estimate(), kept]).then(([e, k]) => {
       info.textContent = (e ? `Using ${fmtBytes(e.usage || 0)} of ${fmtBytes(e.quota || 0)} browser storage.` : 'Storage estimate unavailable.') +
-        (DB.memory || k == null ? '' : k ? ' The browser keeps it even when space runs low.' : ' The browser may clear it if the device runs low on space — installing the game keeps it, and Export all data saves a copy.');
+        (DB.memory || k == null ? '' : k ? ' The browser keeps it even when space runs low.' : ' The browser may clear it if the device runs low on space — installing the game keeps it, and Export beatmaps saves a copy of your songs.');
     });
     const btn = (label, ic, fn, cls = '') => h(`button.btn.sm${cls}`, { onclick: fn }, icon(ic), label);
     const confirmClear = async (what, fn) => { if (await Dialog.confirm(`Clear ${what}?`, 'This cannot be undone.', { ok: 'Clear', danger: true })) { await fn(); Toast.ok(`${what[0].toUpperCase() + what.slice(1)} cleared`); } };
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } }, info,
       h('div.row.wrap',
-        btn('Export all data', 'download', () => DataManager.exportAll()),
-        btn('Import data', 'upload', () => importViaPicker('.json')),
-        btn('Import Web-Osu-Mania backup', 'upload', () => WomImport.pickAndImport()),
+        btn('Export beatmaps', 'download', () => DataManager.exportAll()),
+        btn('Import beatmaps', 'upload', () => importViaPicker('.osz,.zip,.osu')),
+        btn('Import Web-Osu-Mania beatmaps', 'upload', () => WomImport.pickAndImport()),
         btn('Export settings', 'download', () => DataManager.exportSettings()),
         btn('Import settings', 'upload', async () => { const [f] = await pickFiles({ accept: '.json', multiple: false }); if (!f) return; try { const o = JSON.parse(await f.text()); await DataManager.importAll({ ...o, kind: 'settings' }); Toast.ok('Settings imported'); SettingsPanel.o && SettingsPanel.build(''); } catch (e) { Toast.err('Import failed', e.message); } }),
         btn('Keep data persistent', 'save', async () => { const ok = await DB.persist(); Toast.show(ok ? 'Storage marked persistent' : 'The browser declined persistent storage'); }),

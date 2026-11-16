@@ -462,6 +462,16 @@ const Overlays = {
   closeAll() { for (const o of [...this.stack].reverse()) o.close(); },
 };
 
+/** Top-level menu panels replace one another; their own dialogs can still open normally. */
+const MainMenus = {
+  close(except = '') {
+    Overlays.closeAll();
+    if (except !== 'music' && typeof NowPlaying !== 'undefined' && NowPlaying.open) NowPlaying.hide();
+    if (except !== 'notifications' && typeof Notifications !== 'undefined' && Notifications.isOpen()) Notifications.close();
+    if (except !== 'spectator' && typeof SpectatorChat !== 'undefined' && SpectatorChat.panel) SpectatorChat.close();
+  },
+};
+
 /** (`flags`: page-wide classes — BodyFlag — on while it's up, until it's gone from the page; `cls`: a class for its wrapper) */
 function makeOverlay(contentEl, { backdrop = true, onClose, onKey, animOutClass = 'out', dismissable = true, flags = [], cls = '' } = {}) {
   const wrap = h('div', { class: cls || null, style: { position: 'absolute', inset: '0' } });
@@ -977,6 +987,7 @@ const NowPlaying = {
   show() {
     this.ensure();
     if (this.open) return;
+    MainMenus.close('music');
     this.open = true;
     this.el.classList.add('show'); BodyFlag.set('np', true);
     this.render();
@@ -1363,6 +1374,7 @@ const Notifications = {
   isOpen() { return !!(this.el && this.el.classList.contains('open')); },
   toggle() { this.isOpen() ? this.close() : this.open(); },
   open() {
+    MainMenus.close('notifications');
     if (!this.el) {
       this.listEl = h('div.nf-list');
       this.el = h('div.nf-panel', { role: 'dialog', 'aria-label': 'Notifications' },
@@ -1515,7 +1527,7 @@ const Screens = {
       const prev = this.current;
       if (prev) {
         if (prev.canLeave && !(await prev.canLeave())) return;
-        if (!replace && prevName && !prev.transient) this.history.push(prevName);
+        if ((next.inGame || next.transient) && !replace && prevName && !prev.transient) this.history.push(prevName);
         if (this.history.length > 20) this.history.shift();
         const oldEl = prev.el;
         prev.leave && prev.leave();
@@ -1531,6 +1543,7 @@ const Screens = {
           setTimeout(() => oldEl.remove(), fromMenu ? 460 : 220);
         }
       }
+      if (!next.inGame && !next.transient) { this.history = name === 'home' ? [] : ['home']; MainMenus.close(); }
       this.current = next; this.currentName = name;
       if (next.keepParams) next._lastParams = params; // (Back returns to the same one: someone's profile, not yours)
       let el;

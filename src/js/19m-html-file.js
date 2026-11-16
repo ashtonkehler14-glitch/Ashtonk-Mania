@@ -223,7 +223,7 @@ const HtmlFile = {
     const note = t => h('div.muted', { style: { fontSize: '.8rem' } }, t);
     if (!Host.standalone) return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
       h('div.row.wrap', btn(kbHint('Save as an HTML file (Ctrl+S)', 'Save as an HTML file'), 'download', () => this.save())),
-      note('One file with the whole game inside: open it in a browser on any device to play without this website — offline too, or where the site is blocked. Multiplayer, beatmap search and rankings still connect to this site. Its beatmaps, scores and settings are its own: move them with Export all data / Import data.'));
+      note('One file with the whole game inside: open it in a browser on any device to play without this website — offline too, or where the site is blocked. Multiplayer, beatmap search and rankings still connect to this site. Move songs with Export beatmaps / Import beatmaps. Use your account code to sync your progress.'));
     const inp = h('input.input', { value: Host.server(), placeholder: 'https://…', 'aria-label': 'Game website', spellcheck: 'false', autocomplete: 'off', style: { flex: '1', minWidth: '180px' } });
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') apply(); });
     const apply = () => {

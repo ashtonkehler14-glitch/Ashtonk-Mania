@@ -2003,7 +2003,7 @@ await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     await S.import(keep);
     return out;
   });
-  check('a settings file with values of the wrong kind: those keep their defaults, the rest come in', bs.speed === 22 && bs.dim && bs.hue === 150 && bs.lane === 1 && bs.future === 3 && bs.evil === null && bs.proto, JSON.stringify(bs));
+  check('a settings file with values of the wrong kind: those keep their defaults, the rest come in', bs.speed === 22 && bs.dim && bs.hue === 150 && bs.lane === 1 && bs.future === undefined && bs.evil === null && bs.proto, JSON.stringify(bs));
   const wn = await page.evaluate(async () => {
     const W = WhatsNew; await DB.kvSet('changelog.seen', W.latest()); await DB.kvSet('changelog.seenLines', W.lines());
     await W.maybeShow(); const same = !!document.querySelector('.cl');
@@ -2575,23 +2575,22 @@ await page.evaluate(async id => { await AshtonkMania.SkinManager.select(id); Ash
   await wp.click('.setup-choice[data-id="yes"]');
   await wp.waitForSelector('.setup-step-wom .setup-wom-btn');
   check('setup: "Yes" explains where Web-Osu-Mania keeps its backup (Settings → Backup & Restore)', /Backup & Restore/.test(await wp.textContent('.setup-wom')));
+  const wBefore=await wp.evaluate(()=>['audio.master','gameplay.scrollSpeed','gameplay.scrollDirection','audio.offset','input.keybinds','wom.style'].map(k=>Settings.get(k)));
   const [chooser] = await Promise.all([wp.waitForEvent('filechooser'), wp.click('.setup-wom-btn')]);
   await chooser.setFiles(join(root, 'tests', 'fixtures', 'wom-backup.zip'));
   await wp.waitForFunction(() => /Imported/.test(document.querySelector('.setup-wom')?.textContent || ''), null, { timeout: 20000 });
   const w = await wp.evaluate(async () => {
     const S = AshtonkMania.Settings, sc = AshtonkMania.ScoreManager.scores.find(s => s.imported === 'wom');
-    return { text: document.querySelector('.setup-wom').textContent, sets: AshtonkMania.BeatmapManager.sets.filter(s => s.onlineId === 424242).length,
+    return { prefs:['audio.master','gameplay.scrollSpeed','gameplay.scrollDirection','audio.offset','input.keybinds','wom.style'].map(k=>S.get(k)), text: document.querySelector('.setup-wom').textContent, sets: AshtonkMania.BeatmapManager.sets.filter(s => s.onlineId === 424242).length,
       vol: S.get('audio.master'), speed: S.get('gameplay.scrollSpeed'), dir: S.get('gameplay.scrollDirection'), off: S.get('audio.offset'), k4: S.get('input.keybinds')[4],
       score: sc && { v: sc.version, mods: sc.mods, rate: sc.rate, acc: sc.accuracy, grade: sc.grade, counts: sc.counts, n: AshtonkMania.ScoreManager.scores.length },
       skin: AshtonkMania.SkinManager.current.id, style: S.get('wom.style'), hue: S.get('wom.hue'), jud: S.get('wom.judgements'), ns: S.get('wom.noteScale'), hp: S.get('wom.hitPositionOffset'), dk: S.get('wom.darkerHolds'), el: S.get('wom.earlyLate'),
-      col: (await AshtonkMania.DB.kvGet('collections')).find(c => c.name === 'WOM favourites'), downloaded: AshtonkMania.BeatmapManager.sets.filter(s => s.onlineId === 999).length };
+      col: (await AshtonkMania.DB.kvGet('collections', [])).find(c => c.name === 'WOM favourites'), downloaded: AshtonkMania.BeatmapManager.sets.filter(s => s.onlineId === 999).length };
   });
   check('Web-Osu-Mania backup: its stored beatmaps are imported', w.sets === 1, JSON.stringify(w));
-  check('Web-Osu-Mania backup: settings and keybinds carry over', w.vol === 0.6 && w.speed === 27 && w.dir === 'up' && w.off === 12 && JSON.stringify(w.k4) === JSON.stringify([['KeyA', 'KeyZ'], ['KeyS'], ['KeyK'], ['KeyL']]), JSON.stringify(w));
-  check('Web-Osu-Mania backup: its skin comes across (style, colour, judgements, note size, hit position)', w.skin === 'default' && w.style === 'diamonds' && w.hue === 120 && w.jud === 'fnf' && w.ns === 0.7 && w.hp === 150 && w.dk === false && w.el === 300, JSON.stringify(w));
-  check('Web-Osu-Mania backup: high scores land on the right difficulty (mods, rate, judgements); ones for missing maps are left out', w.score && w.score.v === 'Online Hard' && w.score.mods.join() === 'DT,MR' && w.score.rate === 1.5 && w.score.counts.join() === '300,40,5,2,1,3' && w.score.n === 1, JSON.stringify(w.score));
-  check('Web-Osu-Mania backup: collection songs missing from the backup are downloaded, and the collection holds them all', w.col && w.col.hashes.length > 2 && w.downloaded === 1, JSON.stringify({ col: w.col && w.col.hashes.length, dl: w.downloaded }));
-  check('the setup screen says what came across', /2 beatmap sets \(1 downloaded for your collections\), 1 score, 1 collection, settings and keybinds/.test(w.text), w.text);
+  check('Web-Osu-Mania backup leaves preferences and skin choices unchanged',JSON.stringify(w.prefs)===JSON.stringify(wBefore),JSON.stringify(w));
+  check('Web-Osu-Mania backup leaves account scores and collections alone',!w.score && !w.col && w.downloaded===0,JSON.stringify(w));
+  check('the setup screen reports the beatmaps imported',/Imported.*1 beatmap set/.test(w.text),w.text);
   // Sign out here (Your code): back at the setup's first question — and only that
   await wp.evaluate(() => AshtonkMania.Onboarding.finish());
   await wp.waitForFunction(() => !document.querySelector('.setup'), null, { timeout: 5000 });
@@ -2961,38 +2960,17 @@ check('identical toasts don\'t stack', dupToasts === 2, String(dupToasts));
   });
   check('a play stored with its timing (as before) has it moved apart, still shows it, and takes it along when deleted', mv.moved && mv.shown && mv.gone, JSON.stringify(mv));
 }
-// Export all data writes the backup a part at a time, each play and replay on a line of its own, and such a backup is
-// read back a line at a time (as one string, a long-time player's save is more than a phone can hold)
+// Full backups contain song files; account records cannot be restored from an edited file.
 {
   const ex = await page.evaluate(async () => {
-    const A = AshtonkMania, got = [], keep = window.downloadBlob;
-    window.downloadBlob = (b, n) => got.push({ b, n });
+    const got = [], keep = window.downloadBlob, before = JSON.stringify({scores:ScoreManager.scores.length,replays:ReplayManager.list.length,medals:Medals.unlocked()});
+    window.downloadBlob = (b,n) => got.push({b,n});
     try { await DataManager.exportAll(); } finally { window.downloadBlob = keep; }
-    const text = await got[0].b.text(), lines = text.split('\n'), obj = JSON.parse(text), nS = A.ScoreManager.scores.length, nR = A.ReplayManager.list.length;
-    // (read back as another backup — new ids, so this device's own plays stay as they are)
-    await DataManager.importFile(new File([text.replace(/"id":"sc-/g, '"id":"bk-sc-').replace(/"id":"rp-/g, '"id":"bk-rp-')], 'backup.json', { type: 'application/json' }));
-    const added = A.ScoreManager.scores.filter(s => s.id.startsWith('bk-')), addedR = A.ReplayManager.list.filter(r => r.id.startsWith('bk-'));
-    const timedId = obj.scores.find(o => o.hitErrors && o.hitErrors.length)?.id, stored = timedId && await A.DB.kvGet('timing/bk-' + timedId, null), rep = addedR[0] && await A.ReplayManager.get(addedR[0].id);
-    const res = { first: lines[0].endsWith(',"scores":['), lines: lines.length, nS, nR, inFile: [obj.scores.length, obj.replays.length], name: got[0].n, added: added.length, addedR: addedR.length,
-      marked: added.every(s => s.imported === 'backup'), keptTiming: !!(stored && stored.hitErrors && stored.hitErrors.length), keptKeys: !!(rep && rep.events && rep.events.length), light: added.every(s => !('hitErrors' in s)) };
-    // (a backup as older versions wrote it — all on one line — with no replays: it failed with "storeNames parameter was empty")
-    let oldErr = null;
-    // (and a damaged play in it — counts that aren't a list — is left out, not let in to break your stats)
-    try { await DataManager.importFile(new File([JSON.stringify({ app: 'Ashtonk!mania', kind: 'backup', settings: {}, scores: [{ ...obj.scores[0], id: 'bk-old1' }, { ...obj.scores[0], id: 'bk-bad1', counts: 'oops' }], replays: [{ ...obj.replays[0], id: 'bk-badrp', events: 'oops' }] })], 'old.json')); } catch (e) { oldErr = e.message; }
-    res.old = { err: oldErr, found: A.ScoreManager.scores.some(s => s.id === 'bk-old1'), bad: A.ScoreManager.scores.some(s => s.id === 'bk-bad1') || A.ReplayManager.list.some(r => r.id === 'bk-badrp') };
-    added.push({ id: 'bk-old1' });
-    // (and in a browser that can't read a file a part at a time: whole, as before)
-    const TDS = window.TextDecoderStream; delete window.TextDecoderStream;
-    try { await DataManager.importFile(new File([text.replace(/"id":"sc-/g, '"id":"bk2-sc-').replace(/"id":"rp-/g, '"id":"bk2-rp-')], 'backup.json')); } finally { window.TextDecoderStream = TDS; }
-    const added2 = A.ScoreManager.scores.filter(s => s.id.startsWith('bk2-')), addedR2 = A.ReplayManager.list.filter(r => r.id.startsWith('bk2-'));
-    res.whole = added2.length === nS && addedR2.length === nR;
-    added.push(...added2); addedR.push(...addedR2);
-    for (const s of added) await A.DB.del('scores', s.id);
-    for (const r of addedR) await A.DB.del('replays', r.id);
-    await A.ScoreManager.init(); await A.ReplayManager.init(); A.Bus.emit('scores:changed'); A.Bus.emit('replays:changed');
-    return res;
+    const zip = await ZipReader.fromFile(got[0].b);
+    let rejected=false;try{await DataManager.importAll({app:APP_NAME,kind:'backup',settings:{'medals.unlocked':{'ss4':1}},scores:[{id:'forged'}]});}catch{rejected=true;}
+    return {name:got[0].n,files:zip.entries.map(e=>e.name),rejected,unchanged:before===JSON.stringify({scores:ScoreManager.scores.length,replays:ReplayManager.list.length,medals:Medals.unlocked()})};
   });
-  check('Export all data writes each play and replay on a line of its own; such a backup is read back a line at a time, timing and key presses included (and one all on a line, without replays, as before)', ex.first && ex.inFile[0] === ex.nS && ex.inFile[1] === ex.nR && ex.lines === ex.nS + ex.nR + 3 && ex.nS > 0 && ex.nR > 0 && ex.added === ex.nS && ex.addedR === ex.nR && ex.marked && ex.keptTiming && ex.keptKeys && ex.light && /^ashtonk-mania-backup-.*\.json$/.test(ex.name) && !ex.old.err && ex.old.found && !ex.old.bad && ex.whole, JSON.stringify(ex));
+  check('Full backups export beatmap assets only and reject imported account progress', /beatmaps-.*\.zip$/.test(ex.name) && ex.files.some(n=>/\.osu$/i.test(n)) && !ex.files.some(n=>/(scores|replays|medals|settings)\.json$/i.test(n)) && ex.rejected && ex.unchanged, JSON.stringify(ex));
 }
 // results never scroll: with the statistics and "More statistics" open, in a small window, the panels shrink to fit
 {
