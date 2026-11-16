@@ -5600,11 +5600,11 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #bc3978 !important; color: #fff; }
 .lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"] { --c: #8054bf !important; color: #fff; }
 .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #3d3745 !important; }
-.lz-menu .lz-bg { background: linear-gradient(#ffffff09, #00000008), var(--c); border-radius: 16px; box-shadow: inset 0 1px #ffffff26, 0 3px 8px #23172d20; }
+.lz-menu .lz-bg { background: linear-gradient(#ffffff14, #00000008), var(--c); border-radius: 16px; box-shadow: inset 0 0 0 1px #ffffff30, inset 0 2px #ffffff1c, 0 5px 14px #21172b50; }
 .lz-menu .lz-btn { color: #fff; }
 .lz-menu .lz-bg::before { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid #fff1be; opacity: 0; transition: opacity 150ms ease; pointer-events: none; }
 .lz-menu .lz-btn:hover .lz-bg::before, .lz-menu .lz-btn:focus-visible .lz-bg::before { opacity: .85; }
-.lz-menu .lz-label { font-weight: 600; letter-spacing: .015em; }
+.lz-menu .lz-label { font-weight: 700; letter-spacing: .015em; text-shadow: 0 1px 3px #00000040; }
 .lz-menu .lz-btn[data-id="play"] .lz-label, .lz-menu .lz-btn[data-id="solo"] .lz-label { text-shadow: none; }
 .lz-menu .lz-btn[data-id="play"] .lz-ico .i, .lz-menu .lz-btn[data-id="solo"] .lz-ico .i { filter: none; }
 /* Glass-wave logo: a lightweight painted face; no live glass blur or extra animation. */
@@ -16812,7 +16812,7 @@ onmessage = async ({ data: m }) => {
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(285, .14, .65)); g.addColorStop(1, hsl(290, .13, .56));
+    g.addColorStop(0, hsl(285, .08, .59)); g.addColorStop(1, hsl(290, .08, .52));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
@@ -16821,13 +16821,13 @@ onmessage = async ({ data: m }) => {
     x.lineWidth = 2.2; x.lineJoin = 'miter';
     for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 3 === 0)) {
       const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
-      x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
+      x.strokeStyle = hsl(hue, sat, l, 0.20); up(ax, ay, s); x.stroke();
     }
     // the solid banks pick out the edges with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
     x.shadowColor = 'transparent'; x.shadowBlur = 0;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, 0.70)); sg.addColorStop(1, hsl(hue + 3, sat, 0.51));
+    sg.addColorStop(0, hsl(hue, sat, 0.70, .22)); sg.addColorStop(1, hsl(hue + 3, sat, 0.51, .22));
     x.fillStyle = sg;
     x.beginPath();
     for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
@@ -16839,7 +16839,7 @@ onmessage = async ({ data: m }) => {
     for (let i = 0; i < this.RING.length; i++) {
       if (i % 2) continue;
       const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
-      x.strokeStyle = hsl(...c); up(ax, ay, s); x.stroke();
+      x.strokeStyle = hsl(c[0], c[1] * .65, c[2], .30); up(ax, ay, s); x.stroke();
     }
     x.setTransform(1, 0, 0, 1, 0, 0);
   },
@@ -25482,6 +25482,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16c', title: 'A clearer home menu', sections: [
+    { icon: 'home', title: 'Home', items: ['Quieter background triangles and stronger button edges, shadows and labels make the home menu easier to focus on.'] },
+  ] },
   { id: '2026.11.16b', title: 'A softer home screen', sections: [
     { icon: 'home', title: 'Home', items: ['Slanted home buttons now have rounded corners and white labels, with a calmer triangle background.', 'Flowing waves replace the music-reactive bars around the logo. Home menu tips have been removed.'] },
   ] },
@@ -35959,7 +35962,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'b3abeb841d96';
+const APP_BUILD = 'f3c53f4d6705';
 
 const App = {
   lastReport: null,

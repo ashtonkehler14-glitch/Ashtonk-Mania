@@ -694,7 +694,7 @@ onmessage = async ({ data: m }) => {
     const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
     // the gradient: lighter at the top, darker at the bottom
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(285, .14, .65)); g.addColorStop(1, hsl(290, .13, .56));
+    g.addColorStop(0, hsl(285, .08, .59)); g.addColorStop(1, hsl(290, .08, .52));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     x.setTransform(k, 0, 0, k, ox, oy);
     const R3 = Math.sqrt(3) / 2;
@@ -703,13 +703,13 @@ onmessage = async ({ data: m }) => {
     x.lineWidth = 2.2; x.lineJoin = 'miter';
     for (const [ax, ay, s] of this.OUTLINE.filter((_, i) => i % 3 === 0)) {
       const l = 0.68 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
-      x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
+      x.strokeStyle = hsl(hue, sat, l, 0.20); up(ax, ay, s); x.stroke();
     }
     // the solid banks pick out the edges with lazer's soft shadow
     // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
     x.shadowColor = 'transparent'; x.shadowBlur = 0;
     const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat, 0.70)); sg.addColorStop(1, hsl(hue + 3, sat, 0.51));
+    sg.addColorStop(0, hsl(hue, sat, 0.70, .22)); sg.addColorStop(1, hsl(hue + 3, sat, 0.51, .22));
     x.fillStyle = sg;
     x.beginPath();
     for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
@@ -721,7 +721,7 @@ onmessage = async ({ data: m }) => {
     for (let i = 0; i < this.RING.length; i++) {
       if (i % 2) continue;
       const [ax, ay, s] = this.RING[i], c = accents[i % accents.length];
-      x.strokeStyle = hsl(...c); up(ax, ay, s); x.stroke();
+      x.strokeStyle = hsl(c[0], c[1] * .65, c[2], .30); up(ax, ay, s); x.stroke();
     }
     x.setTransform(1, 0, 0, 1, 0, 0);
   },

@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16c', title: 'A clearer home menu', sections: [
+    { icon: 'home', title: 'Home', items: ['Quieter background triangles and stronger button edges, shadows and labels make the home menu easier to focus on.'] },
+  ] },
   { id: '2026.11.16b', title: 'A softer home screen', sections: [
     { icon: 'home', title: 'Home', items: ['Slanted home buttons now have rounded corners and white labels, with a calmer triangle background.', 'Flowing waves replace the music-reactive bars around the logo. Home menu tips have been removed.'] },
   ] },
