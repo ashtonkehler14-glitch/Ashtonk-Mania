@@ -5751,13 +5751,13 @@ button.chat-avatar:disabled { cursor: default; }
 #overlay-root > .sp-wrap > .backdrop { background: rgba(12, 9, 18, .48); animation: fadeIn var(--t-med) ease both; }
 #overlay-root > .sp-wrap > .backdrop.out { animation: fadeOut var(--t-fast) ease both; }
 .sp-wrap > .neru-cameo.sp-neru-peek {
-  left: calc(var(--menu-gutter) + var(--settings-width) - 48px); top: calc(var(--toolbar-h) + 100px);
-  bottom: auto; height: calc(min(240px, calc(34 * var(--vh))) * var(--nc-s, 1)); width: auto;
-  z-index: 0; rotate: 10deg; transform-origin: 25% 100%; pointer-events: none;
-  mask-image: linear-gradient(#000 65%, transparent 100%); -webkit-mask-image: linear-gradient(#000 65%, transparent 100%);
+  --peek-height: calc(min(210px, calc(30 * var(--vh))) * var(--nc-s, 1));
+  left: calc(var(--menu-gutter) + var(--settings-width) - var(--peek-height) * .66);
+  top: calc(var(--toolbar-h) + 68px); bottom: auto; height: var(--peek-height); width: auto;
+  z-index: 0; rotate: 42deg; transform-origin: 50% 100%; pointer-events: none;
 }
 .sp-neru-peek.in .nc-body { animation: settingsNeruIn calc(420ms * var(--anim)) var(--ease-out) both; }
-@keyframes settingsNeruIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+@keyframes settingsNeruIn { from { opacity: 0; transform: translateX(-24px) rotate(-5deg); } to { opacity: 1; transform: none; } }
 .sp-wrap.closing > .sp-neru-peek { opacity: 0; transition: opacity 180ms ease; }
 body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-settings > .nc-peek { opacity: 0; pointer-events: none; }
 /* Temporary peeks live outside the scaled app, so size them in real viewport units. */

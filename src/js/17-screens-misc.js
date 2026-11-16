@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16u', title: 'Cleaner Neru peek', sections: [
+    { title: 'Interface', items: ['Neru now leans around the settings sidebar with her body hidden behind it.'] }
+  ] },
   { id: '2026.11.16t', title: 'Weekly cover and settings sidebar', sections: [
     { title: 'Interface', items: ['Settings is back in the left sidebar, with a dimmed background and Neru peeking around its edge.', 'Neru’s side appearances recover properly after resizing, and rapid pose changes no longer show an older pose.', 'The weekly challenge’s cover is now saved on this device for return visits and offline viewing.'] }
   ] },
