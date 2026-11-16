@@ -49,6 +49,15 @@ try {
   await page.locator('.se-hud > summary').click();
   await page.waitForFunction(() => SkinEditor.boxEls.has('pp') && SkinEditor.boxEls.has('hp'));
   assert.ok(await page.locator('.se-item[data-id=pp]').count()); assert.ok(await page.locator('.se-item[data-id=hp]').count());
+  await page.waitForFunction(()=>SkinEditor.boxEls.has('chat'));
+  assert.ok(await page.locator('.se-item[data-id=chat]').isVisible());
+  assert.ok(await page.locator('.gp-chat .gp-chat-l').count(),'Chat preview has sample messages');
+  const chatBefore=await page.locator('.gp-chat').boundingBox();
+  await page.evaluate(()=>SkinEditor.setPart('chat',{x:.1,y:-.1,s:1.2}));
+  await page.waitForTimeout(100);
+  const chatAfter=await page.locator('.gp-chat').boundingBox();
+  assert.ok(chatAfter.x>chatBefore.x && chatAfter.width>chatBefore.width,'Chat moves and scales in the preview');
+  assert.equal(await page.evaluate(()=>Settings.get('hud.layout').chat.s),1.2);
   const advanced = page.locator('.se-advanced > summary');
   assert.equal(await advanced.evaluate(el => el.parentElement.open), false);
   assert.equal(await page.locator('.se-item[data-id=background]').isVisible(), false);

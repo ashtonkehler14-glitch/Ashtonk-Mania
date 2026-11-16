@@ -511,7 +511,7 @@ const RankedMatch = {
     requestAnimationFrame(() => { this.chatList.scrollTop = this.chatList.scrollHeight; });
     return box;
   },
-  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text) : h('div.rkm-msg.sys', m.text); },
+  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text, m.mentions) : h('div.rkm-msg.sys', m.text); },
   addChat(m) {
     if (!this.chatList) return;
     this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));

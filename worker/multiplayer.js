@@ -150,6 +150,19 @@ const defaultSettings = () => ({ type: 'h2h', win: 'score', size: MAX_PLAYERS, q
 /** Songs waiting their turn in a room's queue, at most. */
 export const QUEUE_MAX = 20;
 
+/** Mention identities come from authenticated participants, never the message payload. */
+function chatMentionData(text, people) {
+  if (!text.includes('@')) return {};
+  const names = new Map();
+  for (const p of people) if (p?.pid && p.name && p.vis !== 'offline') names.set(p.name.toLocaleLowerCase(), { pid: p.pid, name: p.name, avatar: p.avatar || '' });
+  if (!names.size) return {};
+  const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])@(${[...names.values()].sort((a,b)=>b.name.length-a.name.length).map(p=>escape(p.name)).join('|')})(?=$|[^\\p{L}\\p{N}_])`, 'giu');
+  const seen = new Set(), mentions = [];
+  for (const m of text.matchAll(regex)) { const p = names.get(m[2].toLocaleLowerCase()); if (!seen.has(p.pid)) { seen.add(p.pid); mentions.push(p); } if (mentions.length >= 8) break; }
+  return mentions.length ? { mentions } : {};
+}
+
 export class RoomLogic {
   constructor(code, now = () => Date.now(), rnd = Math.random) {
     this.code = code; this.now = now; this.rnd = rnd;
@@ -435,7 +448,7 @@ export class RoomLogic {
       case 'ping': return [{ to: id, msg: { t: 'pong', c: m.c, s: this.now() } }];
       case 'chat': {
         const text = str(m.text, 300);
-        return text ? [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, avatar: p.avatar, text, ts: this.now() } }] : [];
+        return text ? [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, avatar: p.avatar, text, ...chatMentionData(text, this.players), ts: this.now() } }] : [];
       }
       case 'suggest': {
         const map = cleanSuggestion(m.map);
@@ -2464,14 +2477,15 @@ export class PresenceLogic {
         }
       }
       text = starred;
+      const mentionData = chatMentionData(text, this.users.values());
       if (msg.t === 'specChat') {
-        const line = { from, text, at: t };
+        const line = { from, text, ...mentionData, at: t };
         (specHost.specLines || (specHost.specLines = [])).push(line);
         if (specHost.specLines.length > 100) specHost.specLines.shift();
         return [specHostId, ...specHost.watchers].map(to => ({ to, msg: { t: 'specChat', id: specHostId, line } })).concat(auto);
       }
       if (msg.t === 'say') {
-        const line = { ch: '#lobby', from, text, at: t };
+        const line = { ch: '#lobby', from, text, ...mentionData, at: t };
         this.chat.push(line); if (this.chat.length > PresenceLogic.CHAT_KEEP) this.chat.shift();
         if (this.persistChat) this.persistChat(this.chat);
         return [{ to: 'all', msg: { t: 'say', ...line } }, ...auto];
@@ -2481,8 +2495,8 @@ export class PresenceLogic {
       const targets = this.byPid(to);
       if (!targets.length) return [{ to: id, msg: { t: 'error', msg: 'That player is offline.' } }];
       const toName = this.users.get(targets[0]).name;
-      return [...targets.map(x => ({ to: x, msg: { t: 'pm', with: { pid: u.pid, name: u.name, avatar: u.avatar }, from, text, at: t } })),
-        ...this.byPid(u.pid).map(x => ({ to: x, msg: { t: 'pm', with: { pid: to, name: toName }, from, text, at: t, mine: true } }))];
+      return [...targets.map(x => ({ to: x, msg: { t: 'pm', with: { pid: u.pid, name: u.name, avatar: u.avatar }, from, text, ...mentionData, at: t } })),
+        ...this.byPid(u.pid).map(x => ({ to: x, msg: { t: 'pm', with: { pid: to, name: toName }, from, text, ...mentionData, at: t, mine: true } }))];
     }
     if (msg.t === 'vis') {
       const v = cleanVis(msg.v);

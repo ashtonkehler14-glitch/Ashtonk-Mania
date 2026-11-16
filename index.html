@@ -5987,6 +5987,14 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .mp-suggest-action[data-action=set] { background: #9b306b; color: #fff; }
 .mp-suggest-action[data-action=queue] { background: #694180; color: #fff; }
 .mp-suggest-action:disabled { opacity: .45; cursor: default; }
+
+
+.chat-mention-link { pointer-events: auto; display: inline; padding: 1px 4px; margin: 0 1px; border: 0; border-radius: 5px; background: #b875e233; color: #efb9ff; font: inherit; font-weight: 650; line-height: inherit; cursor: pointer; box-decoration-break: clone; }
+.chat-mention-link:hover { background: #a14b9a; color: #fff; }
+.chat-mention-link:focus-visible { outline: 2px solid #ffa8d1; outline-offset: 2px; }
+.chat-copy > .chat-emoji-only, .ch-text.chat-emoji-only, .spectator-chat .chat-copy > .chat-emoji-only { font-size: 36px; line-height: 1.3; text-shadow: none; }
+body.se-open .gp-chat { opacity: 1; pointer-events: none; }
+body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -14452,8 +14460,19 @@ function chatAvatar(from = {}, size = 28) {
     onclick: e => { e.preventDefault(); e.stopPropagation(); if (!pid) return; UISounds.click(); UserPanels.profile({ ...(online || {}), pid, name, avatar }); }
   }, picture);
 }
-function compactChatLine(cls, from, text) {
-  return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
+function singleChatEmoji(text) {
+  const value = String(text || '').trim();
+  if (!value || !/^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(value)) return false;
+  if (typeof Intl.Segmenter === 'function') return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].length === 1;
+  return /^(?:\p{Regional_Indicator}{2}|[0-9#*]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0F\p{Emoji_Modifier}]*(?:\u200D\p{Extended_Pictographic}[\uFE0F\p{Emoji_Modifier}]*)*)$/u.test(value);
+}
+function chatText(cls, text, mentions = []) {
+  const el = h(cls); el.classList.toggle('chat-emoji-only', singleChatEmoji(text));
+  el.append(ChatMentions.render(String(text || ''), mentions)); return el;
+}
+function compactChatLine(cls, from, text, mentions = []) {
+  ChatMentions.remember(from);
+  return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), chatText('span', text, mentions)));
 }
 
 /** Consecutive chat lines share a header for five minutes; system/action lines break the group. */
@@ -16263,6 +16282,28 @@ const ChatMentions = {
   has(text, name = ProfileManager.profile.name) {
     if (!name?.trim()) return false;
     return new RegExp(`(^|[^\\p{L}\\p{N}_])@${this.escape(name.trim())}(?=$|[^\\p{L}\\p{N}_])`, 'iu').test(String(text || ''));
+  },
+  identities: new Map(),
+  remember(player) {
+    if (player?.pid && player.name) this.identities.set(player.name.toLocaleLowerCase(), { pid: player.pid, name: player.name, avatar: player.avatar || '' });
+    while (this.identities.size > 500) this.identities.delete(this.identities.keys().next().value);
+  },
+  render(text, mentions = []) {
+    const fragment = document.createDocumentFragment();
+    if (!text.includes('@')) { fragment.append(document.createTextNode(text)); return fragment; }
+    for (const p of [...(Presence.players || []), ...(Multiplayer.room?.players || []), { pid: Presence.pid(), name: ProfileManager.profile.name }]) this.remember(p);
+    const known = new Map(this.identities);
+    for (const p of Array.isArray(mentions) ? mentions : []) if (p?.pid && typeof p.name === 'string' && p.name) { this.remember(p); known.set(p.name.toLocaleLowerCase(), p); }
+    if (!known.size) { fragment.append(document.createTextNode(text)); return fragment; }
+    const names = [...known.values()].map(p => p.name).sort((a,b) => b.length-a.length);
+    const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])@(${names.map(n=>this.escape(n)).join('|')})(?=$|[^\\p{L}\\p{N}_])`, 'giu');
+    let cursor = 0;
+    for (const match of text.matchAll(regex)) {
+      const start = match.index + match[1].length, end = match.index + match[0].length, player = known.get(match[2].toLocaleLowerCase());
+      fragment.append(document.createTextNode(text.slice(cursor,start)), h('button.chat-mention-link', { type: 'button', title: `Open ${player.name}'s profile`, 'aria-label': `Open ${player.name}'s profile`, onclick: e => { e.preventDefault(); e.stopPropagation(); UISounds.click(); UserPanels.profile({ ...player }); } }, text.slice(start,end)));
+      cursor = end;
+    }
+    fragment.append(document.createTextNode(text.slice(cursor))); return fragment;
   },
   players(input) {
     const room = Multiplayer.room;
@@ -21199,16 +21240,20 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
-    for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
-    this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
+    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text, m.mentions) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const preview = this._hudAll;
+    const messages = preview ? [{ from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Chat messages appear here.', ts: Date.now() }, { from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Move and resize chat to fit your skin.', ts: Date.now() + 1 }] : (Multiplayer.chat || []).slice(-5);
+    for (const m of messages) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
+    this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, readOnly: preview, disabled: !preview, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {
+      if (preview) { e.preventDefault(); return; }
       if (e.key === 'Enter') { e.preventDefault(); const t = this.gpChatIn.value.trim(); if (t) Multiplayer.send({ t: 'chat', text: t }); this.gpChatIn.value = ''; this.gpChatIn.blur(); }
     });
     this.gpChatIn.addEventListener('focus', () => this.gpChat.classList.add('typing'));
     this.gpChatIn.addEventListener('blur', () => { this.gpChat.classList.remove('typing'); if (this.el) this.el.focus({ preventScroll: true }); });
     this.gpChat = h('div.gp-chat', list, this.gpChatIn);
     this.hud.append(this.gpChat);
+    if (preview) { this.gpChat.classList.add('open', 'fresh'); this.gpChatIn.placeholder = 'Chat preview'; return; }
     this._gpChatOff = Bus.on('mp:chat', m => {
       const el = line(m); if (!el) return;
       list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); trimChatLines(list, 5);
@@ -21218,13 +21263,19 @@ const GameplayScreen = {
   gpChatOpen() { const s = this.s; return !!(s && s.mp && s.finished); },
   /** (the box can't be clicked into mid-song: it would take the keys) */
   gpChatTick() {
+    if (this._hudAll) return;
     const R = this.renderer;
-    if (R && R.W && (R.stageX !== this._gpSx || R.W !== this._gpW)) {
-      // (the stage reaching in under the chat's corner — a phone's widened columns: there only a new message shows, for
-      // a moment, not lines of chat over the notes. Its edge measured once a size, not as the stage moves)
-      if (R.W !== this._gpW) { const c = this.gpChat, p = c.offsetParent; this._gpW = R.W; this._gpEdge = (c.offsetLeft + c.offsetWidth) / Math.max(1, p ? p.clientWidth : innerWidth); }
-      this._gpSx = R.stageX;
-      this.gpChat.classList.toggle('over', R.stageX / R.W < this._gpEdge);
+    const placement = HudLayout.part('chat');
+    if (R && R.W && (R.stageX !== this._gpSx || R.stageW !== this._gpStageW || R.W !== this._gpW || R.H !== this._gpH || placement !== this._gpPlacement)) {
+      // Measure only when the stage, viewport or saved placement changes; transforms affect the visible bounds.
+      if (R.W !== this._gpW || R.H !== this._gpH || placement !== this._gpPlacement) {
+        const bounds = this.gpChat.getBoundingClientRect(), parent = this.hud.getBoundingClientRect();
+        this._gpW = R.W; this._gpH = R.H; this._gpPlacement = placement;
+        this._gpEdge = (bounds.right - parent.left) / Math.max(1, parent.width);
+        this._gpLeft = (bounds.left - parent.left) / Math.max(1, parent.width);
+      }
+      this._gpSx = R.stageX; this._gpStageW = R.stageW;
+      this.gpChat.classList.toggle('over', R.stageX / R.W < this._gpEdge && (R.stageX + R.stageW) / R.W > this._gpLeft);
     }
     const open = this.gpChatOpen();
     if (open === this._gpOpen) return;
@@ -21703,6 +21754,8 @@ const GameplayScreen = {
     const s = this.s;
     // (the skin editor shows every component, the ones turned off too — dimmed — so each can be placed before it's on)
     const all = this._hudAll = !!(this.params.skinEditor || (typeof SkinEditor !== 'undefined' && SkinEditor.on));
+    if (this._gpChatOff) this._gpChatOff(); this._gpChatOff = null;
+    this.gpChatIn = this.gpChat = null; this._gpW = this._gpSx = null;
     clearEl(this.hud);
     this.hud.classList.toggle('spectator-hud', !!s.spectate);
     this._pq = this._pieQ = this._lead = this._canSkip = this._inBreak = this._progT = this._ppJudged = this._scT = undefined; this._lastSc = this._lastAcc = this._lastTT = this._hudOff = undefined; this._ctrl = false;
@@ -21750,7 +21803,7 @@ const GameplayScreen = {
       this.jc = { items, el: h(`div.hud-jc.${Settings.get('gameplay.judgementCounterFlow') === 'horizontal' ? 'h' : 'v'}`, ...items.map(i => i.el)) };
       this.hud.append(this.jc.el);
     }
-    if (s.mp) this.buildGpChat(s);
+    if (s.mp || all) this.buildGpChat(s);
     if (s.mp) { this.mpBoard = h('div.hud-mp'); this.hud.append(this.mpBoard); this._mpSent = 0; this._mpRows = null; this.mpTeams = null; this._mpT = 0; this._mpDrawn = 0; }
     else this.buildLeaderboard();
     this.board().classList.toggle('lb-off', !Settings.get('gameplay.leaderboard') && !all);
@@ -23409,6 +23462,7 @@ const HUD_PARTS = [
   { id: 'stageHint', name: 'Skin hit-line graphic', icon: 'image', canvas: true, advanced: true, texture: 'stageHint', origin: 'top left' },
   { id: 'judgement', name: 'Judgements', icon: 'target', canvas: true, setting: 'gameplay.showJudgements', origin: 'center center' },
   { id: 'keys', name: 'Key overlay', icon: 'keyboard', canvas: true, setting: 'input.keyOverlay', origin: 'top left' },
+  { id: 'chat', name: 'Chat', icon: 'chat', sel: '.gp-chat', origin: 'bottom left' },
   { id: 'badge', name: 'Auto / replay badge', icon: 'film', sel: '.hud-replay', origin: 'top center' },
 ];
 
@@ -23436,6 +23490,7 @@ const HudLayout = {
     if (!hud || !p.sel) return [];
     const root = p.scene ? GameplayScreen.el : hud;
     const all = [...root.querySelectorAll(p.sel)];
+    if (p.id === 'chat' && typeof SpectatorChat !== 'undefined' && SpectatorChat.panel && Spectate.watchingNow()) all.push(SpectatorChat.panel);
     return all.length > 1 ? all.filter(el => !all.some(o => o !== el && o.contains(el))) : all;
   },
   /** The combo counter's place, size and visibility ({ x, y, s, off }), for the stage renderer. */
@@ -23457,7 +23512,7 @@ const HudLayout = {
       const c = L[p.id] || {}, off = !!c.off || (editing && !!p.setting && !Settings.get(p.setting));
       for (const el of this.els(hud, p)) {
         if (el.dataset.hlBase == null) { el.style.translate = ''; el.dataset.hlBase = getComputedStyle(el).translate || 'none'; }
-        const [bx, by] = this.split(el.dataset.hlBase), dx = (c.x || 0) * W, dy = (c.y || 0) * H, s = c.s && c.s !== 1 ? c.s : 0;
+        const [bx, by] = this.split(el.dataset.hlBase), external = !hud.contains(el), size = external ? hud.getBoundingClientRect() : null, dx = (c.x || 0) * (size ? size.width : W), dy = (c.y || 0) * (size ? size.height : H), s = c.s && c.s !== 1 ? c.s : 0;
         el.style.translate = dx || dy ? `calc(${bx} + ${dx.toFixed(1)}px) calc(${by} + ${dy.toFixed(1)}px)` : '';
         el.style.scale = s ? String(s) : '';
         el.style.transformOrigin = s ? p.origin : '';
@@ -25747,6 +25802,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16af', title: 'Chat placement and clickable mentions', sections: [
+    { title: 'Chat', items: ['Chat has a preview in the skin editor so you can move and resize it for each skin and key count.', 'Mentions have a colourful highlight. Click one to open that player’s profile.', 'Messages containing just one emoji display it at a larger size.'] }
+  ] },
   { id: '2026.11.16ae', title: 'Use room recommendations', sections: [
     { title: 'Multiplayer', items: ['Recommended songs have Set song and Add to queue actions, following the room’s host and queue permissions.', 'Missing recommended beatmaps download before being selected or queued.'] }
   ] },
@@ -30246,7 +30304,7 @@ const MultiplayerScreen = {
         buttons.push(button);
       }
       el = h('div.mp-msg.suggest', chatAvatar(m, 24), h('div.mp-suggest-copy', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), h('div.mp-suggest-actions', ...buttons)));
-    } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text) : h('div.mp-msg.sys', m.text);
+    } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text, m.mentions) : h('div.mp-msg.sys', m.text);
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)
@@ -31011,7 +31069,7 @@ const RankedMatch = {
     requestAnimationFrame(() => { this.chatList.scrollTop = this.chatList.scrollHeight; });
     return box;
   },
-  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text) : h('div.rkm-msg.sys', m.text); },
+  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text, m.mentions) : h('div.rkm-msg.sys', m.text); },
   addChat(m) {
     if (!this.chatList) return;
     this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
@@ -33174,7 +33232,7 @@ const Chat = {
   },
   add(key, line) {
     const c = this.channels.get(key);
-    c.lines.push({ from: line.from || {}, text: String(line.text || ''), at: line.at || Date.now() });
+    c.lines.push({ from: line.from || {}, text: String(line.text || ''), mentions: Array.isArray(line.mentions) ? line.mentions : [], at: line.at || Date.now() });
     if (c.lines.length > 200) c.lines.shift();
     this.save();
     const looking = this.o && this.cur === key && !document.hidden;
@@ -33273,16 +33331,17 @@ const Chat = {
     const empty = this.lines.querySelector('.ch-empty'); if (empty) empty.remove();
     const stick = this.lines.scrollHeight - this.lines.scrollTop - this.lines.clientHeight < 40;
     const d = new Date(l.at), t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    ChatMentions.remember(l.from);
     const me = l.from.pid && l.from.pid === Presence.pid();
     const act = /^\/me\s+/.test(l.text || '');
-    if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
+    if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), chatText('span.ch-text', l.text, l.mentions)));
     // (/me: lazer's action line — the name and what they did, in italics)
     else this.lines.append(groupChatLine(this.lines, h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
       chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
-      h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)), l.from, l.at));
+      chatText('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text, l.mentions)), l.from, l.at));
     trimChatLines(this.lines, 200);
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },
@@ -35239,6 +35298,10 @@ const SpectatorChat = {
       this.hostButton.hidden = !c?.host || !!this.panel;
       this.hostButton.lastChild.textContent = `Spectator chat${this.unread ? ` (${this.unread})` : ''}`;
     }
+    if (this.panel) {
+      if (Spectate.watchingNow()) HudLayout.apply(GameplayScreen.hud);
+      else { this.panel.style.translate = ''; this.panel.style.scale = ''; this.panel.classList.remove('hl-off'); delete this.panel.dataset.hlBase; }
+    }
     Spectate.paintMsgDot();
     if (autoOpen && c && !c.host && !this.panel) this.open();
   },
@@ -35293,7 +35356,7 @@ const SpectatorChat = {
     if (!this.list) return;
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
-    const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
+    const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text, l.mentions);
     line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(groupChatLine(this.list, line, l.from, l.at));
@@ -35310,7 +35373,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '6a50cc78dd3e';
+const APP_BUILD = 'ce187906a465';
 
 const App = {
   lastReport: null,

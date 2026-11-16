@@ -1575,7 +1575,7 @@ const MultiplayerScreen = {
         buttons.push(button);
       }
       el = h('div.mp-msg.suggest', chatAvatar(m, 24), h('div.mp-suggest-copy', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), h('div.mp-suggest-actions', ...buttons)));
-    } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text) : h('div.mp-msg.sys', m.text);
+    } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text, m.mentions) : h('div.mp-msg.sys', m.text);
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)

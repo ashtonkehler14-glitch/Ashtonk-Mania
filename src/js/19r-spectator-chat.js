@@ -24,6 +24,10 @@ const SpectatorChat = {
       this.hostButton.hidden = !c?.host || !!this.panel;
       this.hostButton.lastChild.textContent = `Spectator chat${this.unread ? ` (${this.unread})` : ''}`;
     }
+    if (this.panel) {
+      if (Spectate.watchingNow()) HudLayout.apply(GameplayScreen.hud);
+      else { this.panel.style.translate = ''; this.panel.style.scale = ''; this.panel.classList.remove('hl-off'); delete this.panel.dataset.hlBase; }
+    }
     Spectate.paintMsgDot();
     if (autoOpen && c && !c.host && !this.panel) this.open();
   },
@@ -78,7 +82,7 @@ const SpectatorChat = {
     if (!this.list) return;
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
-    const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text);
+    const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text, l.mentions);
     line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(groupChatLine(this.list, line, l.from, l.at));

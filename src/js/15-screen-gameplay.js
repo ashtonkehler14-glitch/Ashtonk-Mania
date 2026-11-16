@@ -321,16 +321,20 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
-    for (const m of (Multiplayer.chat || []).slice(-5)) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
-    this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, disabled: true, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
+    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text, m.mentions) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const preview = this._hudAll;
+    const messages = preview ? [{ from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Chat messages appear here.', ts: Date.now() }, { from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Move and resize chat to fit your skin.', ts: Date.now() + 1 }] : (Multiplayer.chat || []).slice(-5);
+    for (const m of messages) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
+    this.gpChatIn = h('input.gp-chat-in', { maxlength: 300, readOnly: preview, disabled: !preview, placeholder: 'chat is available when your song is over', 'aria-label': 'Chat message' }); this._gpOpen = false;
     this.gpChatIn.addEventListener('keydown', e => {
+      if (preview) { e.preventDefault(); return; }
       if (e.key === 'Enter') { e.preventDefault(); const t = this.gpChatIn.value.trim(); if (t) Multiplayer.send({ t: 'chat', text: t }); this.gpChatIn.value = ''; this.gpChatIn.blur(); }
     });
     this.gpChatIn.addEventListener('focus', () => this.gpChat.classList.add('typing'));
     this.gpChatIn.addEventListener('blur', () => { this.gpChat.classList.remove('typing'); if (this.el) this.el.focus({ preventScroll: true }); });
     this.gpChat = h('div.gp-chat', list, this.gpChatIn);
     this.hud.append(this.gpChat);
+    if (preview) { this.gpChat.classList.add('open', 'fresh'); this.gpChatIn.placeholder = 'Chat preview'; return; }
     this._gpChatOff = Bus.on('mp:chat', m => {
       const el = line(m); if (!el) return;
       list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); trimChatLines(list, 5);
@@ -340,13 +344,19 @@ const GameplayScreen = {
   gpChatOpen() { const s = this.s; return !!(s && s.mp && s.finished); },
   /** (the box can't be clicked into mid-song: it would take the keys) */
   gpChatTick() {
+    if (this._hudAll) return;
     const R = this.renderer;
-    if (R && R.W && (R.stageX !== this._gpSx || R.W !== this._gpW)) {
-      // (the stage reaching in under the chat's corner — a phone's widened columns: there only a new message shows, for
-      // a moment, not lines of chat over the notes. Its edge measured once a size, not as the stage moves)
-      if (R.W !== this._gpW) { const c = this.gpChat, p = c.offsetParent; this._gpW = R.W; this._gpEdge = (c.offsetLeft + c.offsetWidth) / Math.max(1, p ? p.clientWidth : innerWidth); }
-      this._gpSx = R.stageX;
-      this.gpChat.classList.toggle('over', R.stageX / R.W < this._gpEdge);
+    const placement = HudLayout.part('chat');
+    if (R && R.W && (R.stageX !== this._gpSx || R.stageW !== this._gpStageW || R.W !== this._gpW || R.H !== this._gpH || placement !== this._gpPlacement)) {
+      // Measure only when the stage, viewport or saved placement changes; transforms affect the visible bounds.
+      if (R.W !== this._gpW || R.H !== this._gpH || placement !== this._gpPlacement) {
+        const bounds = this.gpChat.getBoundingClientRect(), parent = this.hud.getBoundingClientRect();
+        this._gpW = R.W; this._gpH = R.H; this._gpPlacement = placement;
+        this._gpEdge = (bounds.right - parent.left) / Math.max(1, parent.width);
+        this._gpLeft = (bounds.left - parent.left) / Math.max(1, parent.width);
+      }
+      this._gpSx = R.stageX; this._gpStageW = R.stageW;
+      this.gpChat.classList.toggle('over', R.stageX / R.W < this._gpEdge && (R.stageX + R.stageW) / R.W > this._gpLeft);
     }
     const open = this.gpChatOpen();
     if (open === this._gpOpen) return;
@@ -825,6 +835,8 @@ const GameplayScreen = {
     const s = this.s;
     // (the skin editor shows every component, the ones turned off too — dimmed — so each can be placed before it's on)
     const all = this._hudAll = !!(this.params.skinEditor || (typeof SkinEditor !== 'undefined' && SkinEditor.on));
+    if (this._gpChatOff) this._gpChatOff(); this._gpChatOff = null;
+    this.gpChatIn = this.gpChat = null; this._gpW = this._gpSx = null;
     clearEl(this.hud);
     this.hud.classList.toggle('spectator-hud', !!s.spectate);
     this._pq = this._pieQ = this._lead = this._canSkip = this._inBreak = this._progT = this._ppJudged = this._scT = undefined; this._lastSc = this._lastAcc = this._lastTT = this._hudOff = undefined; this._ctrl = false;
@@ -872,7 +884,7 @@ const GameplayScreen = {
       this.jc = { items, el: h(`div.hud-jc.${Settings.get('gameplay.judgementCounterFlow') === 'horizontal' ? 'h' : 'v'}`, ...items.map(i => i.el)) };
       this.hud.append(this.jc.el);
     }
-    if (s.mp) this.buildGpChat(s);
+    if (s.mp || all) this.buildGpChat(s);
     if (s.mp) { this.mpBoard = h('div.hud-mp'); this.hud.append(this.mpBoard); this._mpSent = 0; this._mpRows = null; this.mpTeams = null; this._mpT = 0; this._mpDrawn = 0; }
     else this.buildLeaderboard();
     this.board().classList.toggle('lb-off', !Settings.get('gameplay.leaderboard') && !all);

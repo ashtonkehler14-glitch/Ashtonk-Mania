@@ -91,7 +91,7 @@ const Chat = {
   },
   add(key, line) {
     const c = this.channels.get(key);
-    c.lines.push({ from: line.from || {}, text: String(line.text || ''), at: line.at || Date.now() });
+    c.lines.push({ from: line.from || {}, text: String(line.text || ''), mentions: Array.isArray(line.mentions) ? line.mentions : [], at: line.at || Date.now() });
     if (c.lines.length > 200) c.lines.shift();
     this.save();
     const looking = this.o && this.cur === key && !document.hidden;
@@ -190,16 +190,17 @@ const Chat = {
     const empty = this.lines.querySelector('.ch-empty'); if (empty) empty.remove();
     const stick = this.lines.scrollHeight - this.lines.scrollTop - this.lines.clientHeight < 40;
     const d = new Date(l.at), t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    ChatMentions.remember(l.from);
     const me = l.from.pid && l.from.pid === Presence.pid();
     const act = /^\/me\s+/.test(l.text || '');
-    if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), h('span.ch-text', l.text)));
+    if (l.local) this.lines.append(h('div.ch-line.local', h('span.ch-time', t), chatText('span.ch-text', l.text, l.mentions)));
     // (/me: lazer's action line — the name and what they did, in italics)
     else this.lines.append(groupChatLine(this.lines, h(`div.ch-line${me ? '.me' : ''}${act ? '.act' : ''}${!me && (this.mentions(l.text) || ChatMentions.has(l.text)) ? '.mention' : ''}`,
       chatAvatar(l.from, 30), h('span.ch-time', t),
       // (an admin's name in their role's colour)
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
-      h('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text)), l.from, l.at));
+      chatText('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text, l.mentions)), l.from, l.at));
     trimChatLines(this.lines, 200);
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },

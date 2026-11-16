@@ -5976,3 +5976,11 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .mp-suggest-action[data-action=set] { background: #9b306b; color: #fff; }
 .mp-suggest-action[data-action=queue] { background: #694180; color: #fff; }
 .mp-suggest-action:disabled { opacity: .45; cursor: default; }
+
+
+.chat-mention-link { pointer-events: auto; display: inline; padding: 1px 4px; margin: 0 1px; border: 0; border-radius: 5px; background: #b875e233; color: #efb9ff; font: inherit; font-weight: 650; line-height: inherit; cursor: pointer; box-decoration-break: clone; }
+.chat-mention-link:hover { background: #a14b9a; color: #fff; }
+.chat-mention-link:focus-visible { outline: 2px solid #ffa8d1; outline-offset: 2px; }
+.chat-copy > .chat-emoji-only, .ch-text.chat-emoji-only, .spectator-chat .chat-copy > .chat-emoji-only { font-size: 36px; line-height: 1.3; text-shadow: none; }
+body.se-open .gp-chat { opacity: 1; pointer-events: none; }
+body.se-open .gp-chat .gp-chat-in { pointer-events: none; }

@@ -65,6 +65,18 @@ try {
   assert.ok(result.active.every(n=>n.hold),'Mention popups wait until the song ends');
   assert.equal(result.unchanged,true,'Self mentions and Do not disturb do not notify');
   assert.equal(result.exact,false);assert.equal(result.special,true);assert.equal(result.spaces,true);
+  await page.evaluate(()=>{
+    UserPanels.profile=p=>window._mentionProfile=p;
+    Presence.players=[];ChatMentions.identities.clear();
+    SpectatorChat.lines=[{from:{pid:'sender',name:'Sender'},text:'hey @Offline Friend!',mentions:[{pid:'offline-id',name:'Offline Friend'}],at:Date.now()},{from:{pid:'sender',name:'Sender'},text:'👩🏽‍💻',at:Date.now()+1}];
+    SpectatorChat.open();SpectatorChat.paint();
+  });
+  const mention=page.locator('.spectator-chat .chat-mention-link');
+  assert.equal(await mention.textContent(),'@Offline Friend');
+  await mention.click();assert.equal(await page.evaluate(()=>window._mentionProfile.pid),'offline-id','Mention links retain the intended offline profile');
+  assert.ok(await page.locator('.spectator-chat .chat-emoji-only').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=32),'Single emoji renders larger');
+  const emoji=await page.evaluate(()=>({yes:['😀','🇨🇦','👍🏽','👨‍👩‍👧‍👦','1️⃣'].map(singleChatEmoji),no:['','hi 😀','😀😀','1','hello'].map(singleChatEmoji)}));
+  assert.ok(emoji.yes.every(Boolean));assert.ok(emoji.no.every(v=>!v));
   assert.deepEqual(errors,[]);
   console.log('PASS @ autocomplete, keyboard/touch selection, send separation, notification delivery, DND and name boundaries');
 } finally {if(browser)await browser.close();server.close();}

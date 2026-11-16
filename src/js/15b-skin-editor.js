@@ -25,6 +25,7 @@ const HUD_PARTS = [
   { id: 'stageHint', name: 'Skin hit-line graphic', icon: 'image', canvas: true, advanced: true, texture: 'stageHint', origin: 'top left' },
   { id: 'judgement', name: 'Judgements', icon: 'target', canvas: true, setting: 'gameplay.showJudgements', origin: 'center center' },
   { id: 'keys', name: 'Key overlay', icon: 'keyboard', canvas: true, setting: 'input.keyOverlay', origin: 'top left' },
+  { id: 'chat', name: 'Chat', icon: 'chat', sel: '.gp-chat', origin: 'bottom left' },
   { id: 'badge', name: 'Auto / replay badge', icon: 'film', sel: '.hud-replay', origin: 'top center' },
 ];
 
@@ -52,6 +53,7 @@ const HudLayout = {
     if (!hud || !p.sel) return [];
     const root = p.scene ? GameplayScreen.el : hud;
     const all = [...root.querySelectorAll(p.sel)];
+    if (p.id === 'chat' && typeof SpectatorChat !== 'undefined' && SpectatorChat.panel && Spectate.watchingNow()) all.push(SpectatorChat.panel);
     return all.length > 1 ? all.filter(el => !all.some(o => o !== el && o.contains(el))) : all;
   },
   /** The combo counter's place, size and visibility ({ x, y, s, off }), for the stage renderer. */
@@ -73,7 +75,7 @@ const HudLayout = {
       const c = L[p.id] || {}, off = !!c.off || (editing && !!p.setting && !Settings.get(p.setting));
       for (const el of this.els(hud, p)) {
         if (el.dataset.hlBase == null) { el.style.translate = ''; el.dataset.hlBase = getComputedStyle(el).translate || 'none'; }
-        const [bx, by] = this.split(el.dataset.hlBase), dx = (c.x || 0) * W, dy = (c.y || 0) * H, s = c.s && c.s !== 1 ? c.s : 0;
+        const [bx, by] = this.split(el.dataset.hlBase), external = !hud.contains(el), size = external ? hud.getBoundingClientRect() : null, dx = (c.x || 0) * (size ? size.width : W), dy = (c.y || 0) * (size ? size.height : H), s = c.s && c.s !== 1 ? c.s : 0;
         el.style.translate = dx || dy ? `calc(${bx} + ${dx.toFixed(1)}px) calc(${by} + ${dy.toFixed(1)}px)` : '';
         el.style.scale = s ? String(s) : '';
         el.style.transformOrigin = s ? p.origin : '';

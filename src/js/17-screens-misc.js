@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16af', title: 'Chat placement and clickable mentions', sections: [
+    { title: 'Chat', items: ['Chat has a preview in the skin editor so you can move and resize it for each skin and key count.', 'Mentions have a colourful highlight. Click one to open that player’s profile.', 'Messages containing just one emoji display it at a larger size.'] }
+  ] },
   { id: '2026.11.16ae', title: 'Use room recommendations', sections: [
     { title: 'Multiplayer', items: ['Recommended songs have Set song and Add to queue actions, following the room’s host and queue permissions.', 'Missing recommended beatmaps download before being selected or queued.'] }
   ] },

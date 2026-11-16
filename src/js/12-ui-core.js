@@ -78,8 +78,19 @@ function chatAvatar(from = {}, size = 28) {
     onclick: e => { e.preventDefault(); e.stopPropagation(); if (!pid) return; UISounds.click(); UserPanels.profile({ ...(online || {}), pid, name, avatar }); }
   }, picture);
 }
-function compactChatLine(cls, from, text) {
-  return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), h('span', text)));
+function singleChatEmoji(text) {
+  const value = String(text || '').trim();
+  if (!value || !/^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(value)) return false;
+  if (typeof Intl.Segmenter === 'function') return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].length === 1;
+  return /^(?:\p{Regional_Indicator}{2}|[0-9#*]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0F\p{Emoji_Modifier}]*(?:\u200D\p{Extended_Pictographic}[\uFE0F\p{Emoji_Modifier}]*)*)$/u.test(value);
+}
+function chatText(cls, text, mentions = []) {
+  const el = h(cls); el.classList.toggle('chat-emoji-only', singleChatEmoji(text));
+  el.append(ChatMentions.render(String(text || ''), mentions)); return el;
+}
+function compactChatLine(cls, from, text, mentions = []) {
+  ChatMentions.remember(from);
+  return h(cls, chatAvatar(from, 24), h('span.chat-copy', chatName(h('b', from.name), from), chatText('span', text, mentions)));
 }
 
 /** Consecutive chat lines share a header for five minutes; system/action lines break the group. */

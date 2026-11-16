@@ -5,6 +5,28 @@ const ChatMentions = {
     if (!name?.trim()) return false;
     return new RegExp(`(^|[^\\p{L}\\p{N}_])@${this.escape(name.trim())}(?=$|[^\\p{L}\\p{N}_])`, 'iu').test(String(text || ''));
   },
+  identities: new Map(),
+  remember(player) {
+    if (player?.pid && player.name) this.identities.set(player.name.toLocaleLowerCase(), { pid: player.pid, name: player.name, avatar: player.avatar || '' });
+    while (this.identities.size > 500) this.identities.delete(this.identities.keys().next().value);
+  },
+  render(text, mentions = []) {
+    const fragment = document.createDocumentFragment();
+    if (!text.includes('@')) { fragment.append(document.createTextNode(text)); return fragment; }
+    for (const p of [...(Presence.players || []), ...(Multiplayer.room?.players || []), { pid: Presence.pid(), name: ProfileManager.profile.name }]) this.remember(p);
+    const known = new Map(this.identities);
+    for (const p of Array.isArray(mentions) ? mentions : []) if (p?.pid && typeof p.name === 'string' && p.name) { this.remember(p); known.set(p.name.toLocaleLowerCase(), p); }
+    if (!known.size) { fragment.append(document.createTextNode(text)); return fragment; }
+    const names = [...known.values()].map(p => p.name).sort((a,b) => b.length-a.length);
+    const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])@(${names.map(n=>this.escape(n)).join('|')})(?=$|[^\\p{L}\\p{N}_])`, 'giu');
+    let cursor = 0;
+    for (const match of text.matchAll(regex)) {
+      const start = match.index + match[1].length, end = match.index + match[0].length, player = known.get(match[2].toLocaleLowerCase());
+      fragment.append(document.createTextNode(text.slice(cursor,start)), h('button.chat-mention-link', { type: 'button', title: `Open ${player.name}'s profile`, 'aria-label': `Open ${player.name}'s profile`, onclick: e => { e.preventDefault(); e.stopPropagation(); UISounds.click(); UserPanels.profile({ ...player }); } }, text.slice(start,end)));
+      cursor = end;
+    }
+    fragment.append(document.createTextNode(text.slice(cursor))); return fragment;
+  },
   players(input) {
     const room = Multiplayer.room;
     let list = input?.closest('.mp-tabpane, .gp-chat:not(.spectator-chat)') && room ? room.players : Presence.players;
