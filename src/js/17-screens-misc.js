@@ -922,6 +922,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16o', title: 'Floating menus and better window sizing', sections: [
+    { title: 'Interface', items: ['Menus now share the settings panel’s inset, rounded style above the background.', 'Tall, narrow desktop windows now use a readable upright layout instead of shrinking the widescreen interface.'] }
+  ] },
   { id: '2026.11.16n', title: 'Joining a live song', sections: [
     { title: 'Spectating', items: ['Joining someone mid-song now reconnects to their current play instead of asking you to wait for another song.'] }
   ] },

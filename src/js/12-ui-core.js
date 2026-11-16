@@ -1508,7 +1508,11 @@ const Zoom = {
     // (held upright — gameplay — the same space turned on its side, 768×1366, so the interface is the same size
     // either way up instead of twice as big upright)
     const touchLand = !desktop && W > H, touchUp = !desktop && !touchLand && typeof TOUCH_DEVICE !== 'undefined' && TOUCH_DEVICE;
-    const fit = touchLand ? clamp(Math.min(W / 1366, H / 768), 0.2, 4) : touchUp ? clamp(Math.min(W / 768, H / 1366), 0.2, 4)
+    // A tall desktop window needs the upright layout too: shrinking a 1366px-wide canvas makes
+    // dialogs and the toolbar unreadable while leaving most of its height empty.
+    const desktopUp = desktop && W < H;
+    const fit = desktopUp ? clamp(Math.min(W / 768, H / 1366), 0.65, 4)
+      : touchLand ? clamp(Math.min(W / 1366, H / 768), 0.2, 4) : touchUp ? clamp(Math.min(W / 768, H / 1366), 0.2, 4)
       : W >= 1000 && H >= 560 ? clamp(Math.min(W / 1366, H / 768), 0.75, 4) : desktop ? clamp(Math.min(W / 1366, H / 768), 0.3, 1) : 1;
     const ui = typeof Settings !== 'undefined' && Settings.values ? clamp(Settings.get('ui.scale') || (TOUCH_DEVICE ? 1.25 : 0.9), 0.5, 2) : 0.9;
     const k = fit * ui / bz, z = Math.abs(k - 1) < 0.002 ? 1 : 1 / k;
@@ -1542,7 +1546,7 @@ const Screens = {
   busy: false,
   register(name, screen) { this.registry[name] = screen; },
   /** The screens' entrance animations (each ends where the element rests, so letting go of it changes nothing). */
-  ENTRANCES: new Set(['scrIn', 'scrInRight', 'scrInZoom', 'scrInMenu', 'ssWedgeIn', 'ssCarIn', 'ssFootIn', 'ovBodyIn', 'ovBgIn', 'wedgeIn']),
+  ENTRANCES: new Set(['floatingMenuIn', 'scrIn', 'scrInRight', 'scrInZoom', 'scrInMenu', 'ssWedgeIn', 'ssCarIn', 'ssFootIn', 'ovBodyIn', 'ovBgIn', 'wedgeIn']),
   async go(name, params = {}, { replace = false, transition = 'default' } = {}) {
     // (a screen may be swapped for another first: in a multiplayer room, "home" means back to the room)
     if (this.redirect && !params.noRedirect) { name = this.redirect(name, this.currentName); if (!name) return; }
@@ -1588,12 +1592,13 @@ const Screens = {
       }
       next.el = el;
       el.classList.add('screen', 'enter');
+      if (name !== 'home' && !next.inGame && !next.transient) el.classList.add('menu-surface');
       if (prevName === 'home') el.classList.add('after-menu');
       if (transition === 'zoom') el.classList.add('zoom');
       if (transition === 'right') el.classList.add('from-right');
       if (this._popOut) { this._popOut = false; if (!el.classList.contains('ov')) UISounds.play('overlay-big-pop-out', 0.5); }
       // lazer's WaveOverlayContainer: an overlay screen opens with four waves in its colours sweeping up through it
-      if (el.classList.contains('ov') && !document.documentElement.classList.contains('slow') && !document.documentElement.classList.contains('perf')) {
+      if (el.classList.contains('ov') && !el.classList.contains('menu-surface') && !document.documentElement.classList.contains('slow') && !document.documentElement.classList.contains('perf')) {
         const old = el.querySelector(':scope > .ov-waves'); if (old) old.remove();
         const waves = h('div.ov-waves', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i'), h('i'));
         if (!(prev && prev.el && prev.el.classList.contains('ov'))) UISounds.play('overlay-big-pop-in', 0.6);
