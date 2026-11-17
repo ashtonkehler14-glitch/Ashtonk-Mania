@@ -18,13 +18,14 @@ const SpectatorChat = {
     }
     if (c?.host && !this.hostButton) {
       this.hostButton = h('button.btn.spec-host-chat', { 'aria-label': 'Open spectator chat', onclick: () => this.toggle() }, icon('chat'), h('span'));
-      document.body.append(this.hostButton);
+      $('#app').append(this.hostButton);
     }
     if (this.hostButton) {
       this.hostButton.hidden = !c?.host || !!this.panel;
       this.hostButton.lastChild.textContent = `Spectator chat${this.unread ? ` (${this.unread})` : ''}`;
     }
     if (this.panel) {
+      this.panel.classList.toggle('waiting', !c?.host && Screens.currentName === 'spectator');
       if (Spectate.watchingNow()) HudLayout.apply(GameplayScreen.hud);
       else { this.panel.style.translate = ''; this.panel.style.scale = ''; this.panel.classList.remove('hl-off'); delete this.panel.dataset.hlBase; }
     }
@@ -67,7 +68,7 @@ const SpectatorChat = {
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
-    document.body.append(panel); this.paint(); this.refresh(); Toolbar.sync();
+    $('#app').append(panel); this.paint(); this.refresh(); Toolbar.sync();
     if (c.host && !Mobile.touch) this.input.focus({ preventScroll: true });
   },
   paint() {

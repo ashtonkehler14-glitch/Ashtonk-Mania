@@ -75,7 +75,7 @@ const HudLayout = {
       const c = L[p.id] || {}, off = !!c.off || (editing && !!p.setting && !Settings.get(p.setting));
       for (const el of this.els(hud, p)) {
         if (el.dataset.hlBase == null) { el.style.translate = ''; el.dataset.hlBase = getComputedStyle(el).translate || 'none'; }
-        const [bx, by] = this.split(el.dataset.hlBase), external = !hud.contains(el), size = external ? hud.getBoundingClientRect() : null, dx = (c.x || 0) * (size ? size.width : W), dy = (c.y || 0) * (size ? size.height : H), s = c.s && c.s !== 1 ? c.s : 0;
+        const [bx, by] = this.split(el.dataset.hlBase), external = !hud.contains(el), size = external && el.closest('#app') !== hud.closest('#app') ? hud.getBoundingClientRect() : null, dx = (c.x || 0) * (size ? size.width : W), dy = (c.y || 0) * (size ? size.height : H), s = c.s && c.s !== 1 ? c.s : 0;
         el.style.translate = dx || dy ? `calc(${bx} + ${dx.toFixed(1)}px) calc(${by} + ${dy.toFixed(1)}px)` : '';
         el.style.scale = s ? String(s) : '';
         el.style.transformOrigin = s ? p.origin : '';

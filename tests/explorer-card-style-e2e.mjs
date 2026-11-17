@@ -88,6 +88,8 @@ try {
   } else await first.tap();
   await page.waitForSelector('.bso');
   const favourite=page.getByRole('button',{name:'Favourite beatmap',exact:true});assert.ok(await favourite.isVisible(),'Touch users can favourite in beatmap details');
+  assert.equal(await favourite.textContent(),'','Favourite control is an icon-only heart again');
+  assert.equal(await favourite.evaluate(el=>Math.round(el.getBoundingClientRect().height)),await page.locator('.bso-buttons .bso-fav').first().evaluate(el=>Math.round(el.getBoundingClientRect().height)),'Heart and preview controls use the same size');
   const was=await favourite.getAttribute('aria-pressed');await favourite.click();assert.equal(await page.getByRole('button',{name:'Favourite beatmap',exact:true}).getAttribute('aria-pressed'),was==='true'?'false':'true');
   await page.evaluate(()=>ExplorerScreen.closeSet());await page.waitForTimeout(300);
   await page.evaluate(()=>Settings.set('graphics.performanceMode',true));await page.waitForTimeout(300);

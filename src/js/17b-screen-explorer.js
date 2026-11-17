@@ -897,9 +897,9 @@ const ExplorerScreen = {
               h('span.dim.bso-stat', { title: 'Favourites' }, icon('heart'), fmtCompact(set.favourites))].filter(Boolean)),
             h('div.bso-buttons',
               h('button.bso-fav', { title: 'Preview', 'aria-label': 'Preview', onclick: () => { this.togglePreview(set.id); this.renderSet(); } }, icon(playing ? 'pause' : 'play')),
-              h('button.btn.bso-like', { 'aria-label': 'Favourite beatmap', 'aria-pressed': String(this.liked().has(set.id)), onclick: () => {
+              h('button.bso-fav.bso-like', { title: this.liked().has(set.id) ? 'Unfavourite' : 'Favourite', 'aria-label': 'Favourite beatmap', 'aria-pressed': String(this.liked().has(set.id)), onclick: () => {
                 UISounds.click(); this.toggleLike(set.id); if (this.grid?.isConnected) this.renderResults(); this.renderSet();
-              } }, icon('heart', this.liked().has(set.id) ? 'fill' : ''), this.liked().has(set.id) ? 'Favourited' : 'Favourite'),
+              } }, icon('heart', this.liked().has(set.id) ? 'fill' : '')),
               ...[main].flat()),
             body.children.length ? body : null),
           h('div.bso-card',

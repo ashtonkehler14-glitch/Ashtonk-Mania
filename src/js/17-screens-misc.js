@@ -906,6 +906,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17f', title: 'Mobile menus and smoother song selection', sections: [
+    { title: 'Menus', items: ['Spectator chat follows your UI scale and stays clear of song details on mobile.', 'Beatmap details use a simple heart button for favourites again.'] },
+    { title: 'Song select', items: ['Song details stay visible while switching maps. Backgrounds wait until their artwork is ready, and rapid selections cancel outdated previews.'] }
+  ] },
   { id: '2026.11.17e', title: 'Your choice of performance mode', sections: [
     { title: 'Beatmap explorer', items: ['Card background artwork returns when you switch performance mode off.', 'The game no longer reduces effects or picture quality automatically based on your device or menu frame rate. Performance mode follows your setting.'] }
   ] },

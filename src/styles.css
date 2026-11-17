@@ -5834,7 +5834,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .explorer.ov.menu-surface { background-color: #211d29; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='900' viewBox='0 0 1440 900'%3E%3Cg fill='none' stroke-linejoin='round' stroke-width='2'%3E%3Cpath stroke='%23ed4099' opacity='.12' d='M-70 510 100 215 270 510Z'/%3E%3Cpath stroke='%23a875dc' opacity='.13' d='M1260 110 1480 490 1040 490Z'/%3E%3Cpath stroke='%23d59400' opacity='.08' d='M1220 980 1380 700 1540 980Z'/%3E%3Cpath stroke='%23a875dc' opacity='.07' d='M-40 830 80 620 200 830Z'/%3E%3C/g%3E%3C/svg%3E"), radial-gradient(ellipse at 0 20%, #84305c14, transparent 45%), radial-gradient(ellipse at 100% 80%, #7136a61a, transparent 50%); background-size: cover; background-position: center; background-repeat: no-repeat; }
 
 /* Spectator chat stays a compact bottom-left panel, readable over any song. */
-.spectator-chat.gp-chat { width: min(380px, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 28px)); max-height: min(380px, calc(100dvh - 80px)); padding: 0; gap: 0; border: 1px solid #d4b8e026; border-radius: 16px; background: #25212d; box-shadow: 0 12px 32px #09060f66; overflow: hidden; }
+.spectator-chat.gp-chat { width: min(380px, calc(var(--vw, 1vw) * 100 - env(safe-area-inset-left) - env(safe-area-inset-right) - 28px)); max-height: min(380px, calc(var(--vh, 1dvh) * 100 - 80px)); padding: 0; gap: 0; border: 1px solid #d4b8e026; border-radius: 16px; background: #25212d; box-shadow: 0 12px 32px #09060f66; overflow: hidden; }
 .spectator-chat-head { flex: none; padding: 12px 14px; background: linear-gradient(110deg, #91315c26, #70449714), #302938; border-bottom: 1px solid #ffffff0d; text-shadow: none; }
 .spectator-chat-head > div { min-width: 0; }
 .spectator-chat-head h3 { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; }
@@ -5842,7 +5842,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .spectator-chat-head span { margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #cbbdd1; }
 .spectator-chat-head .icon-btn { flex: none; background: transparent; color: #ded4e5; }
 .spectator-chat-head .icon-btn:hover { background: #ffffff0d; color: #fff; }
-.spectator-chat .gp-chat-list { flex: 1 1 auto; padding: 10px; max-height: min(240px, 40dvh); overscroll-behavior: contain; text-shadow: none; scrollbar-color: #85657d transparent; }
+.spectator-chat .gp-chat-list { flex: 1 1 auto; padding: 10px; max-height: min(240px, calc(var(--vh, 1dvh) * 40)); overscroll-behavior: contain; text-shadow: none; scrollbar-color: #85657d transparent; }
 .spectator-chat .gp-chat-l:not(.sys) { padding: 8px; gap: 9px; border-radius: 9px; }
 .spectator-chat .gp-chat-l.mine { background: #ed40990b; }
 .spectator-chat .chat-copy { flex: 1; }
@@ -5885,7 +5885,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .spm .spm-card .ex-thumbwrap { width: 56px; height: 56px; }
 .spm .spm-watch { width: auto; padding: 0 14px; height: 34px; background: #9b306b; font-size: 13px; }
 .spm .spm-auto { grid-column: 1 / -1; justify-self: end; padding: 3px 0; font-size: 11px; gap: 8px; }
-.spectator-chat.viewer { max-height: min(380px, calc(100dvh - 210px)); }
+.spectator-chat.viewer { max-height: min(380px, calc(var(--vh, 1dvh) * 100 - 210px)); }
 @media (max-width: 700px) {
   .spm .spm-box { gap: 6px 8px; padding: 10px; }
   .spm .spm-row { gap: 8px; }
@@ -6018,3 +6018,14 @@ body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
 .chat-mention-option > small { margin-left: auto; color: #cbbdd1; font-size: 10px; }
 @media (hover: none) { .chat-message-actions { opacity: 1; } }
 .ex-card-placeholder { height: 128px; margin-inline: 10px; border-radius: 16px; background: #30293880; transform: skewX(-8deg); pointer-events: none; }
+
+/* Persistent chat shares the app's coordinate space and reserves the other half for song details. */
+.spectator-chat.viewer.waiting { width: min(380px, calc(var(--vw, 1vw) * 50 - 40px)); }
+@media (orientation: portrait) and (max-width: 700px) {
+  .spectator-chat.viewer.waiting { width: min(380px, calc(var(--vw, 1vw) * 100 - 28px)); max-height: 210px; }
+  .spm-stage { margin-bottom: 244px; }
+}
+.bso-fav.bso-like[aria-pressed="true"] { background: #9b306b; color: #fff; }
+
+/* Keep song details and scores steady while browsing; the screen's entrance still animates. */
+.ss:not(.entering) .wedge, .ss:not(.entering) .wd, .ss:not(.entering) .lbs { animation: none; }

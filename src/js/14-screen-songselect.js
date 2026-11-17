@@ -285,6 +285,7 @@ const SongSelect = {
     this._ro && this._ro.disconnect();
     clearTimeout(this._previewT); clearTimeout(this._infoT); this._infoT = 0; clearTimeout(this._typeT); this._typeT = 0;
     if (this._timing) this._timing();
+    clearTimeout(this._bgT); this._bgTok = {};
     this._previewTok = {}; // (a preview still loading stops where it is)
     clearInterval(this._audioTick); this._audioTok = {}; this._audioSignature = null;
     Music.setRate(1, true, null, { live: true }); AudioManager.modVolume(1, 0);
@@ -881,7 +882,9 @@ const SongSelect = {
   },
   select(id, { scroll = true, regroup: opened = false } = {}) {
     const m = BeatmapManager.maps.get(id);
-    if (!m) return;
+    if (!m || id === this.selectedId && !opened) return;
+    // Cancel work for the previous selection immediately, including a timer for another audio file in this set.
+    clearTimeout(this._previewT); this._previewTok = {}; this._bgTok = {};
     const modsReset = id !== this.selectedId && this.resetMods();
     const setChanged = this.expandedSet !== m.setId;
     if (setChanged) { this._collapseSet = this.expandedSet; this._expandSet = m.setId; this._expandAt = performance.now(); }
@@ -906,7 +909,7 @@ const SongSelect = {
     clearTimeout(this._bgT);
     // (Performance mode: a moment longer before the song's read and started — a song stepped past isn't loaded at all,
     // and loading one was the biggest part of what changing songs cost on a slow computer)
-    if (setChanged || !Music.meta || Music.meta.setId !== m.setId || this.trackKey(m) !== (Music.key || '').toLowerCase()) this.schedulePreview(m, perf ? 350 : held ? 200 : 60);
+    if (setChanged || !Music.meta || Music.meta.setId !== m.setId || this.trackKey(m) !== (Music.key || '').toLowerCase()) this.schedulePreview(m, perf ? 350 : held ? 200 : 120);
     else if (perf) this._bgT = setTimeout(() => { if (this.selectedId === m.id) { this.showBackground(m); this.loopTrack(m); } }, wait);
     else { this.showBackground(m); this.loopTrack(m); } // (another difficulty of the same set can have its own background)
     if (modsReset) Bus.emit('mods:changed');
@@ -1049,7 +1052,7 @@ const SongSelect = {
       else if (Screens.currentName !== 'songselect' && Screens.currentName !== 'gameplay') MenuMusic.next();
     };
   },
-  schedulePreview(m, ms = 60) {
+  schedulePreview(m, ms = 120) {
     BeatmapStatus.checkMap(m);
     clearTimeout(this._previewT);
     this._previewT = setTimeout(() => this.preview(m), ms);
@@ -1062,7 +1065,13 @@ const SongSelect = {
     const set = BeatmapManager.setById.get(m.setId), light = Settings.get('graphics.bgQuality') === 'low';
     const url = light ? await BeatmapManager.thumbURL(set) || await BeatmapManager.bgURL(m).catch(() => null)
       : await BeatmapManager.bgURL(m).catch(() => null) || await BeatmapManager.thumbURL(set);
-    if (tok === this._bgTok && this.selectedId === m.id && url !== Background.current) Background.set(url);
+    if (tok !== this._bgTok || this.selectedId !== m.id || url === Background.current) return;
+    // Keep the old picture visible until the next picture can actually be drawn.
+    if (url) {
+      const image = new Image(); image.src = url;
+      try { await image.decode(); } catch { return; }
+    }
+    if (tok === this._bgTok && this.selectedId === m.id) Background.set(url);
   },
   /** The same key the player gives a track (set / audio file), to tell whether this difficulty's song is playing. */
   trackKey(m) { return `${m.setId}/${m.audioFile || ''}`.toLowerCase(); },
@@ -1117,7 +1126,7 @@ const SongSelect = {
     try {
       await AudioManager.resume();
       const blob = await BeatmapManager.getFile(m.setId, m.audioFile);
-      if (tok !== this._previewTok || BeatmapManager.maps.get(this.selectedId)?.setId !== m.setId) return;
+      if (tok !== this._previewTok || this.selectedId !== m.id) return;
       if (!blob) return;
       if (!await Music.open(blob, `${m.setId}/${m.audioFile}`, { setId: m.setId, mapId: m.id, timing: null }) || tok !== this._previewTok) return;
       await this.syncPreviewAudio(m);
@@ -1198,15 +1207,9 @@ const SongSelect = {
     const v = { m, set, fav, plays, len, bpm, sc, ink, stars, from, stats, tab, modsOn, sortBy, scope, headKey };
     // the panels showing take the new beatmap in place — texts, numbers and colours changed on the same elements —
     // rather than being built again: a hundred new elements styled and laid out for every beatmap stepped onto was most
-    // of what showing one cost. (Outside Performance mode they fade over for another set or difficulty, as they did
-    // built again; the bars slide on their own.)
+    // of what showing one cost. Keep the text steady; the difficulty bars still slide on their own.
     if (this.patchInfo(v)) {
-      const sp = Settings.get('ui.animSpeed');
-      if (!Settings.get('graphics.performanceMode') && sp > 0) {
-        const [wedge, diff] = this.info.children, fade = el => el.animate([{ opacity: .5 }, { opacity: 1 }], { duration: 200 / sp, easing: 'ease-out' });
-        if (!sameSet) fade(wedge);
-        if (!sameMap) fade(diff);
-      }
+      // Existing details stay fully visible while their contents change; repeated fades flashed on rapid picks.
       return;
     }
     clearEl(this.info);

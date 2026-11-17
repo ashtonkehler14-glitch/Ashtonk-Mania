@@ -5845,7 +5845,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .explorer.ov.menu-surface { background-color: #211d29; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='900' viewBox='0 0 1440 900'%3E%3Cg fill='none' stroke-linejoin='round' stroke-width='2'%3E%3Cpath stroke='%23ed4099' opacity='.12' d='M-70 510 100 215 270 510Z'/%3E%3Cpath stroke='%23a875dc' opacity='.13' d='M1260 110 1480 490 1040 490Z'/%3E%3Cpath stroke='%23d59400' opacity='.08' d='M1220 980 1380 700 1540 980Z'/%3E%3Cpath stroke='%23a875dc' opacity='.07' d='M-40 830 80 620 200 830Z'/%3E%3C/g%3E%3C/svg%3E"), radial-gradient(ellipse at 0 20%, #84305c14, transparent 45%), radial-gradient(ellipse at 100% 80%, #7136a61a, transparent 50%); background-size: cover; background-position: center; background-repeat: no-repeat; }
 
 /* Spectator chat stays a compact bottom-left panel, readable over any song. */
-.spectator-chat.gp-chat { width: min(380px, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 28px)); max-height: min(380px, calc(100dvh - 80px)); padding: 0; gap: 0; border: 1px solid #d4b8e026; border-radius: 16px; background: #25212d; box-shadow: 0 12px 32px #09060f66; overflow: hidden; }
+.spectator-chat.gp-chat { width: min(380px, calc(var(--vw, 1vw) * 100 - env(safe-area-inset-left) - env(safe-area-inset-right) - 28px)); max-height: min(380px, calc(var(--vh, 1dvh) * 100 - 80px)); padding: 0; gap: 0; border: 1px solid #d4b8e026; border-radius: 16px; background: #25212d; box-shadow: 0 12px 32px #09060f66; overflow: hidden; }
 .spectator-chat-head { flex: none; padding: 12px 14px; background: linear-gradient(110deg, #91315c26, #70449714), #302938; border-bottom: 1px solid #ffffff0d; text-shadow: none; }
 .spectator-chat-head > div { min-width: 0; }
 .spectator-chat-head h3 { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; }
@@ -5853,7 +5853,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .spectator-chat-head span { margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #cbbdd1; }
 .spectator-chat-head .icon-btn { flex: none; background: transparent; color: #ded4e5; }
 .spectator-chat-head .icon-btn:hover { background: #ffffff0d; color: #fff; }
-.spectator-chat .gp-chat-list { flex: 1 1 auto; padding: 10px; max-height: min(240px, 40dvh); overscroll-behavior: contain; text-shadow: none; scrollbar-color: #85657d transparent; }
+.spectator-chat .gp-chat-list { flex: 1 1 auto; padding: 10px; max-height: min(240px, calc(var(--vh, 1dvh) * 40)); overscroll-behavior: contain; text-shadow: none; scrollbar-color: #85657d transparent; }
 .spectator-chat .gp-chat-l:not(.sys) { padding: 8px; gap: 9px; border-radius: 9px; }
 .spectator-chat .gp-chat-l.mine { background: #ed40990b; }
 .spectator-chat .chat-copy { flex: 1; }
@@ -5896,7 +5896,7 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .spm .spm-card .ex-thumbwrap { width: 56px; height: 56px; }
 .spm .spm-watch { width: auto; padding: 0 14px; height: 34px; background: #9b306b; font-size: 13px; }
 .spm .spm-auto { grid-column: 1 / -1; justify-self: end; padding: 3px 0; font-size: 11px; gap: 8px; }
-.spectator-chat.viewer { max-height: min(380px, calc(100dvh - 210px)); }
+.spectator-chat.viewer { max-height: min(380px, calc(var(--vh, 1dvh) * 100 - 210px)); }
 @media (max-width: 700px) {
   .spm .spm-box { gap: 6px 8px; padding: 10px; }
   .spm .spm-row { gap: 8px; }
@@ -6029,6 +6029,17 @@ body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
 .chat-mention-option > small { margin-left: auto; color: #cbbdd1; font-size: 10px; }
 @media (hover: none) { .chat-message-actions { opacity: 1; } }
 .ex-card-placeholder { height: 128px; margin-inline: 10px; border-radius: 16px; background: #30293880; transform: skewX(-8deg); pointer-events: none; }
+
+/* Persistent chat shares the app's coordinate space and reserves the other half for song details. */
+.spectator-chat.viewer.waiting { width: min(380px, calc(var(--vw, 1vw) * 50 - 40px)); }
+@media (orientation: portrait) and (max-width: 700px) {
+  .spectator-chat.viewer.waiting { width: min(380px, calc(var(--vw, 1vw) * 100 - 28px)); max-height: 210px; }
+  .spm-stage { margin-bottom: 244px; }
+}
+.bso-fav.bso-like[aria-pressed="true"] { background: #9b306b; color: #fff; }
+
+/* Keep song details and scores steady while browsing; the screen's entrance still animates. */
+.ss:not(.entering) .wedge, .ss:not(.entering) .wd, .ss:not(.entering) .lbs { animation: none; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -19716,6 +19727,7 @@ const SongSelect = {
     this._ro && this._ro.disconnect();
     clearTimeout(this._previewT); clearTimeout(this._infoT); this._infoT = 0; clearTimeout(this._typeT); this._typeT = 0;
     if (this._timing) this._timing();
+    clearTimeout(this._bgT); this._bgTok = {};
     this._previewTok = {}; // (a preview still loading stops where it is)
     clearInterval(this._audioTick); this._audioTok = {}; this._audioSignature = null;
     Music.setRate(1, true, null, { live: true }); AudioManager.modVolume(1, 0);
@@ -20312,7 +20324,9 @@ const SongSelect = {
   },
   select(id, { scroll = true, regroup: opened = false } = {}) {
     const m = BeatmapManager.maps.get(id);
-    if (!m) return;
+    if (!m || id === this.selectedId && !opened) return;
+    // Cancel work for the previous selection immediately, including a timer for another audio file in this set.
+    clearTimeout(this._previewT); this._previewTok = {}; this._bgTok = {};
     const modsReset = id !== this.selectedId && this.resetMods();
     const setChanged = this.expandedSet !== m.setId;
     if (setChanged) { this._collapseSet = this.expandedSet; this._expandSet = m.setId; this._expandAt = performance.now(); }
@@ -20337,7 +20351,7 @@ const SongSelect = {
     clearTimeout(this._bgT);
     // (Performance mode: a moment longer before the song's read and started — a song stepped past isn't loaded at all,
     // and loading one was the biggest part of what changing songs cost on a slow computer)
-    if (setChanged || !Music.meta || Music.meta.setId !== m.setId || this.trackKey(m) !== (Music.key || '').toLowerCase()) this.schedulePreview(m, perf ? 350 : held ? 200 : 60);
+    if (setChanged || !Music.meta || Music.meta.setId !== m.setId || this.trackKey(m) !== (Music.key || '').toLowerCase()) this.schedulePreview(m, perf ? 350 : held ? 200 : 120);
     else if (perf) this._bgT = setTimeout(() => { if (this.selectedId === m.id) { this.showBackground(m); this.loopTrack(m); } }, wait);
     else { this.showBackground(m); this.loopTrack(m); } // (another difficulty of the same set can have its own background)
     if (modsReset) Bus.emit('mods:changed');
@@ -20480,7 +20494,7 @@ const SongSelect = {
       else if (Screens.currentName !== 'songselect' && Screens.currentName !== 'gameplay') MenuMusic.next();
     };
   },
-  schedulePreview(m, ms = 60) {
+  schedulePreview(m, ms = 120) {
     BeatmapStatus.checkMap(m);
     clearTimeout(this._previewT);
     this._previewT = setTimeout(() => this.preview(m), ms);
@@ -20493,7 +20507,13 @@ const SongSelect = {
     const set = BeatmapManager.setById.get(m.setId), light = Settings.get('graphics.bgQuality') === 'low';
     const url = light ? await BeatmapManager.thumbURL(set) || await BeatmapManager.bgURL(m).catch(() => null)
       : await BeatmapManager.bgURL(m).catch(() => null) || await BeatmapManager.thumbURL(set);
-    if (tok === this._bgTok && this.selectedId === m.id && url !== Background.current) Background.set(url);
+    if (tok !== this._bgTok || this.selectedId !== m.id || url === Background.current) return;
+    // Keep the old picture visible until the next picture can actually be drawn.
+    if (url) {
+      const image = new Image(); image.src = url;
+      try { await image.decode(); } catch { return; }
+    }
+    if (tok === this._bgTok && this.selectedId === m.id) Background.set(url);
   },
   /** The same key the player gives a track (set / audio file), to tell whether this difficulty's song is playing. */
   trackKey(m) { return `${m.setId}/${m.audioFile || ''}`.toLowerCase(); },
@@ -20548,7 +20568,7 @@ const SongSelect = {
     try {
       await AudioManager.resume();
       const blob = await BeatmapManager.getFile(m.setId, m.audioFile);
-      if (tok !== this._previewTok || BeatmapManager.maps.get(this.selectedId)?.setId !== m.setId) return;
+      if (tok !== this._previewTok || this.selectedId !== m.id) return;
       if (!blob) return;
       if (!await Music.open(blob, `${m.setId}/${m.audioFile}`, { setId: m.setId, mapId: m.id, timing: null }) || tok !== this._previewTok) return;
       await this.syncPreviewAudio(m);
@@ -20629,15 +20649,9 @@ const SongSelect = {
     const v = { m, set, fav, plays, len, bpm, sc, ink, stars, from, stats, tab, modsOn, sortBy, scope, headKey };
     // the panels showing take the new beatmap in place — texts, numbers and colours changed on the same elements —
     // rather than being built again: a hundred new elements styled and laid out for every beatmap stepped onto was most
-    // of what showing one cost. (Outside Performance mode they fade over for another set or difficulty, as they did
-    // built again; the bars slide on their own.)
+    // of what showing one cost. Keep the text steady; the difficulty bars still slide on their own.
     if (this.patchInfo(v)) {
-      const sp = Settings.get('ui.animSpeed');
-      if (!Settings.get('graphics.performanceMode') && sp > 0) {
-        const [wedge, diff] = this.info.children, fade = el => el.animate([{ opacity: .5 }, { opacity: 1 }], { duration: 200 / sp, easing: 'ease-out' });
-        if (!sameSet) fade(wedge);
-        if (!sameMap) fade(diff);
-      }
+      // Existing details stay fully visible while their contents change; repeated fades flashed on rapid picks.
       return;
     }
     clearEl(this.info);
@@ -23594,7 +23608,7 @@ const HudLayout = {
       const c = L[p.id] || {}, off = !!c.off || (editing && !!p.setting && !Settings.get(p.setting));
       for (const el of this.els(hud, p)) {
         if (el.dataset.hlBase == null) { el.style.translate = ''; el.dataset.hlBase = getComputedStyle(el).translate || 'none'; }
-        const [bx, by] = this.split(el.dataset.hlBase), external = !hud.contains(el), size = external ? hud.getBoundingClientRect() : null, dx = (c.x || 0) * (size ? size.width : W), dy = (c.y || 0) * (size ? size.height : H), s = c.s && c.s !== 1 ? c.s : 0;
+        const [bx, by] = this.split(el.dataset.hlBase), external = !hud.contains(el), size = external && el.closest('#app') !== hud.closest('#app') ? hud.getBoundingClientRect() : null, dx = (c.x || 0) * (size ? size.width : W), dy = (c.y || 0) * (size ? size.height : H), s = c.s && c.s !== 1 ? c.s : 0;
         el.style.translate = dx || dy ? `calc(${bx} + ${dx.toFixed(1)}px) calc(${by} + ${dy.toFixed(1)}px)` : '';
         el.style.scale = s ? String(s) : '';
         el.style.transformOrigin = s ? p.origin : '';
@@ -25868,6 +25882,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17f', title: 'Mobile menus and smoother song selection', sections: [
+    { title: 'Menus', items: ['Spectator chat follows your UI scale and stays clear of song details on mobile.', 'Beatmap details use a simple heart button for favourites again.'] },
+    { title: 'Song select', items: ['Song details stay visible while switching maps. Backgrounds wait until their artwork is ready, and rapid selections cancel outdated previews.'] }
+  ] },
   { id: '2026.11.17e', title: 'Your choice of performance mode', sections: [
     { title: 'Beatmap explorer', items: ['Card background artwork returns when you switch performance mode off.', 'The game no longer reduces effects or picture quality automatically based on your device or menu frame rate. Performance mode follows your setting.'] }
   ] },
@@ -27266,9 +27284,9 @@ const ExplorerScreen = {
               h('span.dim.bso-stat', { title: 'Favourites' }, icon('heart'), fmtCompact(set.favourites))].filter(Boolean)),
             h('div.bso-buttons',
               h('button.bso-fav', { title: 'Preview', 'aria-label': 'Preview', onclick: () => { this.togglePreview(set.id); this.renderSet(); } }, icon(playing ? 'pause' : 'play')),
-              h('button.btn.bso-like', { 'aria-label': 'Favourite beatmap', 'aria-pressed': String(this.liked().has(set.id)), onclick: () => {
+              h('button.bso-fav.bso-like', { title: this.liked().has(set.id) ? 'Unfavourite' : 'Favourite', 'aria-label': 'Favourite beatmap', 'aria-pressed': String(this.liked().has(set.id)), onclick: () => {
                 UISounds.click(); this.toggleLike(set.id); if (this.grid?.isConnected) this.renderResults(); this.renderSet();
-              } }, icon('heart', this.liked().has(set.id) ? 'fill' : ''), this.liked().has(set.id) ? 'Favourited' : 'Favourite'),
+              } }, icon('heart', this.liked().has(set.id) ? 'fill' : '')),
               ...[main].flat()),
             body.children.length ? body : null),
           h('div.bso-card',
@@ -35514,13 +35532,14 @@ const SpectatorChat = {
     }
     if (c?.host && !this.hostButton) {
       this.hostButton = h('button.btn.spec-host-chat', { 'aria-label': 'Open spectator chat', onclick: () => this.toggle() }, icon('chat'), h('span'));
-      document.body.append(this.hostButton);
+      $('#app').append(this.hostButton);
     }
     if (this.hostButton) {
       this.hostButton.hidden = !c?.host || !!this.panel;
       this.hostButton.lastChild.textContent = `Spectator chat${this.unread ? ` (${this.unread})` : ''}`;
     }
     if (this.panel) {
+      this.panel.classList.toggle('waiting', !c?.host && Screens.currentName === 'spectator');
       if (Spectate.watchingNow()) HudLayout.apply(GameplayScreen.hud);
       else { this.panel.style.translate = ''; this.panel.style.scale = ''; this.panel.classList.remove('hl-off'); delete this.panel.dataset.hlBase; }
     }
@@ -35563,7 +35582,7 @@ const SpectatorChat = {
       this.list, h('div.spectator-chat-send', this.input, h('button.icon-btn', { 'aria-label': 'Send spectator message', onclick: send }, icon('send'))));
     // A panel, rather than a screen overlay: stays open across the player's retry without pausing their play.
     panel.addEventListener('keydown', e => e.stopPropagation());
-    document.body.append(panel); this.paint(); this.refresh(); Toolbar.sync();
+    $('#app').append(panel); this.paint(); this.refresh(); Toolbar.sync();
     if (c.host && !Mobile.touch) this.input.focus({ preventScroll: true });
   },
   paint() {
@@ -35595,7 +35614,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '6384126e2928';
+const APP_BUILD = '69363d7ab2e5';
 
 const App = {
   lastReport: null,

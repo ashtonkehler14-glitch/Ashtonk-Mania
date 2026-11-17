@@ -69,6 +69,20 @@ try {
   await page.evaluate(()=>{for(const m of BeatmapManager.maps.values())SongSelect.select(m.id);});
   assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),['RT'],'Solo song changes keep custom speed');
   assert.equal(await page.evaluate(()=>ModSystem.config().rate),1.35,'Custom rate stays unchanged while browsing');
+  const smooth = await page.evaluate(async()=>{
+    const original=SongSelect.preview, nativeAnimate=Element.prototype.animate, seen=[];let flashes=0;
+    SongSelect.preview=async m=>seen.push(m.id);
+    Element.prototype.animate=function(...args){if(this.matches('.wedge,.wd'))flashes++;return nativeAnimate.apply(this,args);};
+    const maps=[...BeatmapManager.maps.values()];Music.meta=null;
+    try {
+      for(let i=0;i<6;i++){SongSelect.select(maps[i%maps.length].id);await new Promise(r=>setTimeout(r,80));}
+      await new Promise(r=>setTimeout(r,200));
+      return {seen,selected:SongSelect.selectedId,flashes};
+    } finally {SongSelect.preview=original;Element.prototype.animate=nativeAnimate;}
+  });
+  assert.equal(smooth.flashes,0,'Changing songs does not restart opacity flashes on the details');
+  assert.deepEqual(smooth.seen,[smooth.selected],'Rapid song changes load only the final audio preview');
+
   await page.screenshot({path:'/tmp/lobby-modded-stars.png'});
   assert.deepEqual(errors,[]);
   console.log('PASS lobby modded ratings, exact diff selection, solo speed retention and lounge mod retention');

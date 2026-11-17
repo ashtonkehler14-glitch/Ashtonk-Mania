@@ -40,6 +40,23 @@ try {
   assert.equal((await page.locator('.spm-card .stars').textContent()).trim(),'6.37','Spectator card shows the played rating');
   const chat=await page.locator('.spectator-chat').boundingBox(),song=await page.locator('.spm-stage').boundingBox();
   assert.ok(song.x>=chat.x+chat.width,'Song panel does not overlap chat');
+  for (const viewport of [{width:1280,height:591},{width:844,height:390},{width:390,height:844}]) {
+    await page.setViewportSize(viewport);
+    for (const scale of [.75,1.25,1.75]) {
+      await page.evaluate(scale=>{Settings.set('ui.scale',scale);Zoom.update();SpectatorChat.refresh();},scale);
+      await page.waitForTimeout(80);
+      const fit=await page.evaluate(()=>{
+        const panel=SpectatorChat.panel,stage=SpectatorScreen.stage,chat=panel.getBoundingClientRect(),song=stage.getBoundingClientRect();
+        return {chat:{x:chat.x,y:chat.y,right:chat.right,bottom:chat.bottom},song:{x:song.x,bottom:song.bottom},scaled:Math.abs(chat.width-panel.offsetWidth/Zoom.z)<2,inApp:panel.parentElement===document.getElementById('app'),overflow:stage.scrollWidth>stage.clientWidth+1};
+      });
+      assert.ok(fit.inApp && fit.scaled,'Persistent chat uses the same scaling container as menus');
+      assert.ok(fit.chat.x>=0 && fit.chat.y>=0 && fit.chat.right<=viewport.width+1 && fit.chat.bottom<=viewport.height+1,'Chat stays inside the viewport at every UI scale');
+      assert.ok(viewport.width>viewport.height?fit.song.x>=fit.chat.right:fit.song.bottom<=fit.chat.y+1,'Chat and song details occupy separate space');
+      assert.equal(fit.overflow,false,'Song details do not scroll sideways');
+    }
+  }
+  await page.setViewportSize({width:1280,height:process.env.CARD_TOUCH==='1'?390:591});
+  await page.evaluate(()=>{Settings.set('ui.scale',1.25);Zoom.update();});
   await page.screenshot({path:process.env.CARD_TOUCH==='1'?'/tmp/spectate-exact-mobile.png':'/tmp/spectate-exact-desktop.png'});
   await page.evaluate(()=>{
     ExplorerScreen.download=async()=>{BeatmapManager.maps.set('modified',{id:'modified',hash:'different',onlineId:8,osuPath:'modified',problems:[]});};
