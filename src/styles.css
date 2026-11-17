@@ -5545,9 +5545,9 @@ body.se-open .gameplay .hl-off { visibility: visible !important; opacity: .3; }
 .lz-menu .lz-btn { --c: #3d3745 !important; }
 .lz-menu .lz-btn[data-id="settings"] { --c: #565064 !important; }
 .lz-menu .lz-btn[data-id="back"] { --c: #565064 !important; }
-.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"], .lz-menu .lz-btn[data-id="beatmaps"] { --c: #d59400 !important; color: #fff; }
+.lz-menu .lz-btn[data-id="play"], .lz-menu .lz-btn[data-id="solo"], .lz-menu .lz-btn[data-id="beatmaps"], .lz-menu .lz-btn[data-id="skin"] { --c: #d59400 !important; color: #fff; }
 .lz-menu .lz-btn[data-id="edit"], .lz-menu .lz-btn[data-id="multi"], .lz-menu .lz-btn[data-id="lounge"] { --c: #e01880 !important; color: #fff; }
-.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="skin"], .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #8c32ed !important; color: #fff; }
+.lz-menu .lz-btn[data-id="browse"], .lz-menu .lz-btn[data-id="daily"], .lz-menu .lz-btn[data-id="ranked"] { --c: #8c32ed !important; color: #fff; }
 .lz-menu .lz-bg { background: linear-gradient(#ffffff14, #00000008), var(--c); border-radius: 0; box-shadow: inset 0 0 0 1px #ffffff30, inset 0 2px #ffffff1c, 0 5px 14px #21172b50; }
 .lz-menu .lz-btn { color: #fff; }
 /* Only the outside ends are rounded; neighbouring slanted faces meet without notches. */

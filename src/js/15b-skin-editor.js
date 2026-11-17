@@ -283,7 +283,7 @@ const SkinEditor = {
 
   // ── the layout
   appearanceRows(hud) {
-    return SETTINGS_SCHEMA.filter(it => hud ? it.editor === 'hud' && !HUD_PARTS.some(p => p.setting === it.k) : ['gameplay.laneWidth', 'gameplay.laneSpacing', 'gameplay.noteBorderWidth', 'gameplay.noteBorderColor'].includes(it.k));
+    return SETTINGS_SCHEMA.filter(it => hud ? it.editor === 'hud' && !HUD_PARTS.some(p => p.setting === it.k) : it.editor === 'notes' && (!it.k.startsWith('wom.') || customSkinOn()));
   },
   available(p) {
     if (!p.texture) return true;

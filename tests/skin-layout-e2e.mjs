@@ -58,6 +58,12 @@ try {
   const chatAfter=await page.locator('.gp-chat').boundingBox();
   assert.ok(chatAfter.x>chatBefore.x && chatAfter.width>chatBefore.width,'Chat moves and scales in the preview');
   assert.equal(await page.evaluate(()=>Settings.get('hud.layout').chat.s),1.2);
+  assert.equal(await page.evaluate(()=>SETTINGS_SCHEMA.filter(x=>x.g==='Custom skin').every(x=>x.x)),true,'Custom skin controls are hidden from regular settings');
+  await page.evaluate(()=>SkinEditor.setSection('stage'));
+  await page.locator('.se-item[data-id=noteoptions]').click();
+  assert.ok(await page.getByRole('slider',{name:'Colour',exact:true}).isVisible(),'Custom skin colours remain editable in the skin editor');
+  assert.ok(await page.locator('.se-set').getByText('Note type',{exact:true}).isVisible());
+  await page.evaluate(()=>SkinEditor.setSection('hud'));
   const advanced = page.locator('.se-advanced > summary');
   assert.equal(await advanced.evaluate(el => el.parentElement.open), false);
   assert.equal(await page.locator('.se-item[data-id=background]').isVisible(), false);

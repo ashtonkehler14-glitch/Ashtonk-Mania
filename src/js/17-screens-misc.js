@@ -843,22 +843,6 @@ const SkinsScreen = {
     if (room < css) { const hh = Math.max(200, Math.floor(room)) + 'px'; pv.style.height = hh; pv.parentElement.style.setProperty('--sk-pv-h', hh); }
   },
   leave() { (this._unsub || []).forEach(f => f()); if (this._customOff) { this._customOff(); this._customOff = null; } this.preview && this.preview.stop(); },
-  CUSTOM_KEYS: ['skin.noteStyle', 'skin.c.palette', 'skin.hue', 'skin.c.pattern', 'skin.c.noteSize', 'skin.c.round', 'skin.c.receptor', 'skin.c.keyArea', 'skin.c.hold', 'skin.darkerHolds', 'skin.c.glow', 'skin.c.lines', 'skin.c.border'],
-  WOM_KEYS: ['wom.style', 'wom.hue', 'wom.judgements', 'wom.darkerHolds'],
-  /** The Custom skin's options next to its preview (the same controls as in Settings → Skin): note type, colour,
-   *  judgement set, darker holds. */
-  customPanel(wom = false) {
-    const box = h('div.sk-custom'), keys = wom ? this.WOM_KEYS : this.CUSTOM_KEYS;
-    // (a WOM skin being looked at isn't necessarily the one in use, so its rows show whatever is selected)
-    const rowOf = d => !wom ? d : { ...d, when: undefined };
-    const paint = () => clearEl(box).append(h('div.sk-custom-h', icon('brush'), 'Customise', h('button.btn.sm.ghost', { onclick: () => { for (const k of keys) { const d = Settings.schema.get(k); if (d) Settings.set(k, copyData(d.d)); } UISounds.click(); paint(); } }, 'Reset')),
-      h('div.settings-panel.sk-custom-rows', ...keys.map(k => Settings.schema.get(k)).filter(Boolean).map(d => SettingsPanel.row(rowOf(d)))));
-    paint();
-    // rows that depend on another one (the Custom hue on its palette, WOM's hue on its colour mode)
-    if (this._customOff) this._customOff();
-    this._customOff = Bus.on('settings:changed', k => { if ((k === 'skin.c.palette' || k === 'wom.colorMode') && box.isConnected) paint(); });
-    return box;
-  },
   render() {
     const list = SkinManager.list();
     if (!list.some(s => s.id === this.sel)) this.sel = SkinManager.current.id;
@@ -903,7 +887,7 @@ const SkinsScreen = {
         !meta.builtin ? h('button.btn.ghost', { onclick: () => SkinManager.exportOsk(meta.id) }, icon('download'), 'Export') : null,
         !meta.builtin ? h('button.btn.danger', { title: 'Delete skin', 'aria-label': 'Delete skin', onclick: async () => { if (await Dialog.confirm('Delete skin?', `${skin.name} will be removed.`, { ok: 'Delete', danger: true })) { await SkinManager.remove(meta.id); this.sel = SkinManager.current.id; } } }, icon('trash')) : null),
       h('div.sk-keys.with-chips', h('span.muted.sk-kl', 'Preview'), chips, hint),
-      meta.builtin ? h('div.sk-custom-wrap', pv, this.customPanel(true)) : pv,
+      pv,
       h('div.muted', { style: { marginTop: '10px', fontSize: '.85rem' } }, `by ${skin.author || 'unknown'}`));
     // (again once the screen's entrance animation has settled: it moves the page while it plays)
     this._pv = pv; requestAnimationFrame(() => this.fit()); clearTimeout(this._fitT); this._fitT = setTimeout(() => this.fit(), 500);
@@ -922,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.16ag', title: 'Skin controls in one place', sections: [
+    { title: 'Skins', items: ['Custom skin controls are now only in the skin editor’s Note appearance panel.', 'The home menu’s Skins button is yellow.'] }
+  ] },
   { id: '2026.11.16af', title: 'Chat placement and clickable mentions', sections: [
     { title: 'Chat', items: ['Chat has a preview in the skin editor so you can move and resize it for each skin and key count.', 'Mentions have a colourful highlight. Click one to open that player’s profile.', 'Messages containing just one emoji display it at a larger size.'] }
   ] },
