@@ -906,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17d', title: 'Keep your song speed', sections: [
+    { title: 'Song select', items: ['Speed mods stay enabled while browsing your library. Lounge song selection keeps your chosen mods; picking a new song from beatmap explorer clears them.'] }
+  ] },
   { id: '2026.11.17c', title: 'Message controls and smoother browsing', sections: [
     { title: 'Chat', items: ['Use the menu on your messages to edit or delete them.', 'Mention suggestions include offline friends and players from your chat history. Offline lobby mentions are delivered when the player returns.'] },
     { title: 'Beatmap explorer', items: ['Song cards build in small batches as you scroll, and cards far behind you are released to keep long browsing sessions lighter.'] }

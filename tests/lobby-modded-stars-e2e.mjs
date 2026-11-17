@@ -55,7 +55,21 @@ try {
   const peerExpected=await page.evaluate(async()=>{const map=Multiplayer.localMap(),{notes}=await BeatmapManager.load(map.id);return DifficultyCalculator.calculate(notes,map.keys,1.35).toFixed(2);});
   await page.waitForFunction(value=>[...document.querySelectorAll('.mp-pdiff')].some(e=>e.textContent.includes('★'+value)),peerExpected);
   assert.ok((await page.locator('.mp-pdiff').allTextContents()).some(t=>t.includes('★'+peerExpected)),'Peer custom rate is reflected in their label');
+  await page.evaluate(async()=>{
+    Settings.set('songselect.mods',['RT','HD']);Settings.set('mods.config',{...ModSystem.config(),rate:1.35});
+    await Screens.go('songselect',{mpPick:true});
+  });
+  await page.waitForFunction(()=>!Screens.busy && Screens.currentName==='songselect');
+  assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),['RT','HD'],'Opening the lounge library keeps mods');
+  await page.evaluate(()=>{for(const m of BeatmapManager.maps.values())SongSelect.select(m.id);SongSelect.searched();});
+  assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),['RT','HD'],'Browsing and rebuilding the lounge library keeps mods');
+  await page.evaluate(async()=>{Multiplayer.room=null;await Screens.go('songselect',{force:true});});
+  await page.waitForFunction(()=>!Screens.busy);
+  assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),['RT'],'Solo selection keeps custom speed');
+  await page.evaluate(()=>{for(const m of BeatmapManager.maps.values())SongSelect.select(m.id);});
+  assert.deepEqual(await page.evaluate(()=>Settings.get('songselect.mods')),['RT'],'Solo song changes keep custom speed');
+  assert.equal(await page.evaluate(()=>ModSystem.config().rate),1.35,'Custom rate stays unchanged while browsing');
   await page.screenshot({path:'/tmp/lobby-modded-stars.png'});
   assert.deepEqual(errors,[]);
-  console.log('PASS actual DT ratings on room cards and difficulty options, exact diff selection and peer custom-rate labels');
+  console.log('PASS lobby modded ratings, exact diff selection, solo speed retention and lounge mod retention');
 } finally {if(browser)await browser.close();server.close();}

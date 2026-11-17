@@ -19528,6 +19528,7 @@ const SongSelect = {
   rows: [], pool: new Map(), ROW_SET: 72, ROW_DIFF: 45, ROW_GROUP: 54, ROW_GAP: 3, // (lazer's PanelBeatmapSet / PanelBeatmap / PanelGroup heights)
 
   enter(params = {}) {
+    this.mpPick = !!params.mpPick && Multiplayer.inRoom();
     const hadMods = this.resetMods();
     this._keyMod = 0;
     if (hadMods) Bus.emit('mods:changed');
@@ -19535,7 +19536,6 @@ const SongSelect = {
     // missing the scores set since, your own among them)
     this._onlineFor = null;
     this.practiceMode = !!params.practice;
-    this.mpPick = !!params.mpPick && Multiplayer.inRoom();
     this.mpQueue = this.mpPick && !!params.mpQueue && Multiplayer.canQueue(); // (onto the room's queue, not the room's beatmap)
     if (params.mapId) this.selectedId = params.mapId;
     else if (!this.selectedId) this.selectedId = Settings.get('last.map');
@@ -20357,10 +20357,16 @@ const SongSelect = {
     }
     return wrap;
   },
-  /** Mods belong to this selection, rather than carrying into the next song or visit. */
-  resetMods() {
-    if (!(Settings.get('songselect.mods') || []).length) return false;
-    Settings.set('songselect.mods', []);
+  /** Keep playback speed while browsing; lounge picks keep all selected mods. */
+  resetMods({ all = false } = {}) {
+    const mods = Settings.get('songselect.mods') || [];
+    if (!all && this.mpPick && Multiplayer.inRoom()) return false;
+    const keep = all ? [] : mods.filter(id => {
+      const mod = MOD_BY_ID.get(id);
+      return mod && (mod.rate || mod.config === 'rate' || mod.ramp || mod.adaptive);
+    });
+    if (keep.length === mods.length) return false;
+    Settings.set('songselect.mods', keep);
     return true;
   },
   select(id, { scroll = true, regroup: opened = false } = {}) {
@@ -25921,6 +25927,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17d', title: 'Keep your song speed', sections: [
+    { title: 'Song select', items: ['Speed mods stay enabled while browsing your library. Lounge song selection keeps your chosen mods; picking a new song from beatmap explorer clears them.'] }
+  ] },
   { id: '2026.11.17c', title: 'Message controls and smoother browsing', sections: [
     { title: 'Chat', items: ['Use the menu on your messages to edit or delete them.', 'Mention suggestions include offline friends and players from your chat history. Offline lobby mentions are delivered when the player returns.'] },
     { title: 'Beatmap explorer', items: ['Song cards build in small batches as you scroll, and cards far behind you are released to keep long browsing sessions lighter.'] }
@@ -27390,7 +27399,8 @@ const ExplorerScreen = {
           if (!Multiplayer.queueAdd(m)) throw new Error(Multiplayer.reconnecting ? 'Reconnecting to the room — try again in a moment.' : 'You\'re not connected to the room.');
           Toast.ok(Multiplayer.room && Multiplayer.room.map ? 'Added to the queue' : 'Beatmap picked', `${m.title} [${m.version}]`);
         } else {
-          Multiplayer.selectMap(m, Settings.get('songselect.mods') || []);
+          if (SongSelect.resetMods({all:true})) Bus.emit('mods:changed');
+          Multiplayer.selectMap(m, []);
           Toast.ok('Beatmap picked', `${m.title} [${m.version}]`);
         }
       } else {
@@ -27441,6 +27451,7 @@ const ExplorerScreen = {
    *  menu song the preview had paused isn't resumed over it. */
   playLocal(m) {
     if (typeof Multiplayer !== 'undefined' && Multiplayer.inRoom()) { Toast.show('You\'re in a multiplayer room', 'Leave the room to play on your own.'); return; }
+    if (SongSelect.resetMods({all:true})) Bus.emit('mods:changed');
     this._resumeMusic = false;
     this.stopPreview();
     this.closeSet();
@@ -35637,7 +35648,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'a8d76f39cdeb';
+const APP_BUILD = 'ae6f40cc24fb';
 
 const App = {
   lastReport: null,

@@ -974,7 +974,8 @@ const ExplorerScreen = {
           if (!Multiplayer.queueAdd(m)) throw new Error(Multiplayer.reconnecting ? 'Reconnecting to the room — try again in a moment.' : 'You\'re not connected to the room.');
           Toast.ok(Multiplayer.room && Multiplayer.room.map ? 'Added to the queue' : 'Beatmap picked', `${m.title} [${m.version}]`);
         } else {
-          Multiplayer.selectMap(m, Settings.get('songselect.mods') || []);
+          if (SongSelect.resetMods({all:true})) Bus.emit('mods:changed');
+          Multiplayer.selectMap(m, []);
           Toast.ok('Beatmap picked', `${m.title} [${m.version}]`);
         }
       } else {
@@ -1025,6 +1026,7 @@ const ExplorerScreen = {
    *  menu song the preview had paused isn't resumed over it. */
   playLocal(m) {
     if (typeof Multiplayer !== 'undefined' && Multiplayer.inRoom()) { Toast.show('You\'re in a multiplayer room', 'Leave the room to play on your own.'); return; }
+    if (SongSelect.resetMods({all:true})) Bus.emit('mods:changed');
     this._resumeMusic = false;
     this.stopPreview();
     this.closeSet();

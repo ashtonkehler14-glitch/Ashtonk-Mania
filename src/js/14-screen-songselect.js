@@ -38,6 +38,7 @@ const SongSelect = {
   rows: [], pool: new Map(), ROW_SET: 72, ROW_DIFF: 45, ROW_GROUP: 54, ROW_GAP: 3, // (lazer's PanelBeatmapSet / PanelBeatmap / PanelGroup heights)
 
   enter(params = {}) {
+    this.mpPick = !!params.mpPick && Multiplayer.inRoom();
     const hadMods = this.resetMods();
     this._keyMod = 0;
     if (hadMods) Bus.emit('mods:changed');
@@ -45,7 +46,6 @@ const SongSelect = {
     // missing the scores set since, your own among them)
     this._onlineFor = null;
     this.practiceMode = !!params.practice;
-    this.mpPick = !!params.mpPick && Multiplayer.inRoom();
     this.mpQueue = this.mpPick && !!params.mpQueue && Multiplayer.canQueue(); // (onto the room's queue, not the room's beatmap)
     if (params.mapId) this.selectedId = params.mapId;
     else if (!this.selectedId) this.selectedId = Settings.get('last.map');
@@ -867,10 +867,16 @@ const SongSelect = {
     }
     return wrap;
   },
-  /** Mods belong to this selection, rather than carrying into the next song or visit. */
-  resetMods() {
-    if (!(Settings.get('songselect.mods') || []).length) return false;
-    Settings.set('songselect.mods', []);
+  /** Keep playback speed while browsing; lounge picks keep all selected mods. */
+  resetMods({ all = false } = {}) {
+    const mods = Settings.get('songselect.mods') || [];
+    if (!all && this.mpPick && Multiplayer.inRoom()) return false;
+    const keep = all ? [] : mods.filter(id => {
+      const mod = MOD_BY_ID.get(id);
+      return mod && (mod.rate || mod.config === 'rate' || mod.ramp || mod.adaptive);
+    });
+    if (keep.length === mods.length) return false;
+    Settings.set('songselect.mods', keep);
     return true;
   },
   select(id, { scroll = true, regroup: opened = false } = {}) {
