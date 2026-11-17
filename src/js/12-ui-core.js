@@ -69,7 +69,8 @@ function chatAvatar(from = {}, size = 28) {
   const player = room && room.players.find(p => p.id === from.from);
   const pid = from.pid || (player && player.pid);
   const online = (Presence.players || []).find(p => p.pid === pid);
-  const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || '';
+  const friend = typeof Friends !== 'undefined' && Friends.list().find(p=>p.pid===pid);
+  const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || (friend && friend.avatar) || '';
   const name = from.name || (player && player.name) || 'Player';
   const picture = Presence.avatarEl({ name, avatar }, size);
   // A real button provides keyboard access and keeps the link intact if an image fails to load.
@@ -591,10 +592,10 @@ const Dialog = {
       setTimeout(() => btns[0].focus(), 30);
     });
   },
-  prompt(title, value = '', { ok = 'Save', placeholder = '' } = {}) {
+  prompt(title, value = '', { ok = 'Save', placeholder = '', maxlength = 60 } = {}) {
     return new Promise(resolve => {
       let result = null;
-      const inp = h('input.input.pd-input', { value, placeholder, maxlength: 60 });
+      const inp = h('input.input.pd-input', { value, placeholder, maxlength });
       const { o, btns } = this.popup(title, inp, [
         { label: ok, colour: '#ff66aa', onClick: () => { result = inp.value; } },
         { label: 'Cancel', colour: '#66ccff', cls: 'cancel', cancel: true },

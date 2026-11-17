@@ -27,6 +27,9 @@ try {
   await page.evaluate(()=>{
     Overlays.closeAll();Settings.set('audio.autoplay',false);
     window._exploreRequests=0;window._coverRequests=new Set();
+    window._buildBatches=[];const build=ExplorerScreen.card,windowRender=ExplorerScreen.renderWindow;let builds=0;
+    ExplorerScreen.card=function(...args){builds++;return build.apply(this,args);};
+    ExplorerScreen.renderWindow=function(...args){const before=builds;const result=windowRender.apply(this,args);window._buildBatches.push(builds-before);return result;};
     OnlineBeatmaps.search=async()=>{
       const page=window._exploreRequests++;
       return {sets:Array.from({length:100},(_,i)=>({id:page*100+i+1,title:'Song '+(page*100+i),artist:'Artist',creator:'Mapper',status:'ranked',favourites:10,playCount:100,diffs:[{id:i+1,version:'Hard',keys:4,stars:3,length:180,bpm:180}]})),cursor:page===0?'next':null,hasMore:page===0,total:200};
@@ -42,6 +45,8 @@ try {
   await page.waitForFunction(()=>ExplorerScreen.results.length===200);await page.waitForTimeout(700);
   assert.equal(await page.evaluate(()=>window._exploreRequests),2,'Scrolling near the end loads the next page');
   assert.ok(await page.evaluate(()=>window._coverRequests.size<150),'Scrolling does not preload the whole result list');
+  assert.ok(await page.evaluate(()=>Math.max(...window._buildBatches)<=6),'Card building stays within a small per-frame batch');
+  assert.ok(await page.evaluate(()=>ExplorerScreen._liveCards.size<100),'Long scrolling releases cards far behind the viewport');
   await page.evaluate(async()=>Screens.go('songselect'));await page.waitForFunction(()=>!Screens.busy);
   assert.equal(await page.locator('.ss.menu-surface').count(),0,'Song select keeps its original full-screen layout');
   for(const viewport of [{width:1280,height:591},{width:844,height:390},{width:650,height:1000}]) {

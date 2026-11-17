@@ -13,14 +13,31 @@ const Chat = {
 
   /** From the presence server. */
   on(m) {
+    if (m.t === 'offlineMentions') {
+      for (const line of m.list || []) {
+        const title = `${line.from.name} mentioned you while you were offline`, open = () => this.open('#lobby');
+        if (Settings.get('online.status') === 'dnd') Notifications.add(title,line.text,'info',{onClick:open});
+        else Toast.show(title,line.text,{hold:true,onClick:open});
+      }
+      return;
+    }
+    if (m.t === 'pmHist') {
+      const key = 'pm:'+m.with.pid, existing = this.channels.get(key);
+      this.channels.set(key,{...(existing || {key,name:m.with.name,pid:m.with.pid,pm:true,unread:0}),lines:ChatMessageUI.merge(existing?.lines || [],m.list || []).slice(-200)});
+      this.save();if(this.o)this.paint();return;
+    }
+    if (m.t === 'chatChange') {
+      const key = m.scope === 'lobby' ? '#lobby' : 'pm:'+(m.people || []).find(p=>p.pid!==Presence.pid())?.pid, channel = this.channels.get(key);
+      if (!channel) return;
+      channel.lines = ChatMessageUI.patch(channel.lines,m);this.save();
+      if (this.o) {const top=this.lines.scrollTop,atEnd=this.lines.scrollHeight-top-this.lines.clientHeight<48;this.paint();if(!atEnd)this.lines.scrollTop=top;}
+      return;
+    }
     if (m.t === 'chatHist') {
       // merged with what we already have, never swapped for it: a reconnect (or the server having restarted, with
       // less or nothing to send) used to wipe the chat
       const lobby = this.channels.get('#lobby');
-      const sig = l => `${l.at}|${(l.from && (l.from.pid || l.from.name)) || ''}|${l.text}`;
-      const all = new Map();
-      for (const l of [...lobby.lines, ...(Array.isArray(m.list) ? m.list : [])]) if (l && l.text) all.set(sig(l), l);
-      lobby.lines = [...all.values()].sort((a, b) => (a.at || 0) - (b.at || 0)).slice(-200);
+      lobby.lines = ChatMessageUI.merge(lobby.lines, Array.isArray(m.list) ? m.list : []).slice(-200);
       this.save();
       this.paint();
       return;
@@ -91,7 +108,7 @@ const Chat = {
   },
   add(key, line) {
     const c = this.channels.get(key);
-    c.lines.push({ from: line.from || {}, text: String(line.text || ''), mentions: Array.isArray(line.mentions) ? line.mentions : [], at: line.at || Date.now() });
+    c.lines.push({ mid:line.mid, editedAt:line.editedAt, from: line.from || {}, text: String(line.text || ''), mentions: Array.isArray(line.mentions) ? line.mentions : [], at: line.at || Date.now() });
     if (c.lines.length > 200) c.lines.shift();
     this.save();
     const looking = this.o && this.cur === key && !document.hidden;
@@ -201,6 +218,7 @@ const Chat = {
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
       chatText('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text, l.mentions)), l.from, l.at));
+    if (!l.local) ChatMessageUI.attach(this.lines.lastElementChild, l, {scope:this.cur === '#lobby' ? 'lobby' : 'pm',to:this.channels.get(this.cur)?.pid});
     trimChatLines(this.lines, 200);
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },

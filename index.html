@@ -6029,6 +6029,18 @@ body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
 .spm-presence small { display: block; margin-top: 8px; font-size: 12px; color: #bfaacb; }
 @media (max-height: 560px) { .spm .spm-stage .spm-presence { min-height: 112px; padding: 16px; } }
 @media (max-width: 700px) and (orientation: portrait) { .spm-stage { width: auto; } }
+
+
+.chat-own-message { position: relative; padding-right: 30px !important; }
+.chat-message-actions { position: absolute; right: 2px; top: 2px; display: grid; place-items: center; width: 25px; height: 25px; padding: 0; border: 1px solid #ffffff14; border-radius: 7px; background: #302938; color: #ddd0e6; font-size: 19px; line-height: 1; opacity: 0; pointer-events: auto; }
+.chat-own-message:hover > .chat-message-actions, .chat-own-message:focus-within > .chat-message-actions { opacity: 1; }
+.chat-message-actions:hover { background: #8d285f; color: #fff; }
+.chat-message-actions:focus-visible { opacity: 1; outline: 2px solid #f5a9d1; }
+.ch-line.chat-own-message > .ch-time { margin-right: 20px; }
+.chat-edited { font-size: 10px; color: #b4a3bf; font-weight: 400; white-space: nowrap; }
+.chat-mention-option > small { margin-left: auto; color: #cbbdd1; font-size: 10px; }
+@media (hover: none) { .chat-message-actions { opacity: 1; } }
+.ex-card-placeholder { height: 128px; margin-inline: 10px; border-radius: 16px; background: #30293880; transform: skewX(-8deg); pointer-events: none; }
 </style>
 <style id="css-no-anim" media="not all">
 *, *::before, *::after { transition: none !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
@@ -14489,7 +14501,8 @@ function chatAvatar(from = {}, size = 28) {
   const player = room && room.players.find(p => p.id === from.from);
   const pid = from.pid || (player && player.pid);
   const online = (Presence.players || []).find(p => p.pid === pid);
-  const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || '';
+  const friend = typeof Friends !== 'undefined' && Friends.list().find(p=>p.pid===pid);
+  const avatar = from.avatar || (online && online.avatar) || (player && player.avatar) || (friend && friend.avatar) || '';
   const name = from.name || (player && player.name) || 'Player';
   const picture = Presence.avatarEl({ name, avatar }, size);
   // A real button provides keyboard access and keeps the link intact if an image fails to load.
@@ -15011,10 +15024,10 @@ const Dialog = {
       setTimeout(() => btns[0].focus(), 30);
     });
   },
-  prompt(title, value = '', { ok = 'Save', placeholder = '' } = {}) {
+  prompt(title, value = '', { ok = 'Save', placeholder = '', maxlength = 60 } = {}) {
     return new Promise(resolve => {
       let result = null;
-      const inp = h('input.input.pd-input', { value, placeholder, maxlength: 60 });
+      const inp = h('input.input.pd-input', { value, placeholder, maxlength });
       const { o, btns } = this.popup(title, inp, [
         { label: ok, colour: '#ff66aa', onClick: () => { result = inp.value; } },
         { label: 'Cancel', colour: '#66ccff', cls: 'cancel', cancel: true },
@@ -16329,7 +16342,7 @@ const ChatMentions = {
   render(text, mentions = []) {
     const fragment = document.createDocumentFragment();
     if (!text.includes('@')) { fragment.append(document.createTextNode(text)); return fragment; }
-    for (const p of [...(Presence.players || []), ...(Multiplayer.room?.players || []), { pid: Presence.pid(), name: ProfileManager.profile.name }]) this.remember(p);
+    for (const p of [...(Presence.players || []), ...Friends.list(), ...(Multiplayer.room?.players || []), { pid: Presence.pid(), name: ProfileManager.profile.name }]) this.remember(p);
     const known = new Map(this.identities);
     for (const p of Array.isArray(mentions) ? mentions : []) if (p?.pid && typeof p.name === 'string' && p.name) { this.remember(p); known.set(p.name.toLocaleLowerCase(), p); }
     if (!known.size) { fragment.append(document.createTextNode(text)); return fragment; }
@@ -16347,6 +16360,7 @@ const ChatMentions = {
     const room = Multiplayer.room;
     let list = input?.closest('.mp-tabpane, .gp-chat:not(.spectator-chat)') && room ? room.players : Presence.players;
     if (input?.closest('.spectator-chat')) list = [...(list || []), ...SpectatorChat.lines.map(l => l.from), Spectate.target].filter(Boolean);
+    list = [...(list || []), ...Friends.list(), ...this.identities.values(), ...[...Chat.channels.values()].filter(c=>c.pm).map(c=>({pid:c.pid,name:c.name}))];
     const seen = new Set();
     return (list || []).filter(p => {
       if (!p.name || p.pid && p.pid === Presence.pid() || p.id && p.id === Presence.me) return false;
@@ -16387,7 +16401,7 @@ const ChatMentions = {
     const options = this.players(input).filter(p => p.name.toLocaleLowerCase().includes(token.query)).sort((a,b) => Number(b.name.toLocaleLowerCase().startsWith(token.query)) - Number(a.name.toLocaleLowerCase().startsWith(token.query)) || a.name.localeCompare(b.name)).slice(0, 6);
     if (!options.length) return;
     this.input = input; this.token = token; this.options = options; this.active = 0;
-    this.popup = h('div.chat-mentions', { id: 'chat-mention-options', role: 'listbox', 'aria-label': 'Mention a player' }, h('div.chat-mentions-title', 'Mention a player'), ...options.map((p,i) => h('button.chat-mention-option', { id: `chat-mention-${i}`, role: 'option', type: 'button', onpointerdown: e => { e.preventDefault(); this.choose(i); } }, Presence.avatarEl(p, 26), h('span', p.name))));
+    this.popup = h('div.chat-mentions', { id: 'chat-mention-options', role: 'listbox', 'aria-label': 'Mention a player' }, h('div.chat-mentions-title', 'Mention a player'), ...options.map((p,i) => h('button.chat-mention-option', { id: `chat-mention-${i}`, role: 'option', type: 'button', onpointerdown: e => { e.preventDefault(); this.choose(i); } }, Presence.avatarEl(p, 26), h('span', p.name), !(Presence.players || []).some(u=>u.pid===p.pid) ? h('small', 'Offline') : null)));
     document.body.append(this.popup);
     input.setAttribute('aria-controls', this.popup.id); input.setAttribute('aria-expanded', 'true'); input.setAttribute('aria-autocomplete', 'list');
     const rect = input.getBoundingClientRect(), width = Math.min(320, innerWidth - 24);
@@ -16589,6 +16603,42 @@ const ModdedStars = {
   label(map, version, options = {}) {
     const el = h('span'), paint = stars => { el.textContent = `${version} · ★${stars === null ? '…' : stars.toFixed(2)}`; };
     paint(this.value(map, options));this.calculate(map, options).then(paint).catch(()=>{});return el;
+  },
+};
+
+/* ===== 12f-message-actions.js ===== */
+/* Only the author gets controls; the server checks ownership again before changing a message. */
+const ChatMessageUI = {
+  same(a,b) { return b.mid ? a.mid === b.mid : (a.at ?? a.ts) === (b.at ?? b.ts) && (a.from?.pid || a.pid || a.from) === (b.from?.pid || b.pid || b.from); },
+  merge(local, remote) {
+    const all = new Map();
+    for (const l of [...local,...remote]) if (l && typeof l.text === 'string') all.set(l.mid || `${l.at ?? l.ts}|${l.from?.pid || l.pid || l.from}|${l.text}`, l);
+    return [...all.values()].filter(l=>!l.deleted).sort((a,b)=>(a.at ?? a.ts)-(b.at ?? b.ts));
+  },
+  patch(list, update) {
+    return list.flatMap(l=>this.same(l,update.line || update) ? update.deleted ? [] : [update.line] : [l]);
+  },
+  attach(el, line, channel) {
+    if (!el || line.deleted || el.matches('.sys,.local,.suggest')) return;
+    if (line.editedAt) el.querySelector('.chat-copy > span, .ch-text')?.append(h('small.chat-edited', ' (edited)'));
+    const from = typeof line.from === 'object' ? line.from : line;
+    const mine = from.pid ? from.pid === Presence.pid() : typeof line.from === 'string' ? line.from === Multiplayer.me : !!from.id && from.id === Presence.me;
+    if (!mine || !line.mid && !Number.isFinite(line.at ?? line.ts) || channel.readOnly) return;
+    const send = action => {
+      const packet = { t:'chatChange', scope:channel.scope, to:channel.to, mid:line.mid, at:line.at ?? line.ts, ...action };
+      const connection = channel.send ? Multiplayer.ws : Presence.ws;
+      if (!connection || connection.readyState !== 1) { Toast.err('Chat is offline', 'Reconnect before changing your message.'); return; }
+      if (channel.send) channel.send(packet); else Presence.send(packet);
+    };
+    const open = e => {
+      e.preventDefault();e.stopPropagation();
+      showMenu(e.clientX,e.clientY,[
+        {label:'Edit message',icon:'edit',onClick:async()=>{const text=await Dialog.prompt('Edit message',line.text,{ok:'Save',maxlength:300});if(text===null || text===line.text)return;if(!text.trim()){Toast.err('Message can’t be empty');return;}send({action:'edit',text});}},
+        {label:'Delete message',icon:'trash',danger:true,onClick:async()=>{if(await Dialog.confirm('Delete this message?',line.text,{ok:'Delete',danger:true}))send({action:'delete'});}}
+      ]);
+    };
+    el.classList.add('chat-own-message');el.addEventListener('contextmenu',open);
+    el.append(h('button.chat-message-actions',{type:'button','aria-label':'Message actions',title:'Edit or delete your message',onclick:open},'⋯'));
   },
 };
 
@@ -21323,7 +21373,7 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text, m.mentions) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const line = m => {const el=m.from ? compactChatLine('div.gp-chat-l',m,m.text,m.mentions) : m.text ? h('div.gp-chat-l.sys',m.text):null;if(el)ChatMessageUI.attach(el,m,{scope:'room',send:packet=>Multiplayer.send(packet)});return el;};
     const preview = this._hudAll;
     const messages = preview ? [{ from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Chat messages appear here.', ts: Date.now() }, { from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Move and resize chat to fit your skin.', ts: Date.now() + 1 }] : (Multiplayer.chat || []).slice(-5);
     for (const m of messages) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
@@ -21337,11 +21387,13 @@ const GameplayScreen = {
     this.gpChat = h('div.gp-chat', list, this.gpChatIn);
     this.hud.append(this.gpChat);
     if (preview) { this.gpChat.classList.add('open', 'fresh'); this.gpChatIn.placeholder = 'Chat preview'; return; }
-    this._gpChatOff = Bus.on('mp:chat', m => {
+    const offChat = Bus.on('mp:chat', m => {
       const el = line(m); if (!el) return;
       list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); trimChatLines(list, 5);
       this.gpChat.classList.add('fresh'); clearTimeout(this._gpChatT); this._gpChatT = setTimeout(() => this.gpChat && this.gpChat.classList.remove('fresh'), 5000);
     });
+    const offChange=Bus.on('mp:chatChanged',()=>{clearEl(list);for(const m of (Multiplayer.chat || []).slice(-5)){const el=line(m);if(el)list.append(groupChatLine(list,el,m.from?m:null,m.ts));}});
+    this._gpChatOff=()=>{offChat();offChange();};
   },
   gpChatOpen() { const s = this.s; return !!(s && s.mp && s.finished); },
   /** (the box can't be clicked into mid-song: it would take the keys) */
@@ -25869,6 +25921,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17c', title: 'Message controls and smoother browsing', sections: [
+    { title: 'Chat', items: ['Use the menu on your messages to edit or delete them.', 'Mention suggestions include offline friends and players from your chat history. Offline lobby mentions are delivered when the player returns.'] },
+    { title: 'Beatmap explorer', items: ['Song cards build in small batches as you scroll, and cards far behind you are released to keep long browsing sessions lighter.'] }
+  ] },
   { id: '2026.11.17b', title: 'Star ratings with mods', sections: [
     { title: 'Spectating and multiplayer', items: ['Spectator song cards show the star rating of the play with its mods.', 'Lobby song cards, difficulty choices, player labels and queued songs show ratings with the applicable room and player mods.'] }
   ] },
@@ -26806,15 +26862,15 @@ const ExplorerScreen = {
     // back online after an offline error: search again by itself
     const online = () => { if (this.error) this.newSearch(); };
     window.addEventListener('online', online);
-    const resized = () => { this._mDirty = true; this.renderWindow(); }; // (a different width can mean a different number of columns)
+    const resized = () => { this._mDirty = true; this._wantWin=true; this.schedule(); }; // (a different width can mean a different number of columns)
     window.addEventListener('resize', resized);
-    this._unsub = [Bus.on('library:changed', () => this.renderResults()),
+    this._unsub = [Bus.on('library:changed', () => { this._ownIdx=null;this.renderResults(); }),
       // (a difficulty's global board, asked for by its beatmap id, for the open beatmap overlay)
       Bus.on('lb', m => { if (!m.id) return; (this.lbById ||= new Map()).set(m.id, { ...m, at: Date.now() }); if (this.setView && this.setView.diff && this.setView.diff.id === m.id) this.renderSet(); }), () => window.removeEventListener('online', online), () => window.removeEventListener('resize', resized)];
     if (!this.results.length || this.page === 0) this.newSearch(); else this.renderResults();
     return el;
   },
-  leave() { this._active = false; this.token = {}; this.loading = false; this._replace = false; cancelAnimationFrame(this._fr); this._fr = 0; this._q = []; clearTimeout(this._scrollT); this.io && this.io.disconnect(); this._ringRO && this._ringRO.disconnect(); (this._unsub || []).forEach(f => f()); this.stopPreview(); this.closeSet(); },
+  leave() { this._liveCards?.clear(); if(this._cards)for(const e of this._cards.values()){e.el=null;e.placeholder=null;} this._active = false; this.token = {}; this.loading = false; this._replace = false; cancelAnimationFrame(this._fr); this._fr = 0; this._q = []; clearTimeout(this._scrollT); this.io && this.io.disconnect(); this._ringRO && this._ringRO.disconnect(); (this._unsub || []).forEach(f => f()); this.stopPreview(); this.closeSet(); },
   /** One track with two handles (minimum and maximum stars); the label follows the handles while dragging. */
   starSliders() {
     const st = this.state;
@@ -26919,8 +26975,9 @@ const ExplorerScreen = {
     const sc = this._scroller;
     if (!sc || !sc.isConnected) { this._q = []; return; }
     if (this._scrolled) { this._scrolled = false; this._st = sc.scrollTop; }
-    const q = this._q || []; this._q = [];
-    for (const f of q) f();
+    const q = this._q || []; this._q = q.slice(12);
+    for (const f of q.slice(0,12)) f();
+    if (this._q.length) this.schedule();
     if (this._wantWin) { this._wantWin = false; this.renderWindow(); }
     if (this._wantRing) { this._wantRing = false; this._paintRing && this._paintRing(); this.topBtn.classList.toggle('show', (this._st || 0) > 600); }
     // (and the card that was under the pointer drops its hover at once rather than sliding its buttons away: that
@@ -26956,20 +27013,20 @@ const ExplorerScreen = {
     // each time another page of results came in)
     // (cards are only built as they near the screen — see cardEl — not a whole page of fifty in one frame)
     const old = this._cards || new Map(), next = new Map();
-    const entries = list.map(set => {
+    const entries = list.map((set,index) => {
       const sig = this.cardSig(set), c = old.get(set.id);
       const e = c && c.sig === sig && c.set === set ? c : { set, sig, el: null, isNew: !c };
-      next.set(set.id, e);
+      e.index = index; next.set(set.id, e);
       return e;
     });
     this._cards = next;
     this._all = entries;
     if (!this._m) this._mDirty = true;
     this._st = top;
-    this.renderWindow();
+    this._wantWin=true;this.schedule();
     this.renderStatus();
     // once more after layout (the first row's height, and where the grid sits, are only known then)
-    requestAnimationFrame(() => requestAnimationFrame(() => this.renderWindow()));
+    const grid=this.grid;requestAnimationFrame(() => requestAnimationFrame(() => {if(this._active && this.grid===grid){this._mDirty=true;this._wantWin=true;this.schedule();}}));
   },
   /** The columns, the distance from one row to the next and where the grid starts in the list. */
   measureGrid(grid, sc) {
@@ -26978,7 +27035,7 @@ const ExplorerScreen = {
     // the real distance from one row to the next, measured on the page (an estimate drifts further off the further
     // down the list you go, until the window is drawn off screen)
     const kids = grid.children;
-    let rowH = 0;
+    let rowH = 128 + (parseFloat(cs.rowGap) || 0);
     if (kids.length > cols && kids[cols].offsetTop > kids[0].offsetTop) rowH = kids[cols].offsetTop - kids[0].offsetTop;
     else if (kids[0] && kids[0].offsetHeight) rowH = kids[0].offsetHeight + (parseFloat(cs.rowGap) || 0);
     // where the grid starts in the list, from layout offsets (the header's scroll effects move things on screen,
@@ -26996,6 +27053,7 @@ const ExplorerScreen = {
   cardEl(e) {
     if (e.el) return e.el;
     const card = e.el = this.card(e.set);
+    (this._liveCards || (this._liveCards = new Set())).add(e);
     // a card new to the list fades in once (and drops the animation after) — not while scrolling, where it'd only
     // be a moving layer for the compositor to juggle
     if (e.isNew && !this._scrolling && !this.lite()) { e.isNew = false; card.classList.add('ex-new'); const done = () => card.classList.remove('ex-new'); card.addEventListener('animationend', done, { once: true }); setTimeout(done, 1000); }
@@ -27014,32 +27072,28 @@ const ExplorerScreen = {
     const rowH = this._m.rowH || 110, rows = Math.ceil(all.length / cols);
     const st = this._st ?? (sc ? sc.scrollTop : 0);
     let from = 0, to = rows;
-    if (sc && all.length > cols * 2) {
-      const range = extra => [clamp(Math.floor((st - gridTop - extra) / rowH), 0, rows), clamp(Math.ceil((st - gridTop + vh + extra) / rowH), 0, rows)];
-      // what's in the page already is kept while it still covers the screen with a screen to spare; past that, the
-      // window moves on to two screens either side — a few rows at a time as you scroll
-      // (kept two screens either side — a fast flick on a phone moves a screen or more between frames, and a narrower
-      // window left the list empty where it hadn't caught up — moved on once less than a screen is left)
-      // (it moves a row at a time as you scroll — a row in at one end, a row out at the other — rather than a whole
-      // screen of cards at once now and then: the same work, spread evenly, so no single frame is heavy)
-      [from, to] = range(vh * 1.25);
-      // Start artwork just beyond the viewport, rather than fetching several screens at once.
-      const lite = this.lite();
-      const [pa, pb] = range(vh * .5);
-      // (the cards ahead are built a few a frame, so a new page of results never lands in one long frame)
-      let budget = lite ? 3 : 6, more = false;
-      for (let i = pa * cols; i < Math.min(all.length, pb * cols); i++) {
-        const e = all[i];
-        if (!e.el && i >= from * cols && i < to * cols) this.cardEl(e); // (needed now)
-        else if (!e.el) { if (budget-- > 0) this.cardEl(e); else { more = true; continue; } }
-        const f = e.el._loadCovers; if (f) { e.el._loadCovers = null; f(); }
-      }
-      if (more) { this._wantWin = true; this.schedule(); }
-      // Fetch the next page as the viewer approaches the end of the available rows.
-      if (this.hasMore && !this.loading && !this.error && pb >= rows - 2) this.loadMore();
-    } else for (const e of all) { const c = this.cardEl(e), f = c._loadCovers; if (f) { c._loadCovers = null; f(); } }
-    this._win = { from, to, cols, n: all.length };
-    const shown = all.slice(from * cols, to * cols).map(e => this.cardEl(e));
+    const range = extra => [clamp(Math.floor((st - gridTop - extra) / rowH), 0, rows), clamp(Math.ceil((st - gridTop + vh + extra) / rowH), 0, rows)];
+    if (sc && all.length > cols * 2) [from,to] = range(vh * 1.25);
+    const [va,vb] = range(0), [pa,prefetchEnd] = range(vh * .5);
+    let budget = this.lite() ? 3 : 6, more = false;
+    const priority = [];
+    for (let row=from;row<to;row++) priority.push(row);
+    priority.sort((a,b)=>(a>=va && a<vb ? 0 : a>=pa && a<prefetchEnd ? 1 : 2)-(b>=va && b<vb ? 0 : b>=pa && b<prefetchEnd ? 1 : 2) || Math.abs(a-va)-Math.abs(b-va));
+    for (const row of priority) for (let i=row*cols;i<Math.min(all.length,(row+1)*cols);i++) {
+      const e=all[i];
+      if (!e.el) { if (budget-- > 0) this.cardEl(e); else { more=true; continue; } }
+      if (row>=pa && row<prefetchEnd && e.el._loadCovers) {const load=e.el._loadCovers;e.el._loadCovers=null;load();}
+    }
+    if (more) {this._wantWin=true;this.schedule();}
+    if (this.hasMore && !this.loading && !this.error && prefetchEnd>=rows-2) this.loadMore();
+    this._win = { from,to,cols,n:all.length };
+    const shown = all.slice(from*cols,to*cols).map(e=>e.el || (e.placeholder || (e.placeholder=h('div.ex-card-placeholder',{'aria-hidden':'true'}))));
+    // Reclaim visited cards outside a generous back-scroll buffer; data and decoded cover URLs stay cached.
+    const keepFrom=Math.max(0,from*cols-cols*12),keepTo=Math.min(all.length,to*cols+cols*12);
+    for (const e of this._liveCards || []) if (this._cards?.get(e.set.id)!==e || e.index<keepFrom || e.index>=keepTo) {
+      for(const img of e.el?.querySelectorAll('.ex-thumb,.ex-cardbg') || [])PicWait.done(img);
+      e.el?.remove();e.el=null;this._liveCards.delete(e);
+    }
     const pt = from ? `${from * rowH}px` : '', pb = to < rows ? `${(rows - to) * rowH}px` : '';
     if (grid.style.paddingTop !== pt) grid.style.paddingTop = pt;
     if (grid.style.paddingBottom !== pb) grid.style.paddingBottom = pb;
@@ -28903,9 +28957,10 @@ const Multiplayer = {
           clearTimeout(slow); this.me = m.you; if (m.token) this.token = m.token; this.room = m.room; this.qpClock(m.room);
           // the room's recent chat (after a reload, or anything said while the connection was down)
           let missed = [];
-          if (Array.isArray(m.chat)) { const last = this.chat.length ? this.chat[this.chat.length - 1].ts || 0 : 0; missed = m.chat.filter(c => (c.ts || 0) > last); this.chat.push(...missed); if (this.chat.length > 200) this.chat.splice(0, this.chat.length - 200); }
+          if (Array.isArray(m.chat)) { const ids=new Set(this.chat.map(c=>c.mid || `${c.ts}|${c.from}|${c.text}`)); missed=m.chat.filter(c=>!c.deleted && !ids.has(c.mid || `${c.ts}|${c.from}|${c.text}`));this.chat=ChatMessageUI.merge(this.chat,m.chat).slice(-200); }
           settled = true; resolve(); this.startKeepAlive(); this.autoFetch(); this.flushOutbox(); this.resendFinish();
           for (const c of missed) Bus.emit('mp:chat', c); // (into a chat already open)
+          if (Array.isArray(m.chat)) Bus.emit('mp:chatChanged');
           Bus.emit('mp:changed'); return;
         }
         if (m.t === 'error' && m.fatal) { ws._serverMsg = m.msg; fail(m.msg); return; }
@@ -29099,6 +29154,7 @@ const Multiplayer = {
         Bus.emit('mp:changed');
         break;
       }
+      case 'chatChange': this.chat=ChatMessageUI.patch(this.chat,m);Bus.emit('mp:chatChanged',m);break;
       case 'chat': ChatMentions.notify(m, 'the room', () => Screens.go('multiplayer')); this.chat.push(m); if (this.chat.length > 200) this.chat.shift(); Bus.emit('mp:chat', m); break;
       case 'pong': if (m.c === this._pingAt) this.rtt = performance.now() - m.c; break;
       case 'opp': this.opps.set(m.id, m); Bus.emit('mp:opp', m); break;
@@ -29677,7 +29733,8 @@ const Presence = {
       else if (m.t === 'friendSent') Toast.ok('Friend request sent', `${m.name} can accept it from their online users list.`);
       else if (m.t === 'friendAdded') { if (!Toast.playing()) UISounds.play('check-on'); Toast.ok(`${m.name} accepted your friend request`, 'You can now invite each other to rooms.', { hold: true }); }
       else if (m.t === 'invite') this.onInvite(m);
-      else if (m.t === 'chatHist' || m.t === 'say' || m.t === 'pm') Chat.on(m);
+      else if (m.t === 'chatChange') { if(m.scope==='spectator')SpectatorChat.on(m);else Chat.on(m); }
+      else if (m.t === 'chatHist' || m.t === 'pmHist' || m.t === 'offlineMentions' || m.t === 'say' || m.t === 'pm') Chat.on(m);
       else if (m.t === 'rankings') Bus.emit('rankings', m);
       else if (m.t === 'myBests') Bus.emit('myBests', m);
       // (another of your devices changed something of yours: fetched now)
@@ -29967,7 +30024,7 @@ const MultiplayerScreen = {
     this.el = h('div.mp.ov', { style: { '--o-h': OVERLAY_HUES.plum } });
     this.body = h('div.mp-body');
     this.el.append(this.body, h('div.page-back', backButton(() => this.onBack() || Screens.back())));
-    this._unsub = [Bus.on('mp:changed', () => this.render()), Bus.on('mp:chat', m => this.appendChat(m)), Bus.on('mp:fetch', () => { this.updateFetch(); if (Multiplayer.isQP() && Multiplayer.room.qp.phase === 'load') this.qpUpdate(Multiplayer.room); })];
+    this._unsub = [Bus.on('mp:changed', () => this.render()), Bus.on('mp:chat', m => this.appendChat(m)), Bus.on('mp:chatChanged',()=>{if(this.chatList){const top=this.chatList.scrollTop,end=this.chatList.scrollHeight-top-this.chatList.clientHeight<48;clearEl(this.chatList);for(const m of Multiplayer.chat)this.appendChat(m,false);this.chatList.scrollTop=end?this.chatList.scrollHeight:top;}}), Bus.on('mp:fetch', () => { this.updateFetch(); if (Multiplayer.isQP() && Multiplayer.room.qp.phase === 'load') this.qpUpdate(Multiplayer.room); })];
     this._qpInt = setInterval(() => this.qpTick(), 250);
     this.render();
     return this.el;
@@ -30398,6 +30455,7 @@ const MultiplayerScreen = {
       }
       el = h('div.mp-msg.suggest', chatAvatar(m, 24), h('div.mp-suggest-copy', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), h('div.mp-suggest-actions', ...buttons)));
     } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text, m.mentions) : h('div.mp-msg.sys', m.text);
+    ChatMessageUI.attach(el,m,{scope:'room',send:packet=>Multiplayer.send(packet)});
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)
@@ -30958,6 +31016,7 @@ const RankedMatch = {
     const ev = this.watching ? 'rpw' : 'mp';
     this._subs = [
       Bus.on(`${ev}:chat`, m => this.addChat(m)),
+      Bus.on(`${ev}:chatChanged`,()=>{if(this.chatList){clearEl(this.chatList);for(const m of this.M.chat.slice(-60))this.addChat(m);}}),
       Bus.on(this.watching ? 'rpw:hand' : 'rp:hand', m => this.onHand(m)),
       Bus.on('mp:fetch', () => this.paintCorners(true)),
       Bus.on(`${ev}:opp`, () => { if (this.g && this.g.stage === 'playing') this.refreshPlaying(); }),
@@ -31162,7 +31221,7 @@ const RankedMatch = {
     requestAnimationFrame(() => { this.chatList.scrollTop = this.chatList.scrollHeight; });
     return box;
   },
-  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text, m.mentions) : h('div.rkm-msg.sys', m.text); },
+  chatLine(m) { const el=m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`,m,m.text,m.mentions) : h('div.rkm-msg.sys',m.text);ChatMessageUI.attach(el,m,{scope:'room',readOnly:this.watching,send:packet=>this.M.send(packet)});return el; },
   addChat(m) {
     if (!this.chatList) return;
     this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
@@ -31713,13 +31772,14 @@ const RankedWatch = {
     switch (m.t) {
       case 'welcome':
         this.tries = 0; this.me = m.you; this.room = m.room; this.qpClock(m.room);
-        if (Array.isArray(m.chat)) this.chat = m.chat.slice(-60);
+        if (Array.isArray(m.chat)) this.chat = m.chat.filter(l=>!l.deleted).slice(-60);
         clearInterval(this._keep);
         this._keep = setInterval(() => { if (this.ws && !this.ws.http && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 8000);
         this.prefetch();
         Bus.emit('rpw:changed');
         break;
       case 'room': this.room = m.room; this.qpClock(m.room); this.prefetch(); Bus.emit('rpw:changed'); break;
+      case 'chatChange': this.chat=ChatMessageUI.patch(this.chat,m);Bus.emit('rpw:chatChanged',m);break;
       case 'chat': this.chat.push(m); if (this.chat.length > 60) this.chat.shift(); Bus.emit('rpw:chat', m); break;
       case 'opp': this.opps.set(m.id, m); Bus.emit('rpw:opp', m); break;
       case 'hand': Bus.emit('rpw:hand', m); break;
@@ -33340,14 +33400,31 @@ const Chat = {
 
   /** From the presence server. */
   on(m) {
+    if (m.t === 'offlineMentions') {
+      for (const line of m.list || []) {
+        const title = `${line.from.name} mentioned you while you were offline`, open = () => this.open('#lobby');
+        if (Settings.get('online.status') === 'dnd') Notifications.add(title,line.text,'info',{onClick:open});
+        else Toast.show(title,line.text,{hold:true,onClick:open});
+      }
+      return;
+    }
+    if (m.t === 'pmHist') {
+      const key = 'pm:'+m.with.pid, existing = this.channels.get(key);
+      this.channels.set(key,{...(existing || {key,name:m.with.name,pid:m.with.pid,pm:true,unread:0}),lines:ChatMessageUI.merge(existing?.lines || [],m.list || []).slice(-200)});
+      this.save();if(this.o)this.paint();return;
+    }
+    if (m.t === 'chatChange') {
+      const key = m.scope === 'lobby' ? '#lobby' : 'pm:'+(m.people || []).find(p=>p.pid!==Presence.pid())?.pid, channel = this.channels.get(key);
+      if (!channel) return;
+      channel.lines = ChatMessageUI.patch(channel.lines,m);this.save();
+      if (this.o) {const top=this.lines.scrollTop,atEnd=this.lines.scrollHeight-top-this.lines.clientHeight<48;this.paint();if(!atEnd)this.lines.scrollTop=top;}
+      return;
+    }
     if (m.t === 'chatHist') {
       // merged with what we already have, never swapped for it: a reconnect (or the server having restarted, with
       // less or nothing to send) used to wipe the chat
       const lobby = this.channels.get('#lobby');
-      const sig = l => `${l.at}|${(l.from && (l.from.pid || l.from.name)) || ''}|${l.text}`;
-      const all = new Map();
-      for (const l of [...lobby.lines, ...(Array.isArray(m.list) ? m.list : [])]) if (l && l.text) all.set(sig(l), l);
-      lobby.lines = [...all.values()].sort((a, b) => (a.at || 0) - (b.at || 0)).slice(-200);
+      lobby.lines = ChatMessageUI.merge(lobby.lines, Array.isArray(m.list) ? m.list : []).slice(-200);
       this.save();
       this.paint();
       return;
@@ -33418,7 +33495,7 @@ const Chat = {
   },
   add(key, line) {
     const c = this.channels.get(key);
-    c.lines.push({ from: line.from || {}, text: String(line.text || ''), mentions: Array.isArray(line.mentions) ? line.mentions : [], at: line.at || Date.now() });
+    c.lines.push({ mid:line.mid, editedAt:line.editedAt, from: line.from || {}, text: String(line.text || ''), mentions: Array.isArray(line.mentions) ? line.mentions : [], at: line.at || Date.now() });
     if (c.lines.length > 200) c.lines.shift();
     this.save();
     const looking = this.o && this.cur === key && !document.hidden;
@@ -33528,6 +33605,7 @@ const Chat = {
       // (a right-click — or a tap — on it: their profile, reporting them, an admin's tools)
       chatName(h('span.ch-name', { style: { color: this.colour(l.from) }, title: l.from.name, oncontextmenu: e => this.nameMenu(e, l), onclick: e => this.nameMenu(e, l) }, act ? `* ${l.from.name || '?'}` : l.from.name || '?'), l.from),
       chatText('span.ch-text', act ? l.text.replace(/^\/me\s+/, '') : l.text, l.mentions)), l.from, l.at));
+    if (!l.local) ChatMessageUI.attach(this.lines.lastElementChild, l, {scope:this.cur === '#lobby' ? 'lobby' : 'pm',to:this.channels.get(this.cur)?.pid});
     trimChatLines(this.lines, 200);
     if (scroll && (stick || me)) this.lines.scrollTop = this.lines.scrollHeight;
   },
@@ -35494,10 +35572,9 @@ const SpectatorChat = {
   on(m) {
     this.refresh();
     if (!this.id || m.id !== this.id) return;
+    if (m.t === 'chatChange') { this.lines=ChatMessageUI.patch(this.lines,m);if(this.panel)this.paint();return; }
     if (m.t === 'specChatHist') {
-      const all = new Map();
-      for (const l of [...(m.lines || []), ...this.lines]) if (l?.from && typeof l.text === 'string') all.set(`${l.at}|${l.from.pid}|${l.text}`, l);
-      this.lines = [...all.values()].sort((a, b) => a.at - b.at).slice(-100);
+      this.lines = ChatMessageUI.merge(this.lines,m.lines || []).slice(-100);
       if (this.panel) this.paint();
     } else if (m.line?.from && typeof m.line.text === 'string') {
       ChatMentions.notify(m.line, 'spectator chat', () => this.open());
@@ -35543,6 +35620,7 @@ const SpectatorChat = {
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
     const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text, l.mentions);
+    ChatMessageUI.attach(line,l,{scope:'spectator',to:this.id});
     line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(groupChatLine(this.list, line, l.from, l.at));
@@ -35559,7 +35637,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'e92ee552dfe1';
+const APP_BUILD = 'a8d76f39cdeb';
 
 const App = {
   lastReport: null,

@@ -13,7 +13,7 @@ const ChatMentions = {
   render(text, mentions = []) {
     const fragment = document.createDocumentFragment();
     if (!text.includes('@')) { fragment.append(document.createTextNode(text)); return fragment; }
-    for (const p of [...(Presence.players || []), ...(Multiplayer.room?.players || []), { pid: Presence.pid(), name: ProfileManager.profile.name }]) this.remember(p);
+    for (const p of [...(Presence.players || []), ...Friends.list(), ...(Multiplayer.room?.players || []), { pid: Presence.pid(), name: ProfileManager.profile.name }]) this.remember(p);
     const known = new Map(this.identities);
     for (const p of Array.isArray(mentions) ? mentions : []) if (p?.pid && typeof p.name === 'string' && p.name) { this.remember(p); known.set(p.name.toLocaleLowerCase(), p); }
     if (!known.size) { fragment.append(document.createTextNode(text)); return fragment; }
@@ -31,6 +31,7 @@ const ChatMentions = {
     const room = Multiplayer.room;
     let list = input?.closest('.mp-tabpane, .gp-chat:not(.spectator-chat)') && room ? room.players : Presence.players;
     if (input?.closest('.spectator-chat')) list = [...(list || []), ...SpectatorChat.lines.map(l => l.from), Spectate.target].filter(Boolean);
+    list = [...(list || []), ...Friends.list(), ...this.identities.values(), ...[...Chat.channels.values()].filter(c=>c.pm).map(c=>({pid:c.pid,name:c.name}))];
     const seen = new Set();
     return (list || []).filter(p => {
       if (!p.name || p.pid && p.pid === Presence.pid() || p.id && p.id === Presence.me) return false;
@@ -71,7 +72,7 @@ const ChatMentions = {
     const options = this.players(input).filter(p => p.name.toLocaleLowerCase().includes(token.query)).sort((a,b) => Number(b.name.toLocaleLowerCase().startsWith(token.query)) - Number(a.name.toLocaleLowerCase().startsWith(token.query)) || a.name.localeCompare(b.name)).slice(0, 6);
     if (!options.length) return;
     this.input = input; this.token = token; this.options = options; this.active = 0;
-    this.popup = h('div.chat-mentions', { id: 'chat-mention-options', role: 'listbox', 'aria-label': 'Mention a player' }, h('div.chat-mentions-title', 'Mention a player'), ...options.map((p,i) => h('button.chat-mention-option', { id: `chat-mention-${i}`, role: 'option', type: 'button', onpointerdown: e => { e.preventDefault(); this.choose(i); } }, Presence.avatarEl(p, 26), h('span', p.name))));
+    this.popup = h('div.chat-mentions', { id: 'chat-mention-options', role: 'listbox', 'aria-label': 'Mention a player' }, h('div.chat-mentions-title', 'Mention a player'), ...options.map((p,i) => h('button.chat-mention-option', { id: `chat-mention-${i}`, role: 'option', type: 'button', onpointerdown: e => { e.preventDefault(); this.choose(i); } }, Presence.avatarEl(p, 26), h('span', p.name), !(Presence.players || []).some(u=>u.pid===p.pid) ? h('small', 'Offline') : null)));
     document.body.append(this.popup);
     input.setAttribute('aria-controls', this.popup.id); input.setAttribute('aria-expanded', 'true'); input.setAttribute('aria-autocomplete', 'list');
     const rect = input.getBoundingClientRect(), width = Math.min(320, innerWidth - 24);

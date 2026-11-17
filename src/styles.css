@@ -6018,3 +6018,15 @@ body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
 .spm-presence small { display: block; margin-top: 8px; font-size: 12px; color: #bfaacb; }
 @media (max-height: 560px) { .spm .spm-stage .spm-presence { min-height: 112px; padding: 16px; } }
 @media (max-width: 700px) and (orientation: portrait) { .spm-stage { width: auto; } }
+
+
+.chat-own-message { position: relative; padding-right: 30px !important; }
+.chat-message-actions { position: absolute; right: 2px; top: 2px; display: grid; place-items: center; width: 25px; height: 25px; padding: 0; border: 1px solid #ffffff14; border-radius: 7px; background: #302938; color: #ddd0e6; font-size: 19px; line-height: 1; opacity: 0; pointer-events: auto; }
+.chat-own-message:hover > .chat-message-actions, .chat-own-message:focus-within > .chat-message-actions { opacity: 1; }
+.chat-message-actions:hover { background: #8d285f; color: #fff; }
+.chat-message-actions:focus-visible { opacity: 1; outline: 2px solid #f5a9d1; }
+.ch-line.chat-own-message > .ch-time { margin-right: 20px; }
+.chat-edited { font-size: 10px; color: #b4a3bf; font-weight: 400; white-space: nowrap; }
+.chat-mention-option > small { margin-left: auto; color: #cbbdd1; font-size: 10px; }
+@media (hover: none) { .chat-message-actions { opacity: 1; } }
+.ex-card-placeholder { height: 128px; margin-inline: 10px; border-radius: 16px; background: #30293880; transform: skewX(-8deg); pointer-events: none; }

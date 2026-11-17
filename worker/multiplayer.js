@@ -163,6 +163,21 @@ function chatMentionData(text, people) {
   return mentions.length ? { mentions } : {};
 }
 
+function chatId() { return crypto.randomUUID(); }
+function ownChatMessage(list, actor, connection, request) {
+  const lines = list.filter(l => request.mid ? l.mid === request.mid : Number.isFinite(request.at) && (l.at ?? l.ts) === request.at);
+  if (lines.length !== 1) return null;
+  const l = lines[0], from = typeof l.from === 'object' ? l.from : l;
+  return from.pid ? actor.pid && from.pid === actor.pid ? l : null : (typeof l.from === 'string' ? l.from : from.id) === connection ? l : null;
+}
+function changeChatMessage(line, action, text, at, mentions = {}) {
+  if (!line || line.deleted) return false;
+  if (action === 'delete') { line.deleted = true; line.text = ''; delete line.mentions; }
+  else if (action === 'edit' && text.trim()) { line.text = text; line.editedAt = at; delete line.mentions; Object.assign(line, mentions); }
+  else return false;
+  return true;
+}
+
 export class RoomLogic {
   constructor(code, now = () => Date.now(), rnd = Math.random) {
     this.code = code; this.now = now; this.rnd = rnd;
@@ -448,7 +463,15 @@ export class RoomLogic {
       case 'ping': return [{ to: id, msg: { t: 'pong', c: m.c, s: this.now() } }];
       case 'chat': {
         const text = str(m.text, 300);
-        return text ? [{ to: 'all', msg: { t: 'chat', from: id, pid: p.pid, name: p.name, avatar: p.avatar, text, ...chatMentionData(text, this.players), ts: this.now() } }] : [];
+        if (!text) return [];
+        const line = { t: 'chat', mid: chatId(), from: id, pid: p.pid, name: p.name, avatar: p.avatar, text, ...chatMentionData(text, this.players), ts: this.now() };
+        const log = this.chatLog || (this.chatLog = []); log.push(line); if (log.length > 40) log.shift();
+        return [{ to: 'all', msg: line }];
+      }
+      case 'chatChange': {
+        const line = ownChatMessage(this.chatLog || [], p, id, m);
+        if (!changeChatMessage(line, m.action, str(m.text, 300), this.now(), chatMentionData(str(m.text, 300), this.players))) return [];
+        return [{ to: 'all', msg: { t: 'chatChange', mid: line.mid, at: line.ts, deleted: !!line.deleted, line } }];
       }
       case 'suggest': {
         const map = cleanSuggestion(m.map);
@@ -937,7 +960,7 @@ export const adminCodeHash = env => { const c = cleanPlayerCode(env && env.ADMIN
 export class MatchRoom {
   constructor(state, env) { this.state = state; this.env = env; this.logic = null; this.socks = new Map(); this.timer = null; this.beat = null; this._listed = ''; this.seen = new Map(); this.kick = new Map(); this.watchers = new Map(); }
   static MAX_WATCHERS = 16;
-  static WATCH_MSGS = new Set(['room', 'chat', 'opp', 'hand', 'results']);
+  static WATCH_MSGS = new Set(['room', 'chat', 'chatChange', 'opp', 'hand', 'results']);
   /** Tell the lobby's room list about this room (on change, and every 15 s while anyone is in it). */
   announce(force = false) {
     const l = this.logic && this.logic.listing(), body = JSON.stringify(l ? { room: l } : { remove: this.logic && this.logic.code });
@@ -1092,7 +1115,7 @@ export class MatchRoom {
       // the room's recent chat, for whoever joins (or comes back after a reload) — as lazer shows a channel's history
       if (this.logic && msg) {
         const log = this.logic.chatLog || (this.logic.chatLog = []);
-        if (to === 'all' && msg.t === 'chat') { log.push(msg); if (log.length > 40) log.shift(); }
+        if (to === 'all' && msg.t === 'chat' && (!msg.mid || !log.some(l => l.mid === msg.mid))) { log.push(msg); if (log.length > 40) log.shift(); }
         else if (msg.t === 'welcome') msg.chat = log.slice();
       }
       const data = each ? null : JSON.stringify(msg);
@@ -1133,7 +1156,7 @@ export class PresenceLogic {
     this.friends = new Map(); this.requests = new Map(); this.persist = null;
     // lazer's chat: #lobby for everyone online (the last CHAT_KEEP lines kept for whoever comes online), and private
     // messages between friends; `said` rate-limits each connection
-    this.chat = []; this.said = new Map();
+    this.chat = []; this.said = new Map(); this.privateChat = new Map(); this.mentionInbox = new Map();
     // admins' announcements (banners in everyone's game while they're up) and players' reports for the admins
     this.anns = []; this.reports = []; this.repAt = new Map();
     // lazer's rankings (performance): each player's own totals by public id, kept in storage (rk:<pid>)
@@ -2229,6 +2252,22 @@ export class PresenceLogic {
   save(kind, pid) { if (this.persist && pid) this.persist(kind, pid, [...((kind === 'fr' ? this.friends : this.requests).get(pid) || new Map())]); }
   /** Everyone online with this public id (a player can have the game open in two tabs). */
   byPid(pid) { return [...this.users.entries()].filter(([, u]) => u.pid && u.pid === pid).map(([id]) => id); }
+  mentionPeople(pid) {
+    return [...this.friendsMsg(pid).list, ...this.chat.flatMap(l => [l.from, ...(l.mentions || [])]).filter(Boolean), ...this.users.values()];
+  }
+  updateMentionInbox(line) {
+    for (const [pid, list] of this.mentionInbox) {
+      const next = list.filter(n => n.mid !== line.mid);
+      if (next.length !== list.length) { if (next.length) this.mentionInbox.set(pid, next); else this.mentionInbox.delete(pid); this.persistMentions?.(pid, next); }
+    }
+    if (line.deleted) return;
+    for (const target of line.mentions || []) if (target.pid !== line.from.pid && !this.byPid(target.pid).length) {
+      const list = this.mentionInbox.get(target.pid) || [];
+      list.push({ mid: line.mid, from: {pid:line.from.pid,name:line.from.name}, text: line.text, at: line.at });
+      this.mentionInbox.set(target.pid, list.slice(-30)); this.persistMentions?.(target.pid, list.slice(-30));
+    }
+  }
+  privateKey(a,b) { return [a,b].sort().join(':'); }
   friendsMsg(pid) {
     const online = new Set([...this.users.values()].filter(u => u.vis !== 'offline').map(u => u.pid));
     // (with each one's current name and picture: from them while online, else from their last ranked record)
@@ -2285,7 +2324,10 @@ export class PresenceLogic {
     const me = this.users.get(id);
     // (a new tab with a picture: it's theirs now, everywhere; one without: it shows the one they already have)
     if (pid) { if (me.avatar) this.shareAvatar(pid, me.avatar); else me.avatar = ([...this.users.values()].find(x => x !== me && x.pid === pid && x.avatar) || {}).avatar || ''; }
-    return [...out, { to: id, msg: { t: 'welcome', you: id } }, { to: id, msg: { t: 'chatHist', list: this.chat } }, ...(me.pid ? [{ to: id, msg: this.friendsMsg(me.pid) }] : []),
+    const mentions = me.pid ? this.mentionInbox.get(me.pid) || [] : [];
+    if (mentions.length) { this.mentionInbox.delete(me.pid); this.persistMentions?.(me.pid, []); }
+    const privateHistory = me.pid ? [...this.privateChat.values()].filter(c => c.people.some(p => p.pid === me.pid)).map(c => ({ to: id, msg: { t: 'pmHist', with: c.people.find(p => p.pid !== me.pid), list: c.lines } })) : [];
+    return [...out, ...(mentions.length ? [{ to: id, msg: { t: 'offlineMentions', list: mentions } }] : []), ...privateHistory, { to: id, msg: { t: 'welcome', you: id } }, { to: id, msg: { t: 'chatHist', list: this.chat } }, ...(me.pid ? [{ to: id, msg: this.friendsMsg(me.pid) }] : []),
       ...(this.isStaff(me.pid) ? [{ to: id, msg: { t: 'admin', role: this.roleOf(me.pid) } }, ...(this.openReports() ? [{ to: id, msg: { t: 'staffReport', open: this.openReports() } }] : [])] : []),
       ...(this.annList().length ? [{ to: id, msg: { t: 'anns', list: this.annList() } }] : []), this.broadcast()];
   }
@@ -2439,6 +2481,31 @@ export class PresenceLogic {
       return [...told, this.broadcast()];
     }
     // ── chat: a line in #lobby, or a private message to a friend (every tab of both of you)
+    if (msg.t === 'chatChange') {
+      let list, recipients, scope = msg.scope;
+      if (scope === 'lobby') { list = this.chat; recipients = ['all']; }
+      else if (scope === 'spectator') {
+        const host = this.users.get(String(msg.to || ''));
+        if (!host || !(String(msg.to) === id || u.watching === String(msg.to) && host.watchers.has(id))) return [];
+        list = host.specLines || []; recipients = [String(msg.to), ...host.watchers];
+      } else if (scope === 'pm' && u.pid) {
+        const conversation = this.privateChat.get(this.privateKey(u.pid, String(msg.to || '')));
+        if (!conversation) return [];
+        list = conversation.lines; recipients = conversation.people.flatMap(p => this.byPid(p.pid));
+      } else return [];
+      const line = ownChatMessage(list, u, id, msg);
+      let text = this.starWords(str(msg.text, 300));
+      if (msg.action === 'edit') {
+        if (this.modOf('mu', u.pid)) return [{ to: id, msg: { t: 'error', msg: 'You cannot edit messages while muted.' } }];
+        const recent = (this.said.get(id) || []).filter(t => this.now() - t < PresenceLogic.CHAT_WINDOW);
+        if (recent.length >= PresenceLogic.CHAT_BURST) return [{ to: id, msg: { t: 'error', msg: 'You’re editing messages too fast.' } }];
+        recent.push(this.now()); this.said.set(id, recent);
+      }
+      if (!changeChatMessage(line, msg.action, text, this.now(), chatMentionData(text, this.mentionPeople(u.pid)))) return [];
+      if (scope === 'lobby') { this.persistChat?.(this.chat); this.updateMentionInbox(line); }
+      if (scope === 'pm') this.persistPrivate?.(this.privateKey(u.pid, String(msg.to)), this.privateChat.get(this.privateKey(u.pid, String(msg.to))));
+      return recipients.map(to => ({ to, msg: { t: 'chatChange', scope, mid: line.mid, at: line.at, deleted: !!line.deleted, line, ...(scope === 'spectator' ? { id: String(msg.to) } : {}), ...(scope === 'pm' ? { people: this.privateChat.get(this.privateKey(u.pid, String(msg.to))).people } : {}) } }));
+    }
     if (msg.t === 'specChatHistory') {
       const host = this.users.get(String(msg.to || ''));
       if (!host || !(String(msg.to) === id || u.watching === String(msg.to) && host.watchers.has(id))) return [];
@@ -2463,7 +2530,7 @@ export class PresenceLogic {
       if (msg.t === 'say' && !staff && rules.slow && last != null && t - last < rules.slow * 1000) return [{ to: id, msg: { t: 'error', msg: `Slow mode: one message every ${rules.slow} seconds (${Math.ceil((rules.slow * 1000 - (t - last)) / 1000)}s to go).` } }];
       recent.push(t); this.said.set(id, recent);
       if (msg.t === 'say') { this.lastSay.set(u.pid || id, t); if (this.lastSay.size > 5000) this.lastSay.clear(); }
-      const from = { pid: u.pid, name: u.name, avatar: u.avatar, role: this.roles.get(u.pid) || null };
+      const from = { id, pid: u.pid, name: u.name, avatar: u.avatar, role: this.roles.get(u.pid) || null };
       // (blocked words starred out; one who keeps at it — 3 lines in 10 minutes — is muted for 10 minutes, where the
       // admins have that on)
       const starred = this.starWords(text), auto = [];
@@ -2477,15 +2544,16 @@ export class PresenceLogic {
         }
       }
       text = starred;
-      const mentionData = chatMentionData(text, this.users.values());
+      const mentionData = chatMentionData(text, this.mentionPeople(u.pid));
       if (msg.t === 'specChat') {
-        const line = { from, text, ...mentionData, at: t };
+        const line = { mid: chatId(), from, text, ...mentionData, at: t };
         (specHost.specLines || (specHost.specLines = [])).push(line);
         if (specHost.specLines.length > 100) specHost.specLines.shift();
         return [specHostId, ...specHost.watchers].map(to => ({ to, msg: { t: 'specChat', id: specHostId, line } })).concat(auto);
       }
       if (msg.t === 'say') {
-        const line = { ch: '#lobby', from, text, ...mentionData, at: t };
+        const line = { mid: chatId(), ch: '#lobby', from, text, ...mentionData, at: t };
+        this.updateMentionInbox(line);
         this.chat.push(line); if (this.chat.length > PresenceLogic.CHAT_KEEP) this.chat.shift();
         if (this.persistChat) this.persistChat(this.chat);
         return [{ to: 'all', msg: { t: 'say', ...line } }, ...auto];
@@ -2495,8 +2563,12 @@ export class PresenceLogic {
       const targets = this.byPid(to);
       if (!targets.length) return [{ to: id, msg: { t: 'error', msg: 'That player is offline.' } }];
       const toName = this.users.get(targets[0]).name;
-      return [...targets.map(x => ({ to: x, msg: { t: 'pm', with: { pid: u.pid, name: u.name, avatar: u.avatar }, from, text, ...mentionData, at: t } })),
-        ...this.byPid(u.pid).map(x => ({ to: x, msg: { t: 'pm', with: { pid: to, name: toName }, from, text, ...mentionData, at: t, mine: true } }))];
+      const line = { mid: chatId(), from, text, ...mentionData, at: t };
+      const key = this.privateKey(u.pid,to), conversation = this.privateChat.get(key) || { people: [{ pid: u.pid, name: u.name }, { pid: to, name: toName }], lines: [] };
+      conversation.lines.push({...line,from:{id:from.id,pid:from.pid,name:from.name}}); conversation.lines = conversation.lines.slice(-50); this.privateChat.delete(key);this.privateChat.set(key, conversation); this.persistPrivate?.(key, conversation);
+      while(this.privateChat.size>200){const oldest=this.privateChat.keys().next().value;this.privateChat.delete(oldest);this.persistPrivate?.(oldest,null);}
+      return [...targets.map(x => ({ to: x, msg: { t: 'pm', with: { pid: u.pid, name: u.name, avatar: u.avatar }, ...line } })),
+        ...this.byPid(u.pid).map(x => ({ to: x, msg: { t: 'pm', with: { pid: to, name: toName }, ...line, mine: true } }))];
     }
     if (msg.t === 'vis') {
       const v = cleanVis(msg.v);
@@ -3351,6 +3423,8 @@ export class Matchmaker {
       try {
         for (const [k, v] of await st.list({ prefix: 'fr:' })) fr[k.slice(3)] = v;
         for (const [k, v] of await st.list({ prefix: 'fq:' })) fq[k.slice(3)] = v;
+        for (const [k,v] of await st.list({ prefix: 'mi:' })) if (Array.isArray(v)) this.presence.mentionInbox.set(k.slice(3), v.slice(-30));
+        for (const [k,v] of await st.list({ prefix: 'pc:' })) if (Array.isArray(v?.people) && Array.isArray(v?.lines)) this.presence.privateChat.set(k.slice(3), {...v,lines:v.lines.slice(-50)});
         const rk = {}; for (const [k, v] of await st.list({ prefix: 'rk:' })) rk[k.slice(3)] = v;
         const au = {}; for (const [k, v] of await st.list({ prefix: 'au:' })) au[k.slice(3)] = v;
         this.presence.loadAuth(au);
@@ -3441,6 +3515,8 @@ export class Matchmaker {
       this.presence.persistReports = list => { st.put('reports', list).catch(() => {}); };
       this.presence.persistSeen = (pid, t) => { st.put(`ls:${pid}`, t).catch(() => {}); };
       // (written at most every couple of seconds however busy the lobby is)
+      this.presence.persistMentions = (pid,list) => { (list.length ? st.put('mi:'+pid,list) : st.delete('mi:'+pid)).catch(()=>{}); };
+      this.presence.persistPrivate = (key,conversation) => (conversation ? st.put('pc:'+key,conversation) : st.delete('pc:'+key)).catch(()=>{});
       this.presence.persistChat = c => { if (this._chatT) return; this._chatT = setTimeout(() => { this._chatT = null; st.put('chat', this.presence.chat).catch(() => {}); }, 2000); };
       // (once: the first places on boards set before they were kept — each board's #1, named from their best there;
       //  a few boards at a time, a little apart, so it never holds the server up)

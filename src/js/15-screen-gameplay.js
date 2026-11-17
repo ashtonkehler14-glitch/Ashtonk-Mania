@@ -321,7 +321,7 @@ const GameplayScreen = {
   buildGpChat(s) {
     if (this._gpChatOff) this._gpChatOff();
     const list = h('div.gp-chat-list');
-    const line = m => m.from ? compactChatLine('div.gp-chat-l', m, m.text, m.mentions) : m.text ? h('div.gp-chat-l.sys', m.text) : null;
+    const line = m => {const el=m.from ? compactChatLine('div.gp-chat-l',m,m.text,m.mentions) : m.text ? h('div.gp-chat-l.sys',m.text):null;if(el)ChatMessageUI.attach(el,m,{scope:'room',send:packet=>Multiplayer.send(packet)});return el;};
     const preview = this._hudAll;
     const messages = preview ? [{ from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Chat messages appear here.', ts: Date.now() }, { from: 'preview', pid: Presence.pid(), name: ProfileManager.profile.name, text: 'Move and resize chat to fit your skin.', ts: Date.now() + 1 }] : (Multiplayer.chat || []).slice(-5);
     for (const m of messages) { const el = line(m); if (el) list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); }
@@ -335,11 +335,13 @@ const GameplayScreen = {
     this.gpChat = h('div.gp-chat', list, this.gpChatIn);
     this.hud.append(this.gpChat);
     if (preview) { this.gpChat.classList.add('open', 'fresh'); this.gpChatIn.placeholder = 'Chat preview'; return; }
-    this._gpChatOff = Bus.on('mp:chat', m => {
+    const offChat = Bus.on('mp:chat', m => {
       const el = line(m); if (!el) return;
       list.append(groupChatLine(list, el, m.from ? m : null, m.ts)); trimChatLines(list, 5);
       this.gpChat.classList.add('fresh'); clearTimeout(this._gpChatT); this._gpChatT = setTimeout(() => this.gpChat && this.gpChat.classList.remove('fresh'), 5000);
     });
+    const offChange=Bus.on('mp:chatChanged',()=>{clearEl(list);for(const m of (Multiplayer.chat || []).slice(-5)){const el=line(m);if(el)list.append(groupChatLine(list,el,m.from?m:null,m.ts));}});
+    this._gpChatOff=()=>{offChat();offChange();};
   },
   gpChatOpen() { const s = this.s; return !!(s && s.mp && s.finished); },
   /** (the box can't be clicked into mid-song: it would take the keys) */

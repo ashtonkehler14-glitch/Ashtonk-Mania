@@ -34,10 +34,9 @@ const SpectatorChat = {
   on(m) {
     this.refresh();
     if (!this.id || m.id !== this.id) return;
+    if (m.t === 'chatChange') { this.lines=ChatMessageUI.patch(this.lines,m);if(this.panel)this.paint();return; }
     if (m.t === 'specChatHist') {
-      const all = new Map();
-      for (const l of [...(m.lines || []), ...this.lines]) if (l?.from && typeof l.text === 'string') all.set(`${l.at}|${l.from.pid}|${l.text}`, l);
-      this.lines = [...all.values()].sort((a, b) => a.at - b.at).slice(-100);
+      this.lines = ChatMessageUI.merge(this.lines,m.lines || []).slice(-100);
       if (this.panel) this.paint();
     } else if (m.line?.from && typeof m.line.text === 'string') {
       ChatMentions.notify(m.line, 'spectator chat', () => this.open());
@@ -83,6 +82,7 @@ const SpectatorChat = {
     const atEnd = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 48;
     this.list.querySelector('.gp-chat-l.sys')?.remove();
     const line = compactChatLine(`div.gp-chat-l${l.from.pid === Presence.pid() ? '.mine' : ''}`, l.from, l.text, l.mentions);
+    ChatMessageUI.attach(line,l,{scope:'spectator',to:this.id});
     line.classList.toggle('mention', ChatMentions.has(l.text));
     line.title = new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     this.list.append(groupChatLine(this.list, line, l.from, l.at));

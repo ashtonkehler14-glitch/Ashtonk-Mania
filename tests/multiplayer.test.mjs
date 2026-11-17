@@ -1288,7 +1288,9 @@ test('presence chat: #lobby reaches everyone and is kept for late arrivals; priv
   p.join('a', { name: 'Alice', pid: 'alicepid1', key: 'key-alicepid1-0123456789' }); p.join('b', { name: 'Bob', pid: 'bobpid22', key: 'key-bobpid22-0123456789' });
   const say = p.message('a', { t: 'say', text: '  hello\u0007 all  ' });
   assert.equal(say.length, 1); assert.equal(say[0].to, 'all');
-  assert.deepEqual({ ...say[0].msg, from: say[0].msg.from.name }, { t: 'say', ch: '#lobby', from: 'Alice', text: 'hello  all', at: 0 });
+  assert.equal(typeof say[0].msg.mid, 'string');
+  const { mid, ...publicLine } = say[0].msg;
+  assert.deepEqual({ ...publicLine, from: say[0].msg.from.name }, { t: 'say', ch: '#lobby', from: 'Alice', text: 'hello  all', at: 0 });
   assert.deepEqual(p.message('a', { t: 'say', text: '   ' }), [], 'nothing to say');
   assert.equal(p.message('a', { t: 'say', text: 'x'.repeat(500) })[0].msg.text.length, 300);
   // someone coming online gets the recent lines

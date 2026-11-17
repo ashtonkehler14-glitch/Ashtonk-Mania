@@ -98,9 +98,10 @@ const Multiplayer = {
           clearTimeout(slow); this.me = m.you; if (m.token) this.token = m.token; this.room = m.room; this.qpClock(m.room);
           // the room's recent chat (after a reload, or anything said while the connection was down)
           let missed = [];
-          if (Array.isArray(m.chat)) { const last = this.chat.length ? this.chat[this.chat.length - 1].ts || 0 : 0; missed = m.chat.filter(c => (c.ts || 0) > last); this.chat.push(...missed); if (this.chat.length > 200) this.chat.splice(0, this.chat.length - 200); }
+          if (Array.isArray(m.chat)) { const ids=new Set(this.chat.map(c=>c.mid || `${c.ts}|${c.from}|${c.text}`)); missed=m.chat.filter(c=>!c.deleted && !ids.has(c.mid || `${c.ts}|${c.from}|${c.text}`));this.chat=ChatMessageUI.merge(this.chat,m.chat).slice(-200); }
           settled = true; resolve(); this.startKeepAlive(); this.autoFetch(); this.flushOutbox(); this.resendFinish();
           for (const c of missed) Bus.emit('mp:chat', c); // (into a chat already open)
+          if (Array.isArray(m.chat)) Bus.emit('mp:chatChanged');
           Bus.emit('mp:changed'); return;
         }
         if (m.t === 'error' && m.fatal) { ws._serverMsg = m.msg; fail(m.msg); return; }
@@ -294,6 +295,7 @@ const Multiplayer = {
         Bus.emit('mp:changed');
         break;
       }
+      case 'chatChange': this.chat=ChatMessageUI.patch(this.chat,m);Bus.emit('mp:chatChanged',m);break;
       case 'chat': ChatMentions.notify(m, 'the room', () => Screens.go('multiplayer')); this.chat.push(m); if (this.chat.length > 200) this.chat.shift(); Bus.emit('mp:chat', m); break;
       case 'pong': if (m.c === this._pingAt) this.rtt = performance.now() - m.c; break;
       case 'opp': this.opps.set(m.id, m); Bus.emit('mp:opp', m); break;
@@ -872,7 +874,8 @@ const Presence = {
       else if (m.t === 'friendSent') Toast.ok('Friend request sent', `${m.name} can accept it from their online users list.`);
       else if (m.t === 'friendAdded') { if (!Toast.playing()) UISounds.play('check-on'); Toast.ok(`${m.name} accepted your friend request`, 'You can now invite each other to rooms.', { hold: true }); }
       else if (m.t === 'invite') this.onInvite(m);
-      else if (m.t === 'chatHist' || m.t === 'say' || m.t === 'pm') Chat.on(m);
+      else if (m.t === 'chatChange') { if(m.scope==='spectator')SpectatorChat.on(m);else Chat.on(m); }
+      else if (m.t === 'chatHist' || m.t === 'pmHist' || m.t === 'offlineMentions' || m.t === 'say' || m.t === 'pm') Chat.on(m);
       else if (m.t === 'rankings') Bus.emit('rankings', m);
       else if (m.t === 'myBests') Bus.emit('myBests', m);
       // (another of your devices changed something of yours: fetched now)
@@ -1162,7 +1165,7 @@ const MultiplayerScreen = {
     this.el = h('div.mp.ov', { style: { '--o-h': OVERLAY_HUES.plum } });
     this.body = h('div.mp-body');
     this.el.append(this.body, h('div.page-back', backButton(() => this.onBack() || Screens.back())));
-    this._unsub = [Bus.on('mp:changed', () => this.render()), Bus.on('mp:chat', m => this.appendChat(m)), Bus.on('mp:fetch', () => { this.updateFetch(); if (Multiplayer.isQP() && Multiplayer.room.qp.phase === 'load') this.qpUpdate(Multiplayer.room); })];
+    this._unsub = [Bus.on('mp:changed', () => this.render()), Bus.on('mp:chat', m => this.appendChat(m)), Bus.on('mp:chatChanged',()=>{if(this.chatList){const top=this.chatList.scrollTop,end=this.chatList.scrollHeight-top-this.chatList.clientHeight<48;clearEl(this.chatList);for(const m of Multiplayer.chat)this.appendChat(m,false);this.chatList.scrollTop=end?this.chatList.scrollHeight:top;}}), Bus.on('mp:fetch', () => { this.updateFetch(); if (Multiplayer.isQP() && Multiplayer.room.qp.phase === 'load') this.qpUpdate(Multiplayer.room); })];
     this._qpInt = setInterval(() => this.qpTick(), 250);
     this.render();
     return this.el;
@@ -1593,6 +1596,7 @@ const MultiplayerScreen = {
       }
       el = h('div.mp-msg.suggest', chatAvatar(m, 24), h('div.mp-suggest-copy', chatName(h('b', m.name), m), h('span', 'recommended ', h('i', `${map.artist} - ${map.title} [${map.version}]`)), h('div.mp-suggest-actions', ...buttons)));
     } else el = m.from ? compactChatLine(`div.mp-msg${m.from === Multiplayer.me ? '.mine' : ''}`, m, m.text, m.mentions) : h('div.mp-msg.sys', m.text);
+    ChatMessageUI.attach(el,m,{scope:'room',send:packet=>Multiplayer.send(packet)});
     // (when it was said, on hover — as lazer's chat lines carry their time)
     if (m.ts) el.title = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     // (scrolled up to read something earlier: a new line doesn't yank the list back down — unless it's yours)

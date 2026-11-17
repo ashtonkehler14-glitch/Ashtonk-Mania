@@ -307,6 +307,7 @@ const RankedMatch = {
     const ev = this.watching ? 'rpw' : 'mp';
     this._subs = [
       Bus.on(`${ev}:chat`, m => this.addChat(m)),
+      Bus.on(`${ev}:chatChanged`,()=>{if(this.chatList){clearEl(this.chatList);for(const m of this.M.chat.slice(-60))this.addChat(m);}}),
       Bus.on(this.watching ? 'rpw:hand' : 'rp:hand', m => this.onHand(m)),
       Bus.on('mp:fetch', () => this.paintCorners(true)),
       Bus.on(`${ev}:opp`, () => { if (this.g && this.g.stage === 'playing') this.refreshPlaying(); }),
@@ -511,7 +512,7 @@ const RankedMatch = {
     requestAnimationFrame(() => { this.chatList.scrollTop = this.chatList.scrollHeight; });
     return box;
   },
-  chatLine(m) { return m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`, m, m.text, m.mentions) : h('div.rkm-msg.sys', m.text); },
+  chatLine(m) { const el=m.from ? compactChatLine(`div.rkm-msg${m.from === this.M.me && !this.watching ? '.me' : ''}`,m,m.text,m.mentions) : h('div.rkm-msg.sys',m.text);ChatMessageUI.attach(el,m,{scope:'room',readOnly:this.watching,send:packet=>this.M.send(packet)});return el; },
   addChat(m) {
     if (!this.chatList) return;
     this.chatList.append(groupChatLine(this.chatList, this.chatLine(m), m.from ? m : null, m.ts));
@@ -1062,13 +1063,14 @@ const RankedWatch = {
     switch (m.t) {
       case 'welcome':
         this.tries = 0; this.me = m.you; this.room = m.room; this.qpClock(m.room);
-        if (Array.isArray(m.chat)) this.chat = m.chat.slice(-60);
+        if (Array.isArray(m.chat)) this.chat = m.chat.filter(l=>!l.deleted).slice(-60);
         clearInterval(this._keep);
         this._keep = setInterval(() => { if (this.ws && !this.ws.http && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 8000);
         this.prefetch();
         Bus.emit('rpw:changed');
         break;
       case 'room': this.room = m.room; this.qpClock(m.room); this.prefetch(); Bus.emit('rpw:changed'); break;
+      case 'chatChange': this.chat=ChatMessageUI.patch(this.chat,m);Bus.emit('rpw:chatChanged',m);break;
       case 'chat': this.chat.push(m); if (this.chat.length > 60) this.chat.shift(); Bus.emit('rpw:chat', m); break;
       case 'opp': this.opps.set(m.id, m); Bus.emit('rpw:opp', m); break;
       case 'hand': Bus.emit('rpw:hand', m); break;
