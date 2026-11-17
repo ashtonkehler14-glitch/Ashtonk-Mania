@@ -5984,3 +5984,37 @@ html.touch .explorer.ov .ex-chip { padding: 7px 9px; }
 .chat-copy > .chat-emoji-only, .ch-text.chat-emoji-only, .spectator-chat .chat-copy > .chat-emoji-only { font-size: 36px; line-height: 1.3; text-shadow: none; }
 body.se-open .gp-chat { opacity: 1; pointer-events: none; }
 body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
+
+
+/* The waiting page has a clear song/status area beside its persistent chat. */
+.spm { display: flex; flex-direction: column; background: radial-gradient(ellipse at 90% 35%, #71369325, transparent 65%), #211d29; }
+.spm-art { position: absolute; inset: -18px; background: center / cover no-repeat; filter: blur(14px); opacity: 0; transition: opacity 250ms; pointer-events: none; }
+.spm-art.loaded { opacity: .3; }
+.spm .spm-dim { background: linear-gradient(90deg, #211d29cc, #211d2966); }
+.spm .spm-box { flex: none; z-index: 1; }
+.spm-activity { min-width: 0; color: #d8ccdf; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spm-stage { position: relative; z-index: 1; flex: 1; min-height: 0; width: 52%; margin: 24px 28px 24px auto; display: flex; flex-direction: column; justify-content: safe center; gap: 14px; overflow-y: auto; padding: 2px; }
+.spm-stage[hidden] { display: none; }
+.spm-context { flex: none; font-size: 18px; font-weight: 700; color: #fff; }
+.spm .spm-stage .spm-map { flex: none; width: 100%; }
+.spm .spm-stage .spm-card { height: 170px; padding: 20px; border: 1px solid #d4b8e026; border-radius: 16px; }
+.spm .spm-stage .spm-card .ex-thumbwrap { width: 116px; height: 116px; }
+.spm-stage .spm-card .ex-t { font-size: 19px; }
+.spm-stage .spm-idle { min-height: 90px; border: 1px solid #d4b8e01c; background: #302938cc; border-radius: 14px; }
+.spm-info { flex: none; padding: 16px; border-radius: 14px; background: #302938e8; border: 1px solid #d4b8e01c; }
+.spm-info-title { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.spm-info-title .i { color: #ff91c4; flex: none; }
+.spm-info p { margin: 8px 0 0; font-size: 12px; color: #d1c4d8; line-height: 1.6; }
+.spm-info .btn { margin-top: 12px; }
+@media (max-height: 560px) { .spm-stage { gap: 10px; margin-block: 12px; } .spm .spm-stage .spm-card { height: 120px; padding: 12px; } .spm .spm-stage .spm-card .ex-thumbwrap { width: 80px; height: 80px; } }
+@media (max-width: 700px) and (orientation: portrait) { .spm-stage { width: auto; margin: 16px 12px 230px; overflow: auto; } }
+
+.spm-stage { width: 50%; }
+.spm .spm-stage .spm-presence { min-height: 158px; padding: 24px; gap: 18px; background: linear-gradient(120deg, #91315c1f, #70449714), #302938cc; }
+.spm-presence > .avatar { flex: none; border-radius: 16px; }
+.spm-presence > div { min-width: 0; }
+.spm-presence b { display: block; font-size: 20px; color: #fff; overflow-wrap: anywhere; }
+.spm-presence span { display: block; margin-top: 6px; color: #e1d2e8; }
+.spm-presence small { display: block; margin-top: 8px; font-size: 12px; color: #bfaacb; }
+@media (max-height: 560px) { .spm .spm-stage .spm-presence { min-height: 112px; padding: 16px; } }
+@media (max-width: 700px) and (orientation: portrait) { .spm-stage { width: auto; } }

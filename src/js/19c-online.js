@@ -125,6 +125,11 @@ const Spectate = {
       return;
     }
     if (m.t === 'specStart') { this.start(m); return; }
+    if (m.t === 'specMap') {
+      const c = this.cur;
+      if (c && c.head.mapHash === m.mapHash && /^[a-f0-9]{32}$/.test(m.checksum || '')) { c.head.checksum = m.checksum; this.resolveMap(c, true); }
+      return;
+    }
     if (m.t === 'specFrames') {
       const c = this.cur;
       if (!c || c.id !== m.id) return;
@@ -210,7 +215,56 @@ const Spectate = {
     if (c.acts && c.acts.some(a => a.k === 'fail')) return SPEC_DELAY + 2600;
     return s.failClock ? Math.max(0, 2400 - (performance.now() - s.failClock.real)) : 0;
   },
-  findMap(head) { return BeatmapManager.mapByHash(head.mapHash) || (head.onlineId > 0 ? [...BeatmapManager.maps.values()].find(x => x.onlineId === head.onlineId) : null); },
+  checksums: new Map(), exactMaps: new Map(),
+  findMap(head) {
+    const direct = BeatmapManager.mapByHash(head.mapHash);
+    if (direct && !direct.problems?.length) return direct;
+    const id = this.exactMaps.get(`${head.mapHash}|${head.checksum || ''}`), exact = id && BeatmapManager.maps.get(id);
+    return exact && !exact.problems?.length ? exact : null;
+  },
+  async checksumFor(map) {
+    if (this.checksums.has(map.hash)) return this.checksums.get(map.hash);
+    const file = await BeatmapManager.getFile(map.setId, map.osuPath);
+    if (!file) return '';
+    const checksum = md5Hex(new Uint8Array(await file.arrayBuffer()));
+    this.checksums.set(map.hash, checksum);
+    while (this.checksums.size > 100) this.checksums.delete(this.checksums.keys().next().value);
+    return checksum;
+  },
+  async verifyLocal(head) {
+    if (this.findMap(head)) return this.findMap(head);
+    if (!/^[a-f0-9]{32}$/.test(head.checksum || '')) return null;
+    for (const map of BeatmapManager.maps.values()) if (!map.problems?.length && head.onlineId > 0 && map.onlineId === head.onlineId) {
+      if (await this.checksumFor(map) === head.checksum) { this.exactMaps.set(`${head.mapHash}|${head.checksum}`, map.id); if (this.exactMaps.size > 100) this.exactMaps.delete(this.exactMaps.keys().next().value); return map; }
+    }
+    return null;
+  },
+  async resolveMap(c = this.cur, retry = false) {
+    if (!c || c.ended || this.findMap(c.head)) return;
+    if (c.lookup?.pending) return c.lookup.pending;
+    if (c.lookup && !retry) return;
+    const state = c.lookup = { state: 'checking' }, checksum = c.head.checksum;
+    const work = Promise.resolve().then(async () => {
+      try {
+        if (!/^[a-f0-9]{32}$/.test(checksum || '')) { state.state = 'unavailable'; return; }
+        if (await this.verifyLocal(c.head)) { state.state = 'local'; return; }
+        const response = await fetch(Host.api(`api/lookupBeatmap?checksum=${checksum}${c.head.onlineSetId > 0 ? `&setId=${c.head.onlineSetId}` : ''}`), { cache: 'no-store', signal: timeoutSignal(20000) });
+        if (response.status === 404) { state.state = 'missing'; return; }
+        if (!response.ok) throw new Error('Beatmap lookup unavailable');
+        const match = await response.json();
+        if (match.checksum !== checksum || !(match.setId > 0) || !(match.beatmapId > 0)) { state.state = 'missing'; return; }
+        if (this.cur !== c || c.lookup !== state || c.ended) return;
+        c.head.onlineSetId = match.setId; c.head.onlineId = match.beatmapId;
+        Object.assign(state, { state: 'exact', verified: true, setId: match.setId, beatmapId: match.beatmapId });
+        if (await this.verifyLocal(c.head)) state.state = 'local';
+      } catch { state.state = 'error'; }
+      finally {
+        delete state.pending;
+        if (this.cur === c && c.lookup === state && !c.ended) { SpectatorScreen.paint(); this.tryStart(); if (state.state === 'exact' && !c.downloadAttempted && (Settings.get('online.autoDownload') || RankedWatch.on)) this.download(); }
+      }
+    });
+    state.pending = work; SpectatorScreen.paint(); return work;
+  },
   /** Can Start Watching start their play? They're mid-song, and it's in your library. */
   canStart() { const c = this.cur; return !!(c && !c.ended && this.findMap(c.head)); },
   /** lazer's scheduleStart: their play starts from the Spectator Mode screen (or straight from the room) as soon as the
@@ -245,15 +299,22 @@ const Spectate = {
     this.toScreen();
   },
   /** lazer's "Automatically download missing beatmaps" (off unless you turn it on). */
-  autoDownload() { const c = this.cur; if (c && !c.ended && (Settings.get('online.autoDownload') || RankedWatch.on) && !this.findMap(c.head)) this.download(); },
-  download() {
-    const c = this.cur, id = c && c.head.onlineSetId;
-    if (!(id > 0) || this.findMap(c.head)) return;
-    const st = ExplorerScreen.downloads.get(id);
-    if (st && st.state === 'downloading') return;
-    const set = this.set && this.set.id === id ? this.set : { id, title: c.head.title, artist: c.head.artist, creator: c.head.creator, diffs: [] };
-    ExplorerScreen.download(set).finally(() => SpectatorScreen.paint());
-    SpectatorScreen.paint();
+  autoDownload() { const c = this.cur; if (c && !c.ended && !this.findMap(c.head)) { this.resolveMap(c); if (c.lookup?.state === 'exact' && !c.downloadAttempted && (Settings.get('online.autoDownload') || RankedWatch.on)) this.download(); } },
+  async download() {
+    const c = this.cur;
+    if (!c || c.ended || this.findMap(c.head)) return;
+    await this.resolveMap(c);
+    if (this.cur !== c || c.ended || c.lookup?.state !== 'exact') return;
+    const id = c.lookup.setId, st = ExplorerScreen.downloads.get(id);
+    if (st?.state === 'downloading' || c.downloading) return;
+    c.downloading = true; c.downloadAttempted = true;
+    try {
+      await ExplorerScreen.download({ id, title: c.head.title, artist: c.head.artist, creator: c.head.creator, diffs: [] });
+      if (this.cur !== c || c.ended) return;
+      if (!await this.verifyLocal(c.head)) c.lookup.state = ExplorerScreen.downloads.get(id)?.state === 'error' ? 'error' : 'mismatch';
+      else this.tryStart();
+    } catch { if (this.cur === c) c.lookup.state = 'error'; }
+    finally { c.downloading = false; if (this.cur === c) SpectatorScreen.paint(); }
   },
 
   /** Called by the watcher's gameplay every frame: start a little behind the player, and wait for the stream
@@ -405,11 +466,12 @@ const Spectate = {
     if (!Presence.ws) return;
     const set = BeatmapManager.setById.get(s.rec.setId);
     Presence.send({ t: 'play', head: {
-      mapHash: s.rec.hash, onlineId: s.rec.onlineId > 0 ? s.rec.onlineId : -1, onlineSetId: set && set.onlineId > 0 ? set.onlineId : -1,
+      mapHash: s.rec.hash, checksum: this.checksums.get(s.rec.hash) || '', onlineId: s.rec.onlineId > 0 ? s.rec.onlineId : -1, onlineSetId: set && set.onlineId > 0 ? set.onlineId : -1,
       title: s.rec.title, artist: s.rec.artist, version: s.rec.version, creator: s.rec.creator,
       keys: s.keys, mods: s.mods, rate: s.rate, seed: s.seed, windows: s.windows, accuracyMode: s.accuracyMode, hp: s.bm.hp,
       modConfig: s.modConfig, noFail: !!s.mp, rules: s.rules, player: ProfileManager.profile.name,
     } });
+    if (!this.checksums.has(s.rec.hash)) this.checksumFor(s.rec).then(checksum => { if (checksum && H.s === s && !s.finished && Presence.ws) Presence.send({ t: 'playMap', mapHash: s.rec.hash, checksum }); }).catch(() => {});
   },
   hostTick(s, now) {
     const H = this.host;
@@ -460,7 +522,9 @@ const Spectate = {
 const SpectatorScreen = {
   enter() {
     this.box = h('div.spm-box');
-    const el = h('div.spm', h('div.spm-dim'), this.box);
+    this.stage = h('div.spm-stage');
+    this.artEl = h('div.spm-art'); this._artKey = null;
+    const el = h('div.spm', this.artEl, h('div.spm-dim'), this.box, this.stage);
     this.scr = { el, body: this.box };
     this._unsub = [
       Bus.on('library:changed', () => { this.paintMap(); setTimeout(() => Spectate.tryStart(), 0); }),
@@ -477,6 +541,7 @@ const SpectatorScreen = {
   /** Watching someone in a Ranked Play match: their match screen in place of this one (between their songs). */
   paintRanked() {
     if (!this.box) return;
+    if (this.stage) this.stage.hidden = !!RankedWatch.on;
     if (RankedWatch.on && Spectate.target) RankedMatch.mount(this.scr, { watch: true });
     else if (RankedMatch.watching && RankedMatch.root) { RankedMatch.unmount(); this.render(); }
   },
@@ -485,15 +550,18 @@ const SpectatorScreen = {
   paint() { this.paintUser(); this.paintMap(); },
   /** (a moment on the screen first, as lazer's player loader takes over from it) */
   startSoon() { clearTimeout(this._startT); this._startT = setTimeout(() => Spectate.tryStart(), 350); },
-  leave() { (this._unsub || []).forEach(f => f()); this._unsub = []; clearInterval(this._tick); clearTimeout(this._startT); if (RankedMatch.watching) RankedMatch.unmount(); this.box = null; },
+  leave() { (this._unsub || []).forEach(f => f()); this._unsub = []; clearInterval(this._tick); clearTimeout(this._startT); if (RankedMatch.watching) RankedMatch.unmount(); this.box = this.stage = this.artEl = null; this._artToken = null; },
   render() {
     const box = this.box;
     if (!box) return;
     this.userEl = h('div.spm-user');
     this.mapEl = h('div.spm-map');
+    this.activityEl = h('span.spm-activity');
+    this.contextEl = h('div.spm-context'); this.infoEl = h('div.spm-info');
+    clearEl(this.stage).append(this.contextEl, this.mapEl, this.infoEl);
     this.btn = h('button.spm-watch', { onclick: () => { UISounds.click(); Spectate.tryStart(true); } }, 'Start Watching');
     clearEl(box).append(
-      h('div.spm-row', this.userEl, this.mapEl),
+      h('div.spm-row', this.userEl, this.activityEl),
       h('div.spm-acts', this.btn, h('button.spec-stop', { onclick: () => Screens.back() }, icon('x'), 'Stop watching')), this.autoRow());
     this.paintUser(); this.paintMap();
   },
@@ -513,10 +581,11 @@ const SpectatorScreen = {
     const el = this.mapEl, t = Spectate.target, c = Spectate.cur;
     if (!el || !this.btn) return;
     this.btn.disabled = !Spectate.canStart();
+    this.paintStatus(c);
     if (!t) { clearEl(el); return; }
     if (!c || c.ended) {
       const activity = Presence.activityText(t);
-      clearEl(el).append(h('div.spm-idle', t.lost ? [h('span.spinner'), h('span', `${t.name} went offline — waiting for them to come back…`)] : [icon('clock'), h('span', t.status === 'playing' ? `Connecting to ${t.name}’s current play…` : `${activity} · Waiting for ${t.name} to play…`)]));
+      clearEl(el).append(h('div.spm-idle.spm-presence', Presence.avatarEl(t, 64), h('div', h('b', t.name), h('span', t.lost ? 'Offline · waiting for them to reconnect…' : t.status === 'playing' ? `Connecting to ${t.name}’s current play…` : activity), h('small', t.lost ? 'Watching resumes when they return.' : `Waiting for ${t.name} to play…`))));
       this._mapSig = this.mapSig(c);
       return;
     }
@@ -524,7 +593,31 @@ const SpectatorScreen = {
     this._mapSig = this.mapSig(c);
     clearEl(el).append(this.card(c, st));
   },
-  mapSig(c) { const st = c && c.head.onlineSetId > 0 ? ExplorerScreen.downloads.get(c.head.onlineSetId) : null; return c ? [c.head.mapHash, !!Spectate.findMap(c.head), st ? st.state : '', c.ended].join() : ''; },
+  paintStatus(c) {
+    if (!this.infoEl || !Spectate.target) return;
+    const active = c && !c.ended, local = active && Spectate.findMap(c.head), lookup = active && c.lookup;
+    this.activityEl.textContent = active ? 'Watching live gameplay' : Presence.activityText(Spectate.target);
+    this.contextEl.textContent = active ? 'Now playing' : 'Ready for the next song';
+    let title = 'Stay with the player', description = 'Their next song starts here when you have the exact beatmap.', ic = 'chat', action = null;
+    if (active) {
+      if (local) { title = 'Exact beatmap ready'; description = 'You can join the current play, including when it is already mid-song.'; ic = 'check'; }
+      else if (c.downloading) { title = 'Downloading the exact beatmap'; description = 'The downloaded difficulty is checked before spectating begins.'; ic = 'download'; }
+      else if (lookup?.state === 'missing' || lookup?.state === 'mismatch') { title = lookup.state === 'mismatch' ? 'The available download is a different revision' : 'Exact beatmap not found'; description = 'Import the original .osz file to watch. A similar song or modified difficulty will not be used.'; ic = 'info'; }
+      else if (lookup?.state === 'error') { title = 'Couldn’t check the exact beatmap'; description = 'Try again when the beatmap service is available.'; ic = 'info'; action = h('button.btn.sm', { onclick: () => Spectate.resolveMap(c, true) }, icon('retry'), 'Retry lookup'); }
+      else if (lookup?.state === 'exact') { title = 'Exact difficulty found'; description = 'Download this beatmap to join the current play.'; ic = 'check'; action = h('button.btn.sm.primary', { onclick: () => Spectate.download() }, icon('download'), 'Download exact beatmap'); }
+      else { title = lookup?.state === 'unavailable' ? 'Waiting for exact file details' : 'Checking the exact beatmap…'; description = 'The player’s original file must match before a download is offered.'; ic = 'search'; }
+    }
+    clearEl(this.infoEl).append(h('div.spm-info-title', icon(ic), h('b', title)), h('p', description), action);
+    const sid = active && lookup?.verified ? lookup.setId : 0, key = active ? sid || local?.hash || '' : '';
+    if (key === this._artKey) return;
+    this._artKey = key; const token = this._artToken = {}, art = this.artEl;
+    if (!art) return;
+    art.style.backgroundImage = ''; art.classList.remove('loaded');
+    const show = url => { if (url && this._artToken === token && this.artEl === art) { art.style.backgroundImage = url; art.classList.add('loaded'); } };
+    if (local) BeatmapManager.bgURL(local).then(url => show(url ? `url("${url}")` : '')).catch(() => {});
+    else if (sid) { const temp = h('div'); OnlineBeatmaps.loadCover(temp, sid, ['cover', 'card'], () => show(temp.style.backgroundImage)); }
+  },
+  mapSig(c) { const st = c && c.head.onlineSetId > 0 ? ExplorerScreen.downloads.get(c.head.onlineSetId) : null; return c ? [c.head.mapHash, !!Spectate.findMap(c.head), st ? st.state : '', c.ended, c.lookup?.state || '', !!c.downloading].join() : ''; },
   /** A download's progress, as it goes (the card is built again only when its state changes). */
   paintProgress() {
     const c = Spectate.cur;
@@ -536,7 +629,7 @@ const SpectatorScreen = {
   /** lazer's BeatmapCardNormal of the beatmap they're playing: its cover, title, artist and mapper, the difficulty — and
    *  on the right, Download (with its progress) when it isn't in your library. Clicked, the beatmap's page. */
   card(c, st) {
-    const head = c.head, sid = head.onlineSetId > 0 ? head.onlineSetId : 0, local = Spectate.findMap(head), busy = st && st.state === 'downloading';
+    const head = c.head, sid = c.lookup?.verified ? c.lookup.setId : 0, local = Spectate.findMap(head), busy = st && st.state === 'downloading';
     const thumb = h('div.ex-thumb'), bg = h('div.ex-cardbg');
     const shown = el => () => el.classList.add('loaded');
     if (sid) { OnlineBeatmaps.loadCover(thumb, sid, ['list@2x', 'list', 'card'], shown(thumb), null, () => noPicture(thumb)); OnlineBeatmaps.loadCover(bg, sid, ['card@2x', 'card', 'cover'], shown(bg)); }
@@ -544,7 +637,7 @@ const SpectatorScreen = {
     else noPicture(thumb);
     const pct = `${Math.round(((st && st.progress) || 0) * 100)}%`;
     const side = local ? null : busy ? h('div.ex-side-btn.busy', { title: 'Downloading…', style: { '--p': pct } }, h('span.spinner'))
-      : sid ? h('button.ex-side-btn.dl', { title: 'Download', 'aria-label': 'Download', onclick: e => { e.stopPropagation(); UISounds.click(); Spectate.download(); } }, icon('download')) : null;
+      : sid && c.lookup?.state === 'exact' ? h('button.ex-side-btn.dl', { title: 'Download', 'aria-label': 'Download', onclick: e => { e.stopPropagation(); UISounds.click(); Spectate.download(); } }, icon('download')) : null;
     const card = h(`div.ex-card.spm-card${local ? '.owned' : ''}`, { role: 'button', tabindex: '0', 'aria-label': `${head.artist} - ${head.title}`,
       onclick: () => { if (!sid) return; UISounds.click(); OnlineBeatmaps.getSet(sid).then(set => { if (set && Screens.currentName === 'spectator') ExplorerScreen.openSet(set); }).catch(() => {}); } },
       bg, h('div.ex-cardshade'),

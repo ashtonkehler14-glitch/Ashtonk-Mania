@@ -906,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17', title: 'A clearer spectate page and exact beatmap matching', sections: [
+    { title: 'Spectating', items: ['The waiting page shows the current song, its artwork and clear connection/download status beside chat.', 'Missing beatmaps are looked up by the original file checksum. Similar songs, reused IDs and different map revisions cannot start spectating.'] }
+  ] },
   { id: '2026.11.16ag', title: 'Skin controls in one place', sections: [
     { title: 'Skins', items: ['Custom skin controls are now only in the skin editor’s Note appearance panel.', 'The home menu’s Skins button is yellow.'] }
   ] },

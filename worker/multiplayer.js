@@ -2572,6 +2572,12 @@ export class PresenceLogic {
       u.play = head; u.ev = []; u.t = 0; u.hist = u.watchers.size > 0; // (a fresh play: nothing to catch up on)
       return [...u.watchers].map(w => ({ to: w, msg: { t: 'specStart', id, name: u.name, head, ev: [], at: 0, hist: true, pid: u.pid, room: u.rp || '' } }));
     }
+    if (msg.t === 'playMap') {
+      const checksum = String(msg.checksum || '').toLowerCase();
+      if (!u.play || msg.mapHash !== u.play.mapHash || !/^[a-f0-9]{32}$/.test(checksum)) return [];
+      u.play.checksum = checksum;
+      return [...u.watchers].map(to => ({ to, msg: { t: 'specMap', id, mapHash: u.play.mapHash, checksum } }));
+    }
     if (msg.t === 'frames') {
       if (!u.play || !u.watchers.size || !Array.isArray(msg.ev)) return [];
       const ev = msg.ev.slice(0, 6000).map(Number).filter(Number.isFinite), t = num(msg.at, -1e4, 1e8);
@@ -2601,7 +2607,7 @@ const cleanHead = h => {
   if (!hash) return null;
   const nums = o => o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).slice(0, 16).map(([k, v]) => [str(k, 16), typeof v === 'number' ? num(v, -1e6, 1e6) : str(String(v), 32)])) : {};
   return {
-    mapHash: hash, onlineId: Math.round(num(h.onlineId, -1, 1e10, -1)), onlineSetId: Math.round(num(h.onlineSetId, -1, 1e10, -1)),
+    mapHash: hash, ...(/^[a-f0-9]{32}$/i.test(h.checksum || '') ? { checksum: h.checksum.toLowerCase() } : {}), onlineId: Math.round(num(h.onlineId, -1, 1e10, -1)), onlineSetId: Math.round(num(h.onlineSetId, -1, 1e10, -1)),
     title: str(h.title, 120), artist: str(h.artist, 120), version: str(h.version, 80), creator: str(h.creator, 40),
     keys: Math.round(num(h.keys, 1, 18, 4)), mods: cleanMods(h.mods), rate: num(h.rate, 0.25, 4, 1), seed: Math.round(num(h.seed, 0, 2 ** 32, 0)),
     windows: Array.isArray(h.windows) ? h.windows.slice(0, 8).map(x => num(x, 0, 1000, 100)) : nums(h.windows), accuracyMode: str(h.accuracyMode, 16), hp: num(h.hp, 0, 10, 5), modConfig: nums(h.modConfig),

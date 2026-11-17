@@ -298,7 +298,7 @@ export async function handleLookupBeatmap(url, env, fetchImpl = fetch) {
   try {
     const b = sum ? await lookupExactBeatmap(sum, env, fetchImpl, url.searchParams.get('setId')) : await osuRequest(path, 7 * 86400000, env, fetchImpl);
     const set = b && b.beatmapset;
-    return json({ beatmapId: b.id || 0, setId: b.beatmapset_id || (set && set.id) || 0, status: String((set && set.status) || b.status || '') }, 200, { 'Cache-Control': 'public, max-age=86400' });
+    return json({ ...(sum ? { checksum: sum } : {}), beatmapId: b.id || 0, setId: b.beatmapset_id || (set && set.id) || 0, status: String((set && set.status) || b.status || '') }, 200, { 'Cache-Control': 'public, max-age=86400' });
   } catch (e) { return json({ error: e.message || 'Not found' }, e.status === 404 ? 404 : e.status || 500); }
 }
 
