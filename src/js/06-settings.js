@@ -276,7 +276,6 @@ const Settings = {
     // song select groups by key count by default; a list left ungrouped moves to it, once
     if (!v['migr.groupKeys']) { if (v['songselect.group'] === 'none') delete v['songselect.group']; v['migr.groupKeys'] = true; }
     // (…and back again: the Performance choice is Performance mode, menus and all, as the player asked)
-    if (v['migr.perfMenus'] && !v['migr.perfBack'] && v['setup.device'] === 'chromebook') v['graphics.performanceMode'] = true;
     v['migr.perfBack'] = true;
     // (safe mode is gone: what it left behind goes too)
     if (!v['migr.noSafe']) { delete v['online.safeMode']; delete v['online.safeModeAuto']; try { localStorage.removeItem('am.session'); } catch { /* storage blocked */ } v['migr.noSafe'] = true; }
@@ -292,13 +291,7 @@ const Settings = {
       v['migr.fullRes'] = true;
     }
     if (!v['migr.cbBlur']) { if (v['graphics.performanceMode'] && v['graphics.menuBlur'] === 0) v['graphics.menuBlur'] = 12; v['migr.cbBlur'] = true; }
-    // a Chromebook that never picked a device (or skipped setup before it asked) gets the Chromebook settings, once
-    if (!v['migr.crosAuto']) {
-      v['migr.crosAuto'] = true;
-      if (typeof IS_CHROMEBOOK !== 'undefined' && IS_CHROMEBOOK && !v['setup.device'] && typeof SETUP_DEVICES !== 'undefined') {
-        Object.assign(v, SETUP_DEVICES.chromebook.values()); v['setup.device'] = 'chromebook';
-      }
-    }
+    v['migr.crosAuto'] = true; // Device detection no longer changes player settings.
     this.applyUI();
   },
   get(k) {
@@ -426,7 +419,7 @@ const Settings = {
     const own = 'ui.animSpeed' in this.values ? +this.values['ui.animSpeed'] : 1;
     r.classList.toggle('no-anim', sp <= 0); cssSheet('no-anim', own <= 0);
     // Performance mode: the lightest of everything, menus too — no animation, blur, glass, glow or moving backgrounds
-    // (without it the menus still lighten by themselves on a device that can't keep up — see .slow)
+    r.classList.remove('slow'); // Discard the retired automatic low-power mode.
     r.classList.toggle('perf', !!this.get('graphics.performanceMode')); cssSheet('perf', !!this.get('graphics.performanceMode'));
   },
 };

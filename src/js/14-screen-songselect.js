@@ -59,7 +59,7 @@ const SongSelect = {
       this.query = this.searchInput.value;
       const root = document.documentElement.classList;
       clearTimeout(this._typeT);
-      if (root.contains('perf') || root.contains('slow')) this._typeT = setTimeout(typed, 150); else typed();
+      if (root.contains('perf')) this._typeT = setTimeout(typed, 150); else typed();
     });
     this.searchInput.addEventListener('keydown', e => {
       if (e.isComposing || e.keyCode === 229) { e.stopPropagation(); return; } // (an input method's own keys)
@@ -270,7 +270,7 @@ const SongSelect = {
    *  layer up: the bar's smallest prime factor). */
   panelPulse(beat, tp) {
     const sc = this.scrollEl || document.querySelector('.carousel-scroll');
-    if (!sc || document.documentElement.classList.contains('slow')) return;
+    if (!sc || document.documentElement.classList.contains('perf')) return;
     const len = menuBeatLength(tp.beatLength);
     const meter = tp.meter || 4, f = (() => { for (let i = 2; i <= meter / i; i++) if (meter % i === 0) return i; return meter > 1 ? meter : 2; })();
     const pulse = el => el.animate([{ opacity: .5 }, { opacity: 1, offset: Math.min(.5, 40 / (40 + len)), easing: 'ease-out' }, { opacity: .5 }],

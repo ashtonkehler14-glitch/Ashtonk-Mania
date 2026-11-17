@@ -1848,7 +1848,7 @@ body.f-chat .home .neru { opacity: 0; translate: 0 40px; transition: opacity 260
 .neru-cameo.nc-card { position: relative; z-index: auto; height: clamp(110px, calc(26 * var(--vh)), 240px); margin: 0 auto 6px; } /* (smaller on a short screen — a phone on its side — so what she's saying stays on it) */
 .neru-cameo.nc-card[hidden] { display: block; visibility: hidden; } /* (her room kept while her picture loads: no jump) */
 .nc-card .nc-img { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .4)); }
-.slow .nc-img, .perf .nc-img { animation: none; filter: none; }
+.perf .nc-img { animation: none; filter: none; }
 /* ── Neru's easter eggs (NeruEggs) ── */
 .neru.shake .neru-img { animation: neruShake 380ms cubic-bezier(.36, .07, .19, .97); }
 .neru.huff .neru-img { animation: neruShake 560ms cubic-bezier(.36, .07, .19, .97); }
@@ -1941,7 +1941,7 @@ body.f-chat .home .neru { opacity: 0; translate: 0 40px; transition: opacity 260
 .neru.nm-fools .neru-body { scale: -1 1; }
 .neru-dust { position: absolute; z-index: 2; left: 50%; bottom: -2px; width: 34px; height: 16px; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 255, 255, .55), transparent); }
 @media (prefers-reduced-motion: reduce) { .neru.huff .neru-img, .neru.shake .neru-img, .neru.startle .neru-img, .neru.giggle .neru-img, .neru.wobble .neru-img, .neru.twirl .neru-img, .neru-cameo.twirl .nc-img { animation: none; } }
-.slow .neru-cameo.hop .nc-img, .perf .neru-cameo.hop .nc-img { animation: neruHop 620ms linear; }
+.perf .neru-cameo.hop .nc-img { animation: neruHop 620ms linear; }
 /* ── Invite dialog */
 .inv { display: flex; flex-direction: column; gap: 8px; }
 .inv-label { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
@@ -3753,9 +3753,8 @@ html.touch .explorer.ov .ex-flabel { padding-top: 7px; }
 .rkm-stage.st-stars { display: flex; }
 
 /* Performance (Chromebook) mode: lighter menus — no idle sway or soft shadows on Neru, no glow shadows on big panels */
-.slow .neru-img, .perf .neru-img { animation: none; filter: none; }
-.slow .neru.hop .neru-img, .perf .neru.hop .neru-img { animation: neruHop 620ms linear; }
-.slow .settings-panel, .slow .np-player, .slow .np-playlist, .slow .nf-panel { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4); } /* (the now-playing card's own edge — round the panel, it drew an empty strip below it) */
+.perf .neru-img { animation: none; filter: none; }
+.perf .neru.hop .neru-img { animation: neruHop 620ms linear; }
 
 /* lazer's spectator list on the HUD (left, under the score area), and friend request bits in the online list */
 .spec-list { position: absolute; left: 12px; top: 45%; z-index: 6; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, .35); color: #fff; pointer-events: none; font-size: 12px; }
@@ -4786,10 +4785,10 @@ html.no-zoom, html.no-zoom body { touch-action: manipulation; }
 @keyframes ovBodyIn { from { transform: translateY(80px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ov-waves { display: none; } .ov.screen.enter > .screen-body, .ov.screen.enter > .mp-body { animation: none; } }
 /* (the overlay doesn't fade in as a whole: its waves are solid, and its own background comes in behind them) */
-html:not(.slow) .ov.screen.enter:not(.zoom):not(.from-right) { animation: ovBgIn calc(240ms * var(--anim)) ease both; }
+html:not(.perf) .ov.screen.enter:not(.zoom):not(.from-right) { animation: ovBgIn calc(240ms * var(--anim)) ease both; }
 @keyframes ovBgIn { from { background-color: transparent; } }
 /* (and closing: lazer's waves drop away — the overlay sinks as it fades) */
-html:not(.slow) .ov.screen.leave:not(.zoom) { animation: ovOut calc(220ms * var(--anim)) cubic-bezier(.55, 0, 1, .45) both; z-index: 5; }
+html:not(.perf) .ov.screen.leave:not(.zoom) { animation: ovOut calc(220ms * var(--anim)) cubic-bezier(.55, 0, 1, .45) both; z-index: 5; }
 @keyframes ovOut { to { transform: translateY(18%); opacity: 0; } }
 /* lazer's BeatmapCard on the profile: the cover behind, the details over a dark gradient */
 .pf-bcs { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
@@ -4857,8 +4856,7 @@ html:not(.slow) .ov.screen.leave:not(.zoom) { animation: ovOut calc(220ms * var(
 /* (scrolled on the compositor: on a screen that isn't high-DPI the browser otherwise repaints and re-layers the whole
    list for every step of the wheel — the most expensive thing in the menus on a slow computer) */
 /* (each written out: in one :is() the rule was tried against every element restyled, whatever its class) */
-:root.perf .screen-body, :root.perf .bso-scroll, :root.perf .res-body, :root.perf .mp-body, :root.perf .cl-body, :root.perf .ab-grid, :root.perf .setup-body, :root.perf .mc-list, :root.perf .nf-list, :root.perf .np-list, :root.perf .ch-lines,
-:root.slow .screen-body, :root.slow .bso-scroll, :root.slow .res-body, :root.slow .mp-body, :root.slow .cl-body, :root.slow .ab-grid { will-change: scroll-position; }
+:root.perf .screen-body, :root.perf .bso-scroll, :root.perf .res-body, :root.perf .mp-body, :root.perf .cl-body, :root.perf .ab-grid, :root.perf .setup-body, :root.perf .mc-list, :root.perf .nf-list, :root.perf .np-list, :root.perf .ch-lines { will-change: scroll-position; }
 /* (the beatmap listing and the library too, in every mode: now that their cards are drawn in a few pieces rather than
    as layers of their own, scrolled on the compositor they take half the work a frame they did repainted) */
 .ex-body, .lib-body { will-change: scroll-position; }
@@ -4867,11 +4865,11 @@ html:not(.slow) .ov.screen.leave:not(.zoom) { animation: ovOut calc(220ms * var(
    was a good part of every step of a scroll) */
 :root.perf .carousel-scroll.under { -webkit-mask-image: none; mask-image: none; }
 /* the beatmap listing at its lightest: flat cards (no cover behind them, shade, shadow or hover lift) */
-:root.perf .ex-card, :root.slow .ex-card { box-shadow: none !important; transform: none !important; isolation: auto; } /* (nothing drawn behind it to keep apart) */
-:root.perf .ex-cardbg, :root.perf .ex-cardshade, :root.slow .ex-cardbg, :root.slow .ex-cardshade { display: none; }
-:root.perf .ex-card, :root.slow .ex-card { background: hsl(var(--o-h, 333) 10% 18%); }
-:root.perf .ex-thumb, :root.slow .ex-thumb { opacity: 1; transition: none; }
-:root.perf .ex-grid, :root.slow .ex-grid { transition: none; }
+:root.perf .ex-card { box-shadow: none !important; transform: none !important; isolation: auto; } /* (nothing drawn behind it to keep apart) */
+:root.perf .ex-cardbg, :root.perf .ex-cardshade { display: none; }
+:root.perf .ex-card { background: hsl(var(--o-h, 333) 10% 18%); }
+:root.perf .ex-thumb { opacity: 1; transition: none; }
+:root.perf .ex-grid { transition: none; }
 /* (a card's Play / Download / Delete strip waits off its edge until the card's hovered: with no slide to show it isn't
    there at all until then — hundreds of hidden strips were still drawn and hit-tested on every step of a scroll) */
 @media (hover: hover) { :root.perf .ex-card:not(:hover):not(:focus-visible):not(:focus-within) .ex-side { display: none; } }
@@ -5067,16 +5065,6 @@ html:not(.slow) .ov.screen.leave:not(.zoom) { animation: ovOut calc(220ms * var(
 .hud-jc .jc-item { min-width: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }
 .hud-jc .jc-n { font-size: 16px; font-weight: 600; line-height: 16px; text-shadow: none; }
 .hud-jc .jc-name { margin-top: 1px; font-size: 8px; font-weight: 600; line-height: 9px; letter-spacing: .02em; text-transform: none; opacity: 1; }
-/* a device found (or known) to be slow keeps the menus' animations but drops what costs its graphics chip the most,
-   as Performance mode does: the blur behind glass panels, big soft shadows, the background's parallax, and the
-   overlay waves and fountains */
-:root.slow .panel.glass, :root.slow .bso-card, :root.slow .pl-group { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-:root.slow .panel.glass, :root.slow .bso-card { background-color: rgba(18, 16, 24, .94); }
-:root.slow .menu, :root.slow .dialog, :root.slow .toast, :root.slow .chat, :root.slow .tooltip, :root.slow .ex-card, :root.slow .mp-room-row, :root.slow .mp-roompanel { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4) !important; }
-:root.slow .lz-fountain, :root.slow .ov-waves { display: none !important; }
-:root.slow #bg-layer { transform: none !important; }
-:root.slow #bg-a, :root.slow #bg-b { will-change: auto; }
-
 /* ── accounts: lazer's LoginOverlay — 360px on Purple Background4, square, a black shadow (radius 10), fading in
    (OutQuint) under the right of the toolbar; ACCOUNT, the fields, the error line, Sign in, then Register */
 .login-ov > .backdrop { background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -5806,8 +5794,8 @@ body.f-settings #screens .neru, body.f-settings #screens .neru-cameo, body.f-set
 .explorer .ex-side-btn .i { transform: skewX(8deg); }
 .explorer .ex-card .ex-foot { gap: 6px; }
 .bso-like[aria-pressed="true"] { color: #ff91c4; }
-:root.perf .explorer .ex-card, :root.slow .explorer .ex-card { background: transparent; }
-:root.perf .explorer .ex-card::before, :root.slow .explorer .ex-card::before { box-shadow: none; }
+:root.perf .explorer .ex-card { background: transparent; }
+:root.perf .explorer .ex-card::before { box-shadow: none; }
 
 .explorer .ex-thumbwrap { background: transparent; }
 .explorer .ex-thumbwrap::before { content: ''; position: absolute; inset: 0; border-radius: 12px; background: hsl(var(--o-h) 20% 22%); transform: skewX(-8deg); }
@@ -9875,7 +9863,6 @@ const Settings = {
     // song select groups by key count by default; a list left ungrouped moves to it, once
     if (!v['migr.groupKeys']) { if (v['songselect.group'] === 'none') delete v['songselect.group']; v['migr.groupKeys'] = true; }
     // (…and back again: the Performance choice is Performance mode, menus and all, as the player asked)
-    if (v['migr.perfMenus'] && !v['migr.perfBack'] && v['setup.device'] === 'chromebook') v['graphics.performanceMode'] = true;
     v['migr.perfBack'] = true;
     // (safe mode is gone: what it left behind goes too)
     if (!v['migr.noSafe']) { delete v['online.safeMode']; delete v['online.safeModeAuto']; try { localStorage.removeItem('am.session'); } catch { /* storage blocked */ } v['migr.noSafe'] = true; }
@@ -9891,13 +9878,7 @@ const Settings = {
       v['migr.fullRes'] = true;
     }
     if (!v['migr.cbBlur']) { if (v['graphics.performanceMode'] && v['graphics.menuBlur'] === 0) v['graphics.menuBlur'] = 12; v['migr.cbBlur'] = true; }
-    // a Chromebook that never picked a device (or skipped setup before it asked) gets the Chromebook settings, once
-    if (!v['migr.crosAuto']) {
-      v['migr.crosAuto'] = true;
-      if (typeof IS_CHROMEBOOK !== 'undefined' && IS_CHROMEBOOK && !v['setup.device'] && typeof SETUP_DEVICES !== 'undefined') {
-        Object.assign(v, SETUP_DEVICES.chromebook.values()); v['setup.device'] = 'chromebook';
-      }
-    }
+    v['migr.crosAuto'] = true; // Device detection no longer changes player settings.
     this.applyUI();
   },
   get(k) {
@@ -10025,7 +10006,7 @@ const Settings = {
     const own = 'ui.animSpeed' in this.values ? +this.values['ui.animSpeed'] : 1;
     r.classList.toggle('no-anim', sp <= 0); cssSheet('no-anim', own <= 0);
     // Performance mode: the lightest of everything, menus too — no animation, blur, glass, glow or moving backgrounds
-    // (without it the menus still lighten by themselves on a device that can't keep up — see .slow)
+    r.classList.remove('slow'); // Discard the retired automatic low-power mode.
     r.classList.toggle('perf', !!this.get('graphics.performanceMode')); cssSheet('perf', !!this.get('graphics.performanceMode'));
   },
 };
@@ -14676,7 +14657,7 @@ const FallingText = {
   drop(e) {
     const t = e.target;
     if (!(t instanceof HTMLInputElement) || !this.TYPES.has(t.type) || !e.inputType.startsWith('delete') || e.isComposing) return;
-    if (document.documentElement.classList.contains('slow') || document.documentElement.classList.contains('perf') || document.getElementById('app').classList.contains('in-game')) return; // (not mid-song)
+    if (document.documentElement.classList.contains('perf') || document.getElementById('app').classList.contains('in-game')) return; // (not mid-song)
     const v = t.value; let a = t.selectionStart, b = t.selectionEnd;
     if (a == null || !v) return;
     if (a === b) {
@@ -16055,7 +16036,7 @@ const Screens = {
       if (transition === 'right') el.classList.add('from-right');
       if (this._popOut) { this._popOut = false; if (!el.classList.contains('ov')) UISounds.play('overlay-big-pop-out', 0.5); }
       // lazer's WaveOverlayContainer: an overlay screen opens with four waves in its colours sweeping up through it
-      if (el.classList.contains('ov') && !el.classList.contains('menu-surface') && !document.documentElement.classList.contains('slow') && !document.documentElement.classList.contains('perf')) {
+      if (el.classList.contains('ov') && !el.classList.contains('menu-surface') && !document.documentElement.classList.contains('perf')) {
         const old = el.querySelector(':scope > .ov-waves'); if (old) old.remove();
         const waves = h('div.ov-waves', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i'), h('i'));
         if (!(prev && prev.el && prev.el.classList.contains('ov'))) UISounds.play('overlay-big-pop-in', 0.6);
@@ -16759,48 +16740,8 @@ onmessage = ({ data: m }) => {
   frame(m) { if (this.w) this.w.postMessage(m, [m.vis && m.vis.freq, m.tri && m.tri.pts].filter(Boolean).map(a => a.buffer)); },
 };
 
-/** A device that's known to be slow starts the menus light (see HomeScreen.loop): one found slow before (remembered
- *  for two weeks), or one whose hardware says so — a Chromebook with 4 cores and 4 GB or less, or anything with 2 GB
- *  or less — instead of dropping frames for the two seconds it takes to notice. */
-const LowEnd = {
-  known() {
-    try { const t = +localStorage.getItem('am.slowMenus'); if (t && Date.now() - t < 14 * 864e5) return true; } catch { /* private mode */ }
-    const mem = navigator.deviceMemory || 8, cores = navigator.hardwareConcurrency || 8;
-    return mem <= 2 || (/\bCrOS\b/.test(navigator.userAgent) && cores <= 4 && mem <= 4);
-  },
-  /** Found slow: the lighter menus from now on (and for the next two weeks). */
-  mark() {
-    if (document.documentElement.classList.contains('slow')) return;
-    document.documentElement.classList.add('slow');
-    try { localStorage.setItem('am.slowMenus', String(Date.now())); } catch { /* private mode */ }
-  },
-  /** A list scrolling at under ~33fps for two seconds of scrolling (or with a quarter of its frames late) is a slow
-   *  device too — found wherever it scrolls (the beatmap listing first of all), not only on the main menu. Frames
-   *  are only looked at while something is scrolling: a list at rest costs nothing. */
-  watchScroll() {
-    let raf = 0, until = 0, last = 0, ms = 0, n = 0, late = 0, period = 16.7;
-    const tick = now => {
-      raf = 0;
-      const dt = last ? now - last : 0; last = now;
-      if (document.documentElement.classList.contains('slow')) return;
-      // (a hitch — a page of results arriving — counts as one late frame, not as the whole of its length; a hidden tab
-      // doesn't count at all, nor does the first frame, with no frame before it to time)
-      if (dt > 0 && !document.hidden) {
-        if (dt < period) period = Math.max(5, dt); else period += (Math.min(dt, 100) - period) * 0.002;
-        ms += Math.min(dt, 100); n++; if (dt > period * 1.6) late++;
-      }
-      if (ms >= 2000) { if (ms / n > period * 1.8 || late / n > 0.25) this.mark(); ms = n = late = 0; }
-      if (now < until) raf = requestAnimationFrame(tick);
-    };
-    document.addEventListener('scroll', () => {
-      if (Screens.currentName === 'gameplay' || document.documentElement.classList.contains('slow')) return;
-      until = performance.now() + 200;
-      if (!raf) { last = 0; raf = requestAnimationFrame(tick); }
-    }, { capture: true, passive: true });
-  },
-};
-if (LowEnd.known()) document.documentElement.classList.add('slow');
-LowEnd.watchScroll();
+// Retire the automatic low-power override; visual quality follows the player's settings.
+try { localStorage.removeItem('am.slowMenus'); } catch { /* storage blocked */ }
 
 const HomeScreen = {
   tab: 'home',
@@ -18119,7 +18060,7 @@ const NeruCameo = {
     // (a picture that couldn't be loaded — offline — never replaces the one she has)
     if (img._swapToken !== token || !still() || !pre.naturalWidth) return;
     if (img._flopEnd) img._flopEnd(); // (a fish flopping on her line: over, the picture's changing)
-    const box = img.parentElement, anim = neruAnim() && !document.documentElement.classList.contains('slow');
+    const box = img.parentElement, anim = neruAnim() && !document.documentElement.classList.contains('perf');
     if (anim && box && img.isConnected && img.complete && img.naturalWidth && img.getAttribute('src') !== src) {
       // (the old picture, where it was — held to the bottom, as she stands — fading away over the new one)
       const ghost = img.cloneNode(); ghost.classList.add('neru-ghost'); ghost.removeAttribute('data-pose');
@@ -18134,7 +18075,7 @@ const NeruCameo = {
   },
   /** A few sparkles that burst out around her head and fade — when she's pleased (not that she'd say so). */
   burst(el) {
-    if (!neruAnim() || document.documentElement.classList.contains('slow')) return;
+    if (!neruAnim() || document.documentElement.classList.contains('perf')) return;
     const colors = ['#ffd54a', '#ff8cc0', '#ffffff', '#8fd3ff'];
     for (let i = 0; i < 6; i++) {
       const sp = h('span.neru-spark');
@@ -18336,7 +18277,7 @@ const NeruEggs = {
    *  wherever she is (`el`: her element; what's over her head is placed by --nm-top). */
   fume(el) {
     if (!neruAnim()) return;
-    const light = document.documentElement.classList.contains('slow'); // (lighter: the mark alone, no steam)
+    const light = document.documentElement.classList.contains('perf'); // (lighter: the mark alone, no steam)
     const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), g = document.createElementNS(NS, 'g');
     svg.setAttribute('viewBox', '0 0 40 40');
     for (const [k, v] of [['fill', 'none'], ['stroke', '#ff3b5c'], ['stroke-width', '5'], ['stroke-linecap', 'round']]) g.setAttribute(k, v);
@@ -19309,7 +19250,7 @@ const NeruEggs = {
   /** Little stars going round her head, cartoon-dizzy, for `ms`. */
   daze(ms = 2300) {
     const M = NeruMascot;
-    if (!M.el || !M.img || !neruAnim() || document.documentElement.classList.contains('slow')) return;
+    if (!M.el || !M.img || !neruAnim() || document.documentElement.classList.contains('perf')) return;
     const er = M.el.getBoundingClientRect(), ir = M.img.getBoundingClientRect(), k = M.el.offsetWidth ? er.width / M.el.offsetWidth : 1;
     const cx = (ir.left - er.left + ir.width * 0.5) / k, cy = (ir.top - er.top + ir.height * 0.08) / k, rx = ir.width * 0.26 / k, ry = rx * 0.32;
     for (let i = 0; i < 3; i++) {
@@ -19391,7 +19332,7 @@ const NeruEggs = {
   /** A little heart floating up beside her face (and fading): the main menu's Neru, or `box` with her picture `img` —
    *  a small Neru on another screen. */
   heart(box = NeruMascot.el, img = NeruMascot.img) {
-    if (!box || !img || !box.isConnected || !neruAnim() || document.documentElement.classList.contains('slow')) return;
+    if (!box || !img || !box.isConnected || !neruAnim() || document.documentElement.classList.contains('perf')) return;
     const er = box.getBoundingClientRect(), ir = img.getBoundingClientRect(), k = box.offsetWidth ? er.width / box.offsetWidth : 1;
     // (from beside her face, not the top of her head: on the main menu that's under its bar of buttons)
     const side = Math.random() < 0.5 ? -1 : 1, x = (ir.left - er.left + ir.width * (0.5 + side * (0.2 + Math.random() * 0.22))) / k, y = (ir.top - er.top + ir.height * (0.2 + Math.random() * 0.12)) / k;
@@ -19549,7 +19490,7 @@ const SongSelect = {
       this.query = this.searchInput.value;
       const root = document.documentElement.classList;
       clearTimeout(this._typeT);
-      if (root.contains('perf') || root.contains('slow')) this._typeT = setTimeout(typed, 150); else typed();
+      if (root.contains('perf')) this._typeT = setTimeout(typed, 150); else typed();
     });
     this.searchInput.addEventListener('keydown', e => {
       if (e.isComposing || e.keyCode === 229) { e.stopPropagation(); return; } // (an input method's own keys)
@@ -19760,7 +19701,7 @@ const SongSelect = {
    *  layer up: the bar's smallest prime factor). */
   panelPulse(beat, tp) {
     const sc = this.scrollEl || document.querySelector('.carousel-scroll');
-    if (!sc || document.documentElement.classList.contains('slow')) return;
+    if (!sc || document.documentElement.classList.contains('perf')) return;
     const len = menuBeatLength(tp.beatLength);
     const meter = tp.meter || 4, f = (() => { for (let i = 2; i <= meter / i; i++) if (meter % i === 0) return i; return meter > 1 ? meter : 2; })();
     const pulse = el => el.animate([{ opacity: .5 }, { opacity: 1, offset: Math.min(.5, 40 / (40 + len)), easing: 'ease-out' }, { opacity: .5 }],
@@ -25229,7 +25170,7 @@ const BeatmapsScreen = {
     const { cols, top, vh } = this._m, rows = this._rows;
     let from = 0, to = rows.length;
     if (sets.length > cols * 12) {
-      const lite = document.documentElement.classList.contains('perf') || document.documentElement.classList.contains('slow');
+      const lite = document.documentElement.classList.contains('perf');
       const st = sc.scrollTop - top;
       const after = y => { let lo = 0, hi = rows.length; while (lo < hi) { const m = (lo + hi) >> 1; if (rows[m].y < y) lo = m + 1; else hi = m; } return lo; };
       const band = k => { const a = Math.max(0, after(st - vh * k) - 1); return [a, Math.max(a + 1, after(st + vh + vh * k))]; };
@@ -25812,11 +25753,11 @@ class SkinPreview {
       if (!this.running) return;
       this._raf = requestAnimationFrame(frame);
       if (!this.engine) return;
-      // (Performance mode, or a computer found slow: drawn at 30fps — it's a picture of the skin, not a play to keep up
+      // (Performance mode: drawn at 30fps — it's a picture of the skin, not a play to keep up
       // with)
       const real = performance.now();
       if (!this.seen) { this.t0 += real - (this._drawn || real); this._drawn = real; return; }
-      if (real - (this._drawn || 0) < 31 && (Settings.get('graphics.performanceMode') || document.documentElement.classList.contains('slow'))) return;
+      if (real - (this._drawn || 0) < 31 && Settings.get('graphics.performanceMode')) return;
       this._drawn = real;
       const now = real - this.t0;
       if (now > this.end) { this.reset(); return; }
@@ -25927,6 +25868,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17e', title: 'Your choice of performance mode', sections: [
+    { title: 'Beatmap explorer', items: ['Card background artwork returns when you switch performance mode off.', 'The game no longer reduces effects or picture quality automatically based on your device or menu frame rate. Performance mode follows your setting.'] }
+  ] },
   { id: '2026.11.17d', title: 'Keep your song speed', sections: [
     { title: 'Song select', items: ['Speed mods stay enabled while browsing your library. Lounge song selection keeps your chosen mods; picking a new song from beatmap explorer clears them.'] }
   ] },
@@ -27056,8 +27000,8 @@ const ExplorerScreen = {
     this._mDirty = !(kids.length > cols && rowH > 0 && sc && sc.clientHeight);
     return { cols, rowH: rowH || (this._m && this._m.rowH) || 0, gridTop, vh };
   },
-  /** The lightest listing: Performance mode, or a device the menus found too slow for them. */
-  lite() { const c = document.documentElement.classList; return c.contains('perf') || c.contains('slow'); },
+  /** The lightest listing is enabled only by Performance mode. */
+  lite() { const c = document.documentElement.classList; return c.contains('perf'); },
   /** A result's card, built the first time it's needed. */
   cardEl(e) {
     if (e.el) return e.el;
@@ -27139,12 +27083,15 @@ const ExplorerScreen = {
       // (they fade in only on a card you're looking at; one that loads ahead of the screen or mid-scroll is simply
       // there — every fade is its own compositor layer for a moment, and dozens at once stuttered the scroll)
       const show = el => () => { if (this._scrolling || !el.isConnected) el.style.transition = 'none'; el.classList.add('loaded'); };
-      // (Performance mode, or a device found to be slow: the plain-size thumbnail alone — a quarter of the pixels to
-      // decode, and one picture per card instead of two)
+      // Reuse one small image in Performance mode. Keep its backdrop ready so turning Performance mode off
+      // restores the artwork immediately, without rebuilding cards or downloading a second picture.
       const q = f => this.later(f);
       // (a set with no cover anywhere gets a note, as in your library — not an empty square)
       const none = () => q(() => thumb.isConnected && noPicture(thumb));
-      if (this.lite()) { OnlineBeatmaps.loadCover(thumb, set.id, ['list', 'card'], show(thumb), q, none); return; }
+      if (this.lite()) {
+        OnlineBeatmaps.loadCover(thumb, set.id, ['list', 'card'], () => { show(thumb)(); bg.style.backgroundImage = thumb.style.backgroundImage; show(bg)(); }, q, none);
+        return;
+      }
       OnlineBeatmaps.loadCover(thumb, set.id, ['list@2x', 'list', 'card'], show(thumb), q, none);
       OnlineBeatmaps.loadCover(bg, set.id, ['card@2x', 'card', 'cover'], show(bg), q);
     };
@@ -35648,7 +35595,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'ae6f40cc24fb';
+const APP_BUILD = '6384126e2928';
 
 const App = {
   lastReport: null,
@@ -35710,7 +35657,7 @@ const App = {
     LazerCursor.init();
     MediaKeys.init();
     KeyNames.load(); // (the keyboard's own key names, for the key bindings and the keys under the stage)
-    window.AshtonkMania = { ProfileAppearance, MapOffsets, Onboarding, Presence, NeruMascot, App, DB, Settings, ProfileManager, OsuMath, ExplorerScreen, OnlineBeatmaps, BeatmapManager, SkinManager, ScoreManager, ReplayManager, Music, AudioManager, Screens, GameplayScreen, Game, SongSelect, BeatmapParser, Collections, Favorites, SettingsPanel, ModSelect, MenuMusic, NowPlaying, Multiplayer, MultiplayerScreen, Zoom, healthModeFor, SkinHealthBar, friendlyError, AvatarPresets, Toast, Background, Spectate, Friends, OnlinePanel, DashboardScreen, UserPanels, Osr, Mobile, Dialog, Chat, Rankings, RankingsScreen, Daily, DailyScreen, Medals, ProfileScreen, Bus, ManageCollections, MpResults, SkinEditor, HudLayout, Screenshot, UserTags, Host, HtmlFile, Account, CodePanel, Sync, NeruCameo, MenuScroll, LowEnd, PicWait, NeruEggs, Staff, Announcements, Report };
+    window.AshtonkMania = { ProfileAppearance, MapOffsets, Onboarding, Presence, NeruMascot, App, DB, Settings, ProfileManager, OsuMath, ExplorerScreen, OnlineBeatmaps, BeatmapManager, SkinManager, ScoreManager, ReplayManager, Music, AudioManager, Screens, GameplayScreen, Game, SongSelect, BeatmapParser, Collections, Favorites, SettingsPanel, ModSelect, MenuMusic, NowPlaying, Multiplayer, MultiplayerScreen, Zoom, healthModeFor, SkinHealthBar, friendlyError, AvatarPresets, Toast, Background, Spectate, Friends, OnlinePanel, DashboardScreen, UserPanels, Osr, Mobile, Dialog, Chat, Rankings, RankingsScreen, Daily, DailyScreen, Medals, ProfileScreen, Bus, ManageCollections, MpResults, SkinEditor, HudLayout, Screenshot, UserTags, Host, HtmlFile, Account, CodePanel, Sync, NeruCameo, MenuScroll, PicWait, NeruEggs, Staff, Announcements, Report };
     try { await Screens.go('home'); }
     catch (e) { console.error(e); Toast.err('The main menu failed to load', e.message); }
     await sleep(250);

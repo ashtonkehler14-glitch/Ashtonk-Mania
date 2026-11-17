@@ -631,8 +631,8 @@ const ExplorerScreen = {
     this._mDirty = !(kids.length > cols && rowH > 0 && sc && sc.clientHeight);
     return { cols, rowH: rowH || (this._m && this._m.rowH) || 0, gridTop, vh };
   },
-  /** The lightest listing: Performance mode, or a device the menus found too slow for them. */
-  lite() { const c = document.documentElement.classList; return c.contains('perf') || c.contains('slow'); },
+  /** The lightest listing is enabled only by Performance mode. */
+  lite() { const c = document.documentElement.classList; return c.contains('perf'); },
   /** A result's card, built the first time it's needed. */
   cardEl(e) {
     if (e.el) return e.el;
@@ -714,12 +714,15 @@ const ExplorerScreen = {
       // (they fade in only on a card you're looking at; one that loads ahead of the screen or mid-scroll is simply
       // there — every fade is its own compositor layer for a moment, and dozens at once stuttered the scroll)
       const show = el => () => { if (this._scrolling || !el.isConnected) el.style.transition = 'none'; el.classList.add('loaded'); };
-      // (Performance mode, or a device found to be slow: the plain-size thumbnail alone — a quarter of the pixels to
-      // decode, and one picture per card instead of two)
+      // Reuse one small image in Performance mode. Keep its backdrop ready so turning Performance mode off
+      // restores the artwork immediately, without rebuilding cards or downloading a second picture.
       const q = f => this.later(f);
       // (a set with no cover anywhere gets a note, as in your library — not an empty square)
       const none = () => q(() => thumb.isConnected && noPicture(thumb));
-      if (this.lite()) { OnlineBeatmaps.loadCover(thumb, set.id, ['list', 'card'], show(thumb), q, none); return; }
+      if (this.lite()) {
+        OnlineBeatmaps.loadCover(thumb, set.id, ['list', 'card'], () => { show(thumb)(); bg.style.backgroundImage = thumb.style.backgroundImage; show(bg)(); }, q, none);
+        return;
+      }
       OnlineBeatmaps.loadCover(thumb, set.id, ['list@2x', 'list', 'card'], show(thumb), q, none);
       OnlineBeatmaps.loadCover(bg, set.id, ['card@2x', 'card', 'cover'], show(bg), q);
     };

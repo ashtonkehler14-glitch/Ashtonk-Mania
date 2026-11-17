@@ -15,7 +15,10 @@ await new Promise(r => server.once('listening', r)); let browser;
 try {
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: process.env.CARD_PORTRAIT==='1' ? { width: 390, height: 844 } : { width: 1280, height: 591 }, isMobile: process.env.CARD_TOUCH==='1', hasTouch: process.env.CARD_TOUCH==='1', deviceScaleFactor: 1 }), errors = [];
-  await page.addInitScript(() => localStorage.setItem('am.noInstallPrompt', '1'));
+  await page.addInitScript(() => {
+    localStorage.setItem('am.noInstallPrompt','1');localStorage.setItem('am.slowMenus',String(Date.now()));
+    Object.defineProperty(navigator,'deviceMemory',{get:()=>2});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>2});
+  });
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}`); await page.waitForFunction(() => document.querySelector('#loading-screen.done'));
   if (await page.$('.onboarding')) {
@@ -24,6 +27,7 @@ try {
     await page.waitForSelector('.setup-step-wom, .setup-step-mobile'); await page.evaluate(() => Onboarding.finish());
   }
   await page.waitForFunction(() => !Screens.busy);
+  assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('slow')),false,'Saved low-power detection and low-end hardware no longer override visuals');
   await page.evaluate(()=>{
     Overlays.closeAll();Settings.set('audio.autoplay',false);
     const names=[['Subwoofer Lullaby','C418'],['Retry Now','Hatsune Miku'],['Final Destination','Camellia']];
@@ -89,6 +93,20 @@ try {
   await page.evaluate(()=>Settings.set('graphics.performanceMode',true));await page.waitForTimeout(300);
   assert.equal(await first.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','Performance mode keeps the slanted silhouette');
   assert.ok(await first.locator('.ex-thumbwrap').isVisible());
+  assert.equal(await first.locator('.ex-cardbg').evaluate(el=>getComputedStyle(el).display),'none','Performance mode hides backdrop artwork');
+  // Cards loaded in Performance mode retain artwork for when the player switches it off.
+  await page.evaluate(()=>{window._oldExplorerCard=document.querySelector('.ex-card');document.documentElement.classList.add('slow');ExplorerScreen._cards=new Map();ExplorerScreen.renderResults();});
+  await page.waitForFunction(()=>!window._oldExplorerCard.isConnected && document.querySelector('.ex-cardbg.loaded'));
+  await page.evaluate(()=>Settings.set('graphics.performanceMode',false));
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.ex-cardbg')).display!=='none');
+  const backdrop=first.locator('.ex-cardbg');
+  assert.notEqual(await backdrop.evaluate(el=>getComputedStyle(el).backgroundImage),'none','Artwork is ready when performance mode is switched off');
+  assert.equal(await first.evaluate(el=>el.querySelector('.ex-thumb').style.backgroundImage===el.querySelector('.ex-cardbg').style.backgroundImage),true,'Performance mode reuses the thumbnail without a second cover request');
+  assert.notEqual(await first.locator('.ex-cardshade').evaluate(el=>getComputedStyle(el).display),'none','Readability shade remains visible');
+  await page.evaluate(()=>document.documentElement.classList.add('slow'));
+  assert.equal(await page.evaluate(()=>ExplorerScreen.lite()),false,'A legacy low-power class cannot activate lighter rendering');
+  assert.notEqual(await backdrop.evaluate(el=>getComputedStyle(el).display),'none','Legacy low-power state cannot hide the artwork');
+  await page.screenshot({path:'/tmp/explorer-artwork-low-power.png'});
   assert.deepEqual(errors,[]);
   console.log('PASS artwork ribbon cards, hover/focus actions, independent clicks, detail favourites and performance mode '+(process.env.CARD_TOUCH==='1'?'touch':'desktop'));
 } finally {if(browser)await browser.close();server.close();}

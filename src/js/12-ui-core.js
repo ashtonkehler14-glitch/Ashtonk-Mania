@@ -244,7 +244,7 @@ const FallingText = {
   drop(e) {
     const t = e.target;
     if (!(t instanceof HTMLInputElement) || !this.TYPES.has(t.type) || !e.inputType.startsWith('delete') || e.isComposing) return;
-    if (document.documentElement.classList.contains('slow') || document.documentElement.classList.contains('perf') || document.getElementById('app').classList.contains('in-game')) return; // (not mid-song)
+    if (document.documentElement.classList.contains('perf') || document.getElementById('app').classList.contains('in-game')) return; // (not mid-song)
     const v = t.value; let a = t.selectionStart, b = t.selectionEnd;
     if (a == null || !v) return;
     if (a === b) {
@@ -1623,7 +1623,7 @@ const Screens = {
       if (transition === 'right') el.classList.add('from-right');
       if (this._popOut) { this._popOut = false; if (!el.classList.contains('ov')) UISounds.play('overlay-big-pop-out', 0.5); }
       // lazer's WaveOverlayContainer: an overlay screen opens with four waves in its colours sweeping up through it
-      if (el.classList.contains('ov') && !el.classList.contains('menu-surface') && !document.documentElement.classList.contains('slow') && !document.documentElement.classList.contains('perf')) {
+      if (el.classList.contains('ov') && !el.classList.contains('menu-surface') && !document.documentElement.classList.contains('perf')) {
         const old = el.querySelector(':scope > .ov-waves'); if (old) old.remove();
         const waves = h('div.ov-waves', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i'), h('i'));
         if (!(prev && prev.el && prev.el.classList.contains('ov'))) UISounds.play('overlay-big-pop-in', 0.6);

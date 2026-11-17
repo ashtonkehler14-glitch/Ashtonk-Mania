@@ -495,7 +495,7 @@ const NeruCameo = {
     // (a picture that couldn't be loaded — offline — never replaces the one she has)
     if (img._swapToken !== token || !still() || !pre.naturalWidth) return;
     if (img._flopEnd) img._flopEnd(); // (a fish flopping on her line: over, the picture's changing)
-    const box = img.parentElement, anim = neruAnim() && !document.documentElement.classList.contains('slow');
+    const box = img.parentElement, anim = neruAnim() && !document.documentElement.classList.contains('perf');
     if (anim && box && img.isConnected && img.complete && img.naturalWidth && img.getAttribute('src') !== src) {
       // (the old picture, where it was — held to the bottom, as she stands — fading away over the new one)
       const ghost = img.cloneNode(); ghost.classList.add('neru-ghost'); ghost.removeAttribute('data-pose');
@@ -510,7 +510,7 @@ const NeruCameo = {
   },
   /** A few sparkles that burst out around her head and fade — when she's pleased (not that she'd say so). */
   burst(el) {
-    if (!neruAnim() || document.documentElement.classList.contains('slow')) return;
+    if (!neruAnim() || document.documentElement.classList.contains('perf')) return;
     const colors = ['#ffd54a', '#ff8cc0', '#ffffff', '#8fd3ff'];
     for (let i = 0; i < 6; i++) {
       const sp = h('span.neru-spark');
@@ -712,7 +712,7 @@ const NeruEggs = {
    *  wherever she is (`el`: her element; what's over her head is placed by --nm-top). */
   fume(el) {
     if (!neruAnim()) return;
-    const light = document.documentElement.classList.contains('slow'); // (lighter: the mark alone, no steam)
+    const light = document.documentElement.classList.contains('perf'); // (lighter: the mark alone, no steam)
     const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), g = document.createElementNS(NS, 'g');
     svg.setAttribute('viewBox', '0 0 40 40');
     for (const [k, v] of [['fill', 'none'], ['stroke', '#ff3b5c'], ['stroke-width', '5'], ['stroke-linecap', 'round']]) g.setAttribute(k, v);
@@ -1685,7 +1685,7 @@ const NeruEggs = {
   /** Little stars going round her head, cartoon-dizzy, for `ms`. */
   daze(ms = 2300) {
     const M = NeruMascot;
-    if (!M.el || !M.img || !neruAnim() || document.documentElement.classList.contains('slow')) return;
+    if (!M.el || !M.img || !neruAnim() || document.documentElement.classList.contains('perf')) return;
     const er = M.el.getBoundingClientRect(), ir = M.img.getBoundingClientRect(), k = M.el.offsetWidth ? er.width / M.el.offsetWidth : 1;
     const cx = (ir.left - er.left + ir.width * 0.5) / k, cy = (ir.top - er.top + ir.height * 0.08) / k, rx = ir.width * 0.26 / k, ry = rx * 0.32;
     for (let i = 0; i < 3; i++) {
@@ -1767,7 +1767,7 @@ const NeruEggs = {
   /** A little heart floating up beside her face (and fading): the main menu's Neru, or `box` with her picture `img` —
    *  a small Neru on another screen. */
   heart(box = NeruMascot.el, img = NeruMascot.img) {
-    if (!box || !img || !box.isConnected || !neruAnim() || document.documentElement.classList.contains('slow')) return;
+    if (!box || !img || !box.isConnected || !neruAnim() || document.documentElement.classList.contains('perf')) return;
     const er = box.getBoundingClientRect(), ir = img.getBoundingClientRect(), k = box.offsetWidth ? er.width / box.offsetWidth : 1;
     // (from beside her face, not the top of her head: on the main menu that's under its bar of buttons)
     const side = Math.random() < 0.5 ? -1 : 1, x = (ir.left - er.left + ir.width * (0.5 + side * (0.2 + Math.random() * 0.22))) / k, y = (ir.top - er.top + ir.height * (0.2 + Math.random() * 0.12)) / k;

@@ -75,48 +75,8 @@ onmessage = ({ data: m }) => {
   frame(m) { if (this.w) this.w.postMessage(m, [m.vis && m.vis.freq, m.tri && m.tri.pts].filter(Boolean).map(a => a.buffer)); },
 };
 
-/** A device that's known to be slow starts the menus light (see HomeScreen.loop): one found slow before (remembered
- *  for two weeks), or one whose hardware says so — a Chromebook with 4 cores and 4 GB or less, or anything with 2 GB
- *  or less — instead of dropping frames for the two seconds it takes to notice. */
-const LowEnd = {
-  known() {
-    try { const t = +localStorage.getItem('am.slowMenus'); if (t && Date.now() - t < 14 * 864e5) return true; } catch { /* private mode */ }
-    const mem = navigator.deviceMemory || 8, cores = navigator.hardwareConcurrency || 8;
-    return mem <= 2 || (/\bCrOS\b/.test(navigator.userAgent) && cores <= 4 && mem <= 4);
-  },
-  /** Found slow: the lighter menus from now on (and for the next two weeks). */
-  mark() {
-    if (document.documentElement.classList.contains('slow')) return;
-    document.documentElement.classList.add('slow');
-    try { localStorage.setItem('am.slowMenus', String(Date.now())); } catch { /* private mode */ }
-  },
-  /** A list scrolling at under ~33fps for two seconds of scrolling (or with a quarter of its frames late) is a slow
-   *  device too — found wherever it scrolls (the beatmap listing first of all), not only on the main menu. Frames
-   *  are only looked at while something is scrolling: a list at rest costs nothing. */
-  watchScroll() {
-    let raf = 0, until = 0, last = 0, ms = 0, n = 0, late = 0, period = 16.7;
-    const tick = now => {
-      raf = 0;
-      const dt = last ? now - last : 0; last = now;
-      if (document.documentElement.classList.contains('slow')) return;
-      // (a hitch — a page of results arriving — counts as one late frame, not as the whole of its length; a hidden tab
-      // doesn't count at all, nor does the first frame, with no frame before it to time)
-      if (dt > 0 && !document.hidden) {
-        if (dt < period) period = Math.max(5, dt); else period += (Math.min(dt, 100) - period) * 0.002;
-        ms += Math.min(dt, 100); n++; if (dt > period * 1.6) late++;
-      }
-      if (ms >= 2000) { if (ms / n > period * 1.8 || late / n > 0.25) this.mark(); ms = n = late = 0; }
-      if (now < until) raf = requestAnimationFrame(tick);
-    };
-    document.addEventListener('scroll', () => {
-      if (Screens.currentName === 'gameplay' || document.documentElement.classList.contains('slow')) return;
-      until = performance.now() + 200;
-      if (!raf) { last = 0; raf = requestAnimationFrame(tick); }
-    }, { capture: true, passive: true });
-  },
-};
-if (LowEnd.known()) document.documentElement.classList.add('slow');
-LowEnd.watchScroll();
+// Retire the automatic low-power override; visual quality follows the player's settings.
+try { localStorage.removeItem('am.slowMenus'); } catch { /* storage blocked */ }
 
 const HomeScreen = {
   tab: 'home',

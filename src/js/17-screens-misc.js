@@ -208,7 +208,7 @@ const BeatmapsScreen = {
     const { cols, top, vh } = this._m, rows = this._rows;
     let from = 0, to = rows.length;
     if (sets.length > cols * 12) {
-      const lite = document.documentElement.classList.contains('perf') || document.documentElement.classList.contains('slow');
+      const lite = document.documentElement.classList.contains('perf');
       const st = sc.scrollTop - top;
       const after = y => { let lo = 0, hi = rows.length; while (lo < hi) { const m = (lo + hi) >> 1; if (rows[m].y < y) lo = m + 1; else hi = m; } return lo; };
       const band = k => { const a = Math.max(0, after(st - vh * k) - 1); return [a, Math.max(a + 1, after(st + vh + vh * k))]; };
@@ -791,11 +791,11 @@ class SkinPreview {
       if (!this.running) return;
       this._raf = requestAnimationFrame(frame);
       if (!this.engine) return;
-      // (Performance mode, or a computer found slow: drawn at 30fps — it's a picture of the skin, not a play to keep up
+      // (Performance mode: drawn at 30fps — it's a picture of the skin, not a play to keep up
       // with)
       const real = performance.now();
       if (!this.seen) { this.t0 += real - (this._drawn || real); this._drawn = real; return; }
-      if (real - (this._drawn || 0) < 31 && (Settings.get('graphics.performanceMode') || document.documentElement.classList.contains('slow'))) return;
+      if (real - (this._drawn || 0) < 31 && Settings.get('graphics.performanceMode')) return;
       this._drawn = real;
       const now = real - this.t0;
       if (now > this.end) { this.reset(); return; }
@@ -906,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17e', title: 'Your choice of performance mode', sections: [
+    { title: 'Beatmap explorer', items: ['Card background artwork returns when you switch performance mode off.', 'The game no longer reduces effects or picture quality automatically based on your device or menu frame rate. Performance mode follows your setting.'] }
+  ] },
   { id: '2026.11.17d', title: 'Keep your song speed', sections: [
     { title: 'Song select', items: ['Speed mods stay enabled while browsing your library. Lounge song selection keeps your chosen mods; picking a new song from beatmap explorer clears them.'] }
   ] },
