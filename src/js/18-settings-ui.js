@@ -514,6 +514,7 @@ const ModSelect = {
         title: p.mods.map(id => MOD_BY_ID.get(id)?.name || id).join(', '),
         onclick: () => {
           if (off) return;
+          const on = [...(Settings.get('songselect.mods') || [])].sort().join() === [...p.mods].sort().join();
           UISounds.play(on ? 'check-off' : 'check-on');
           if (!on && p.config) Settings.set('mods.config', { ...ModSystem.config(), ...p.config });
           setMods(on ? [] : ModSystem.normalize(p.mods));
@@ -522,7 +523,7 @@ const ModSelect = {
           e.preventDefault();
           showMenu(e.clientX, e.clientY, [
             { label: 'Rename', icon: 'edit', onClick: async () => { const n = await Dialog.prompt('Rename preset', p.name, { ok: 'Save' }); if (n && n.trim()) { p.name = n.trim().slice(0, 40); save([...list]); this.render(); } } },
-            { label: 'Use the mods on now', icon: 'retry', onClick: () => { if (!cur.length) return; p.mods = [...cur]; p.config = { ...ModSystem.config() }; save([...list]); this.render(); } },
+            { label: 'Use the mods on now', icon: 'retry', onClick: () => { const cur=Settings.get('songselect.mods') || [];if (!cur.length) return; p.mods = [...cur]; p.config = { ...ModSystem.config() }; save([...list]); this.render(); } },
             { label: 'Delete', icon: 'trash', danger: true, onClick: () => { save(list.filter(x => x !== p)); this.render(); } },
           ]);
         },
@@ -533,6 +534,7 @@ const ModSelect = {
     // (lazer's AddPresetButton: a "+" that asks for a name, with the mods you have on now)
     body.append(h('button.mod-p.preset-add', { disabled: !cur.length, title: cur.length ? 'Save the mods you have on as a preset' : 'Turn some mods on first', onclick: async () => {
       UISounds.click();
+      const cur = Settings.get('songselect.mods') || [];
       const n = await Dialog.prompt('New preset', '', { ok: 'Save', placeholder: cur.join(' ') });
       if (n == null) return;
       save([...list, { id: uid(), name: (n.trim() || cur.join(' ')).slice(0, 40), mods: [...cur], config: { ...ModSystem.config() } }]);
@@ -555,7 +557,7 @@ const ModSelect = {
     const mult = ModSystem.multiplier(cur), rate = ModSystem.rate(cur);
     const setMods = v => { Settings.set('songselect.mods', v); this.render(); Bus.emit('mods:changed'); };
     const shown = new Set(this.found().map(m => m.id));
-    const cols = h('div.modsel-cols');
+    let cols = h('div.modsel-cols');
     cols.append(this.presetColumn(cur, setMods));
     for (const [gid, gname] of MOD_GROUPS) {
       const mods = MODS.filter(x => x.group === gid && shown.has(x.id));
@@ -583,23 +585,24 @@ const ModSelect = {
       requestAnimationFrame(edge);
     }
     const cfgMods = cur.filter(id => MOD_BY_ID.get(id)?.config);
-    const was = this.custEnabled;
     this.custEnabled = cfgMods.length > 0;
     this.cust.classList.toggle('off', !this.custEnabled);
     this.cust.title = this.custEnabled ? '' : 'No mod selected which can be customised.';
     if (!this.custEnabled) this.setCust('closed');
-    else if (!was && this.custEnabled) { this.cust.classList.remove('flash'); void this.cust.offsetWidth; this.cust.classList.add('flash'); }
+    this.cust.classList.remove('flash');
     this.custBody.replaceChildren(...(cfgMods.length ? this.configRows(cfgMods) : []));
-    const opening = !this.colsEl;
-    if (this.colsEl) this.colsEl.replaceWith(cols); else sheet.append(cols);
-    this.colsEl = cols;
-    // lazer's ModSelectOverlay opening: the columns come in one after another (30ms apart), alternately from above
-    // and below, over 400ms OutQuint (only when it opens — not each time a mod is toggled)
-    if (opening && Settings.get('ui.animSpeed') !== 0) {
-      const d = Math.min(700, innerHeight * .9), k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
-      [...cols.children].forEach((c, i) => c.animate([{ translate: `0 ${i % 2 ? d : -d}px`, opacity: 0 }, { translate: '0 0', opacity: 1 }],
-        { duration: 400 * k, delay: i * 30 * k, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' }));
+    // A toggle updates existing controls so their focus, hover and scroll positions do not blink or reset.
+    const structure = JSON.stringify([this.query, Settings.get('mods.presets') || [], [...this.disabled]]);
+    const oldPanels = this.colsEl && [...this.colsEl.querySelectorAll('.mod-p')], newPanels = [...cols.querySelectorAll('.mod-p')];
+    if (this.colsEl && this._structure === structure && oldPanels.length === newPanels.length) {
+      oldPanels.forEach((old,i)=>{const fresh=newPanels[i];old.className=fresh.className;for(const attr of ['aria-pressed','aria-disabled','title','disabled']){if(fresh.hasAttribute(attr))old.setAttribute(attr,fresh.getAttribute(attr));else old.removeAttribute(attr);}});
+      [...this.colsEl.querySelectorAll('.modcol-h')].forEach((head,i)=>head.replaceChildren(...cols.querySelectorAll('.modcol-h')[i].childNodes));
+    } else {
+      if (this.colsEl) this.colsEl.replaceWith(cols); else sheet.append(cols);
+      this.colsEl = cols;
     }
+    cols = this.colsEl;
+    this._structure = structure;
     // lazer's footer: the back button, a 200px sheared "Deselect all" (Backspace), and at the right the speed and score
     // multiplier in a sheared two-part box (ModFooterInformationDisplay)
     const info = (label, value, cls = '') => h(`div.ms-info${cls}`, h('span.ms-info-l', h('i', label)), h('span.ms-info-r', h('i', value)));
@@ -614,12 +617,12 @@ const ModSelect = {
     cols.scrollLeft = scrollX;
     [...cols.querySelectorAll('.modcol-list')].forEach((l, i) => { if (tops[i]) l.scrollTop = tops[i]; });
     // lazer's columns scroll sideways with the wheel when they don't all fit (a column with more mods still scrolls itself)
-    cols.addEventListener('wheel', e => {
+    if (!cols._wheelBound) { cols._wheelBound=true; cols.addEventListener('wheel', e => {
       if (cols.scrollWidth <= cols.clientWidth + 1 || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       const list = e.target.closest && e.target.closest('.modcol-list');
       if (list && list.scrollHeight > list.clientHeight + 1) return;
       cols.scrollLeft += e.deltaY; e.preventDefault();
-    }, { passive: false });
+    }, { passive: false }); }
   },
   /** Sliders for mods with settings (Accuracy Challenge, Difficulty Adjust, Song Speed, Hidden/Fade In, Percy). */
   configRows(ids) {

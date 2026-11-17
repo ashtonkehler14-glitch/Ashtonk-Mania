@@ -73,11 +73,14 @@ const Spectate = {
   cur: null,    // their play now: { id, name, head, feed, at, ready, ended, quit, started }
   host: { watchers: 0, s: null, sent: 0, lastSend: 0 },
 
+  temporary: new Set(), downloads: new Set(),
+  clearTemporary() { for(const controller of this.downloads)controller.abort();this.downloads.clear();for(const batch of this.temporary)batch.release();this.temporary.clear(); },
   // ── watching
   watch(p) {
     if (!p || !Presence.ws) { Toast.err('Can\'t spectate right now', 'You\'re not connected to the online service.'); return; }
     if (Screens.currentName === 'gameplay' && !this.watchingNow()) { Toast.err('You\'re playing', 'Finish your song first.'); return; }
     if (this.target && this.target.id !== p.id) Presence.send({ t: 'unwatch', to: this.target.id });
+    if (!this.target || this.target.id !== p.id) this.clearTemporary();
     const room = Multiplayer.inRoom();
     this.target = { id: p.id, name: p.name, pid: p.pid || '', avatar: p.avatar || '', activity: p.activity || '', status: p.status || 'menu', room };
     this.cur = null; this.set = null;
@@ -91,6 +94,7 @@ const Spectate = {
     if (!t) return;
     Presence.send({ t: 'unwatch', to: t.id });
     this.target = null; this.cur = null; this.set = null;
+    this.clearTemporary();
     RankedWatch.close(true);
     if (typeof SpectatorChat !== 'undefined') SpectatorChat.refresh();
     if (t.room && Multiplayer.inRoom() && this.watchingNow()) Screens.go('multiplayer', {}, { replace: true }); // (watching from a room: back to it)
@@ -302,19 +306,30 @@ const Spectate = {
   autoDownload() { const c = this.cur; if (c && !c.ended && !this.findMap(c.head)) { this.resolveMap(c); if (c.lookup?.state === 'exact' && !c.downloadAttempted && (Settings.get('online.autoDownload') || RankedWatch.on)) this.download(); } },
   async download() {
     const c = this.cur;
-    if (!c || c.ended || this.findMap(c.head)) return;
-    await this.resolveMap(c);
-    if (this.cur !== c || c.ended || c.lookup?.state !== 'exact') return;
-    const id = c.lookup.setId, st = ExplorerScreen.downloads.get(id);
-    if (st?.state === 'downloading' || c.downloading) return;
-    c.downloading = true; c.downloadAttempted = true;
+    if (!c || c.ended || c.downloading || this.findMap(c.head)) return;
+    c.downloading = true;
+    const controller = new AbortController(); this.downloads.add(controller);
+    let batch;
     try {
-      await ExplorerScreen.download({ id, title: c.head.title, artist: c.head.artist, creator: c.head.creator, diffs: [] });
-      if (this.cur !== c || c.ended) return;
-      if (!await this.verifyLocal(c.head)) c.lookup.state = ExplorerScreen.downloads.get(id)?.state === 'error' ? 'error' : 'mismatch';
-      else this.tryStart();
-    } catch { if (this.cur === c) c.lookup.state = 'error'; }
-    finally { c.downloading = false; if (this.cur === c) SpectatorScreen.paint(); }
+      // Check exact local bytes both before the network request and again before installing its result.
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      await this.resolveMap(c);
+      if (this.cur !== c || c.ended || c.lookup?.state !== 'exact') return;
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      c.downloadAttempted = true;
+      const file = await OnlineBeatmaps.download(c.lookup.setId, null, undefined, controller.signal);
+      if (this.cur !== c || c.ended || controller.signal.aborted) return;
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      batch = await BeatmapManager.importTemporary(file);
+      if (this.cur !== c || c.ended || controller.signal.aborted) return;
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      batch.mount();
+      if (!await this.verifyLocal(c.head)) { c.lookup.state = 'mismatch'; return; }
+      if (this.cur !== c || c.ended || controller.signal.aborted) return;
+      this.temporary.add(batch); batch = null;
+      this.tryStart();
+    } catch { if (this.cur === c && !controller.signal.aborted && c.lookup) c.lookup.state = 'error'; }
+    finally { batch?.release(); this.downloads.delete(controller); c.downloading = false; if (this.cur === c) SpectatorScreen.paint(); }
   },
 
   /** Called by the watcher's gameplay every frame: start a little behind the player, and wait for the stream

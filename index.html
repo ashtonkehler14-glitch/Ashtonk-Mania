@@ -10088,7 +10088,7 @@ const BeatmapManager = {
     const set = this.setById.get(setId);
     if (!set) return null;
     const real = set.fileIndex[normPath(path).toLowerCase()];
-    return real ? DB.get('files', `${setId}/${real}`) : null;
+    return real ? set._temporaryFiles ? set._temporaryFiles.get(`${setId}/${real}`) || null : DB.get('files', `${setId}/${real}`) : null;
   },
   hasFile(setId, path) { const s = this.setById.get(setId); return !!(s && path && s.fileIndex[normPath(path).toLowerCase()]); },
   /** Song cards' pictures: sharp on big and high-density screens (they were 640px wide, which looked soft). */
@@ -10101,7 +10101,7 @@ const BeatmapManager = {
     if (!set || !set.thumb) return null;
     const cached = BlobURLs.map.get(`thumb:${set.id}`);
     if (cached) return cached;
-    const b = await DB.get('files', `${set.id}/__thumb.jpg`);
+    const b = set._temporaryFiles ? set._temporaryFiles.get(`${set.id}/__thumb.jpg`) : await DB.get('files', `${set.id}/__thumb.jpg`);
     return BlobURLs.get(`thumb:${set.id}`, b);
   },
   /** Song panels in Performance mode (pictures at a lower resolution): a smaller copy of the card picture (CARD_W),
@@ -10111,6 +10111,7 @@ const BeatmapManager = {
   CARD_W: 768, CARD_Q: 0.85,
   async cardURL(set) {
     if (!set || !set.thumb) return null;
+    if (set._temporaryFiles) return this.thumbURL(set);
     const key = `card:${set.id}`;
     if (BlobURLs.map.has(key)) return BlobURLs.map.get(key);
     if (set.thumbV !== this.THUMB_V) return this.thumbURL(set);
@@ -10264,6 +10265,24 @@ const BeatmapManager = {
     return report;
   },
 
+  /** A spectated archive lives only in memory, outside the saved library, with isolated file and map IDs. */
+  async importTemporary(file) {
+    const files = new Map(), manager = Object.assign(Object.create(this), {sets:[],setById:new Map(),maps:new MapIndex()});
+    const storage = {
+      async put(store,value,key){if(store==='files')files.set(key,value);},
+      async putMany(items){for(const item of items)if(item.store==='files')files.set(item.key,item.value);},
+      async delPrefix(store,prefix){if(store==='files')for(const key of files.keys())if(key.startsWith(prefix))files.delete(key);}
+    };
+    const report = {sets:[],errors:[],warnings:[],temporary:crypto.randomUUID(),storage};
+    report.sets = await manager.importOsz(file,report);
+    const mounted=[];
+    const result = {sets:report.sets,errors:report.errors,warnings:report.warnings,
+      mount:()=>{for(const set of report.sets){if(mounted.includes(set))continue;set._temporaryFiles=files;this.setById.set(set.id,set);for(const map of set.maps)this.maps.set(map.id,map);mounted.push(set);}},
+      release:()=>{for(const set of mounted){if(this.setById.get(set.id)!==set)continue;for(const map of set.maps)if(this.maps.get(map.id)===map)this.maps.delete(map.id);this.setById.delete(set.id);for(const prefix of [`thumb:${set.id}`,`card:${set.id}`,`bg:${set.id}/`,`bgthumb:${set.id}/`])BlobURLs.drop(prefix);}mounted.length=0;files.clear();}
+    };
+    return result;
+  },
+
   async importOsz(file, report) {
     let zip;
     try { zip = await ZipReader.fromFile(file); } // (a part at a time: a beatmap pack can be gigabytes)
@@ -10352,7 +10371,8 @@ const BeatmapManager = {
   /** What a set keeps when it's imported again (BeatmapStatus and the beatmap listing found these out). */
   KEPT: ['status', 'statusChecked', 'statusV', 'statusErr', 'statusMiss', 'genreId', 'languageId', 'rankedDate', 'submittedDate'],
   async _storeSet(keySrc, diffs, entries, lowerIndex, available, sourceName, report) {
-    const setId = 'set-' + (await hashHex(keySrc)).slice(0, 16);
+    const storage = report?.storage || DB;
+    const setId = (report?.temporary ? `spectator-${report.temporary}-set-` : 'set-') + (await hashHex(keySrc)).slice(0, 16);
     const existing = this.setById.get(setId);
     const md = diffs[0].info.metadata;
     // which files do we keep? .osu, audio, backgrounds, samples, skip video & big storyboards
@@ -10406,9 +10426,9 @@ const BeatmapManager = {
       const [n, e] = want[i];
       items.push({ store: 'files', key: `${setId}/${e.name}`, value: blobs[i] });
       fileIndex[n] = e.name;
-      if (items.length >= 20) { await this.breathe(); await DB.putMany(items.splice(0)); }
+      if (items.length >= 20) { await this.breathe(); await storage.putMany(items.splice(0)); }
     }
-    if (items.length) { await this.breathe(); await DB.putMany(items); }
+    if (items.length) { await this.breathe(); await storage.putMany(items); }
     const blobOf = name => { const i = want.findIndex(([n]) => n === name); return i < 0 ? null : blobs[i]; };
 
     // difficulties
@@ -10418,10 +10438,11 @@ const BeatmapManager = {
       const rec = this._mapRecord(d, setId, available, existing?.added || Date.now());
       // difficulties that can't be played (other game modes, missing audio…) aren't kept at all
       if (rec.problems.length) { if (report) report.warnings.push(`${rec.artist} - ${rec.title} [${rec.version}]: ${rec.problems.join('; ')}`); continue; }
+      if (report?.temporary) { rec.id = `spectator-${report.temporary}-` + rec.id; rec.temporary = true; }
       mapRecords.push(rec);
     }
     if (!mapRecords.length && !existing) {
-      await DB.delPrefix('files', `${setId}/`);
+      await storage.delPrefix('files', `${setId}/`);
       throw new Error(`${md.Title || sourceName}: no playable difficulties`);
     }
     // thumbnail from first background available
@@ -10432,7 +10453,7 @@ const BeatmapManager = {
         const e = lowerIndex.get(bgRec.bgFile.toLowerCase());
         await this.breathe();
         const t = await makeThumbnail(blobOf(bgRec.bgFile.toLowerCase()) || new Blob([await e.read()]), this.THUMB_W, this.THUMB_Q);
-        if (t) { await DB.put('files', t, `${setId}/__thumb.jpg`); thumb = true; }
+        if (t) { await storage.put('files', t, `${setId}/__thumb.jpg`); thumb = true; }
       } catch (e) { /* ignore */ }
     }
     const mapIds = new Set(existing ? existing.mapIds : []);
@@ -10450,7 +10471,7 @@ const BeatmapManager = {
       mapIds: [...mapIds], fileIndex, thumb, thumbV: existing && existing.thumb ? existing.thumbV : this.THUMB_V, storyboard, video,
       added: existing?.added || Date.now(), sourceName,
     };
-    await DB.putMany([{ store: 'sets', value: set }, ...mapRecords.map(r => ({ store: 'maps', value: r }))]);
+    await storage.putMany([{ store: 'sets', value: set }, ...mapRecords.map(r => ({ store: 'maps', value: r }))]);
     for (const r of mapRecords) this.maps.set(r.id, r);
     set.maps = set.mapIds.map(id => this.maps.get(id)).filter(Boolean).sort((a, b) => a.stars - b.stars);
     if (existing) this.sets[this.sets.indexOf(existing)] = set; else this.sets.push(set);
@@ -20763,6 +20784,16 @@ const SongSelect = {
    *  the avatar, the time since ("3hrs") over the name, COMBO and ACCURACY (lime when perfect), and on the right the
    *  score with its mods over a gradient into the grade's colour, the grade letter in a 35px strip of it. Narrower
    *  leaderboards drop the rank, then stack the statistics, then hide them (as lazer's display modes do). */
+  /** An online copy of your play must resolve to that exact local record, never an arbitrary score on the map. */
+  scoreForResult(s,m) {
+    if (!s.online) return s;
+    if (s.own) {
+      const mods=v=>[...(v.mods || [])].sort().join(',');
+      const matches=ScoreManager.forMap(m.hash).filter(local=>dateMs(local.date)===dateMs(s.date) && ScoreManager.value(local)===ScoreManager.value(s) && local.maxCombo===s.maxCombo && Math.abs(local.accuracy-s.accuracy)<1e-9 && mods(local)===mods(s) && JSON.stringify(local.counts)===JSON.stringify(s.counts));
+      if(matches.length===1)return matches[0];
+    }
+    return {...s,id:`o-${m.hash}-${s.pid}-${s.date}-${s.score}`,mapHash:m.hash,title:m.title,artist:m.artist,version:m.version,creator:m.creator,keys:m.keys,stars:s.stars || m.stars,counts:s.counts || [0,0,0,0,0,0],replayId:null};
+  },
   lbScore(s, i, who, m, delay = i) {
     const own = s.online ? s.own : !s.player || s.player === who;
     const g = s.grade || 'D', letter = g === 'XH' || g === 'X' ? 'SS' : g === 'SH' ? 'S' : g;
@@ -20772,7 +20803,7 @@ const SongSelect = {
     const row = h('button.lbs', {
       style: { animationDelay: `${Math.min(delay, 20) * 25}ms`, '--rc': RANK_COLOURS[g] || '#3f3f3f', '--rt': RANK_INK[g] || '#fff' },
       title: `${s.player || who} · ${fmtScore(ScoreManager.value(s))} · ${fmtAcc(s.accuracy)} · ${fmtInt(s.maxCombo)}x${pp ? ` · ${fmtInt(pp)}pp` : ''}\n${new Date(s.date).toLocaleString()}`,
-      onclick: () => { UISounds.click(); Screens.go('results', s.online ? { score: { ...s, mapHash: m.hash, title: m.title, artist: m.artist, version: m.version, creator: m.creator, keys: m.keys, stars: s.stars || m.stars, counts: s.counts || [0, 0, 0, 0, 0, 0], replayId: null }, fromList: true, browse: true, watched: 'online' } : { score: s, fromList: true, browse: true }, { transition: 'right' }); },
+      onclick: () => { UISounds.click(); const score=this.scoreForResult(s,m); Screens.go('results', {score,fromList:true,browse:true,...(score.online?{watched:'online'}:{})}, {transition:'right'}); },
       oncontextmenu: e => { e.preventDefault(); this.lbMenu(e, s, m); },
     },
       h('span.lbs-rank', h('b', '#' + fmtInt(i + 1))),
@@ -21870,8 +21901,8 @@ const GameplayScreen = {
         s.mods.length ? h('div.hud-mods', ...s.mods.map(m => modIcon(m, 42))) : null),
       // touch screens have no Escape key: a pause button only shows for coarse pointers
       // (in every kind of play — your own, practice, Auto, a replay, a multiplayer match (it asks before quitting) and
-      // spectating (where it stops watching) — and whatever the HUD's visibility: it's the only way out on a phone)
-      s.spectate ? h('button.hud-touch-pause.stop', { 'aria-label': 'Leave', onclick: e => { e.stopPropagation(); this.onBack(); } }, icon('x'))
+      // spectating uses the Stop watching control in its top strip instead)
+      s.spectate ? null
         : h('button.hud-touch-pause', { 'aria-label': 'Pause', onclick: e => { e.stopPropagation(); this.onBack(); } }, h('i'), h('i')),
       // (no hold-for-menu button on a computer: it sat where song select's play logo is, so starting a song from the
       // logo left the pointer on it and it showed up — Esc opens the pause menu)
@@ -25882,6 +25913,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17g', title: 'Temporary spectator maps and steady mod controls', sections: [
+    { title: 'Spectating', items: ['Missing maps downloaded for spectating stay temporary and are released when you stop. Existing maps are checked first and kept unchanged.', 'Watching a play uses a single Stop watching button in the top strip.'] },
+    { title: 'Song select', items: ['Mod select opens without flashing columns, and toggling mods keeps buttons and scroll positions steady.', 'Opening your leaderboard score uses its exact saved play and replay when available.'] }
+  ] },
   { id: '2026.11.17f', title: 'Mobile menus and smoother song selection', sections: [
     { title: 'Menus', items: ['Spectator chat follows your UI scale and stays clear of song details on mobile.', 'Beatmap details use a simple heart button for favourites again.'] },
     { title: 'Song select', items: ['Song details stay visible while switching maps. Backgrounds wait until their artwork is ready, and rapid selections cancel outdated previews.'] }
@@ -27455,7 +27490,7 @@ const BeatmapStatus = {
       Rankings.report(); Verified.catchUp();
     })().catch(e => console.warn('imported map verification', e)).finally(() => { this._importing = false; });
   },
-  mapDue(m, now = Date.now()) { return !m.rankChecked || now - m.rankChecked > (m.rankError ? 60000 : 7 * this.DAY); },
+  mapDue(m, now = Date.now()) { return !m.temporary && (!m.rankChecked || now - m.rankChecked > (m.rankError ? 60000 : 7 * this.DAY)); },
   async keepMapStatus(m, status) {
     if (!m || BeatmapManager.maps.get(m.id) !== m) return;
     const changed = m.rankStatus !== status;
@@ -28070,6 +28105,7 @@ const ModSelect = {
         title: p.mods.map(id => MOD_BY_ID.get(id)?.name || id).join(', '),
         onclick: () => {
           if (off) return;
+          const on = [...(Settings.get('songselect.mods') || [])].sort().join() === [...p.mods].sort().join();
           UISounds.play(on ? 'check-off' : 'check-on');
           if (!on && p.config) Settings.set('mods.config', { ...ModSystem.config(), ...p.config });
           setMods(on ? [] : ModSystem.normalize(p.mods));
@@ -28078,7 +28114,7 @@ const ModSelect = {
           e.preventDefault();
           showMenu(e.clientX, e.clientY, [
             { label: 'Rename', icon: 'edit', onClick: async () => { const n = await Dialog.prompt('Rename preset', p.name, { ok: 'Save' }); if (n && n.trim()) { p.name = n.trim().slice(0, 40); save([...list]); this.render(); } } },
-            { label: 'Use the mods on now', icon: 'retry', onClick: () => { if (!cur.length) return; p.mods = [...cur]; p.config = { ...ModSystem.config() }; save([...list]); this.render(); } },
+            { label: 'Use the mods on now', icon: 'retry', onClick: () => { const cur=Settings.get('songselect.mods') || [];if (!cur.length) return; p.mods = [...cur]; p.config = { ...ModSystem.config() }; save([...list]); this.render(); } },
             { label: 'Delete', icon: 'trash', danger: true, onClick: () => { save(list.filter(x => x !== p)); this.render(); } },
           ]);
         },
@@ -28089,6 +28125,7 @@ const ModSelect = {
     // (lazer's AddPresetButton: a "+" that asks for a name, with the mods you have on now)
     body.append(h('button.mod-p.preset-add', { disabled: !cur.length, title: cur.length ? 'Save the mods you have on as a preset' : 'Turn some mods on first', onclick: async () => {
       UISounds.click();
+      const cur = Settings.get('songselect.mods') || [];
       const n = await Dialog.prompt('New preset', '', { ok: 'Save', placeholder: cur.join(' ') });
       if (n == null) return;
       save([...list, { id: uid(), name: (n.trim() || cur.join(' ')).slice(0, 40), mods: [...cur], config: { ...ModSystem.config() } }]);
@@ -28111,7 +28148,7 @@ const ModSelect = {
     const mult = ModSystem.multiplier(cur), rate = ModSystem.rate(cur);
     const setMods = v => { Settings.set('songselect.mods', v); this.render(); Bus.emit('mods:changed'); };
     const shown = new Set(this.found().map(m => m.id));
-    const cols = h('div.modsel-cols');
+    let cols = h('div.modsel-cols');
     cols.append(this.presetColumn(cur, setMods));
     for (const [gid, gname] of MOD_GROUPS) {
       const mods = MODS.filter(x => x.group === gid && shown.has(x.id));
@@ -28139,23 +28176,24 @@ const ModSelect = {
       requestAnimationFrame(edge);
     }
     const cfgMods = cur.filter(id => MOD_BY_ID.get(id)?.config);
-    const was = this.custEnabled;
     this.custEnabled = cfgMods.length > 0;
     this.cust.classList.toggle('off', !this.custEnabled);
     this.cust.title = this.custEnabled ? '' : 'No mod selected which can be customised.';
     if (!this.custEnabled) this.setCust('closed');
-    else if (!was && this.custEnabled) { this.cust.classList.remove('flash'); void this.cust.offsetWidth; this.cust.classList.add('flash'); }
+    this.cust.classList.remove('flash');
     this.custBody.replaceChildren(...(cfgMods.length ? this.configRows(cfgMods) : []));
-    const opening = !this.colsEl;
-    if (this.colsEl) this.colsEl.replaceWith(cols); else sheet.append(cols);
-    this.colsEl = cols;
-    // lazer's ModSelectOverlay opening: the columns come in one after another (30ms apart), alternately from above
-    // and below, over 400ms OutQuint (only when it opens — not each time a mod is toggled)
-    if (opening && Settings.get('ui.animSpeed') !== 0) {
-      const d = Math.min(700, innerHeight * .9), k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
-      [...cols.children].forEach((c, i) => c.animate([{ translate: `0 ${i % 2 ? d : -d}px`, opacity: 0 }, { translate: '0 0', opacity: 1 }],
-        { duration: 400 * k, delay: i * 30 * k, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' }));
+    // A toggle updates existing controls so their focus, hover and scroll positions do not blink or reset.
+    const structure = JSON.stringify([this.query, Settings.get('mods.presets') || [], [...this.disabled]]);
+    const oldPanels = this.colsEl && [...this.colsEl.querySelectorAll('.mod-p')], newPanels = [...cols.querySelectorAll('.mod-p')];
+    if (this.colsEl && this._structure === structure && oldPanels.length === newPanels.length) {
+      oldPanels.forEach((old,i)=>{const fresh=newPanels[i];old.className=fresh.className;for(const attr of ['aria-pressed','aria-disabled','title','disabled']){if(fresh.hasAttribute(attr))old.setAttribute(attr,fresh.getAttribute(attr));else old.removeAttribute(attr);}});
+      [...this.colsEl.querySelectorAll('.modcol-h')].forEach((head,i)=>head.replaceChildren(...cols.querySelectorAll('.modcol-h')[i].childNodes));
+    } else {
+      if (this.colsEl) this.colsEl.replaceWith(cols); else sheet.append(cols);
+      this.colsEl = cols;
     }
+    cols = this.colsEl;
+    this._structure = structure;
     // lazer's footer: the back button, a 200px sheared "Deselect all" (Backspace), and at the right the speed and score
     // multiplier in a sheared two-part box (ModFooterInformationDisplay)
     const info = (label, value, cls = '') => h(`div.ms-info${cls}`, h('span.ms-info-l', h('i', label)), h('span.ms-info-r', h('i', value)));
@@ -28170,12 +28208,12 @@ const ModSelect = {
     cols.scrollLeft = scrollX;
     [...cols.querySelectorAll('.modcol-list')].forEach((l, i) => { if (tops[i]) l.scrollTop = tops[i]; });
     // lazer's columns scroll sideways with the wheel when they don't all fit (a column with more mods still scrolls itself)
-    cols.addEventListener('wheel', e => {
+    if (!cols._wheelBound) { cols._wheelBound=true; cols.addEventListener('wheel', e => {
       if (cols.scrollWidth <= cols.clientWidth + 1 || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       const list = e.target.closest && e.target.closest('.modcol-list');
       if (list && list.scrollHeight > list.clientHeight + 1) return;
       cols.scrollLeft += e.deltaY; e.preventDefault();
-    }, { passive: false });
+    }, { passive: false }); }
   },
   /** Sliders for mods with settings (Accuracy Challenge, Difficulty Adjust, Song Speed, Hidden/Fade In, Percy). */
   configRows(ids) {
@@ -31764,14 +31802,9 @@ const RankedWatch = {
     }
   },
   qpClock(room) { const g = room && room.rp; this.qpEndAt = g && g.left ? performance.now() + g.left - this.rtt / 2 : 0; },
-  /** The card they played: its beatmap fetched as soon as it's picked (with automatic downloads on), so their song can
-   *  be watched from its start. */
+  /** Ranked spectators share the exact-file checks and temporary storage of regular spectating. */
   prefetch() {
-    const map = this.room && this.room.map;
-    if (!map || !(map.onlineSetId > 0) || this.localMap(map) || !Settings.get('online.autoDownload')) return;
-    const st = ExplorerScreen.downloads.get(map.onlineSetId);
-    if (st && st.state === 'downloading') return;
-    ExplorerScreen.download({ id: map.onlineSetId, title: map.title, artist: map.artist, creator: map.creator, diffs: [] }).catch(() => {});
+    if (this.on && Spectate.cur && !Spectate.cur.ended) Spectate.autoDownload();
   },
   // (what RankedMatch asks of its source: as Multiplayer's, for the player watched — and nothing sent)
   self() { return this.room ? this.room.players.find(p => p.id === this.me) || null : null; },
@@ -31990,11 +32023,14 @@ const Spectate = {
   cur: null,    // their play now: { id, name, head, feed, at, ready, ended, quit, started }
   host: { watchers: 0, s: null, sent: 0, lastSend: 0 },
 
+  temporary: new Set(), downloads: new Set(),
+  clearTemporary() { for(const controller of this.downloads)controller.abort();this.downloads.clear();for(const batch of this.temporary)batch.release();this.temporary.clear(); },
   // ── watching
   watch(p) {
     if (!p || !Presence.ws) { Toast.err('Can\'t spectate right now', 'You\'re not connected to the online service.'); return; }
     if (Screens.currentName === 'gameplay' && !this.watchingNow()) { Toast.err('You\'re playing', 'Finish your song first.'); return; }
     if (this.target && this.target.id !== p.id) Presence.send({ t: 'unwatch', to: this.target.id });
+    if (!this.target || this.target.id !== p.id) this.clearTemporary();
     const room = Multiplayer.inRoom();
     this.target = { id: p.id, name: p.name, pid: p.pid || '', avatar: p.avatar || '', activity: p.activity || '', status: p.status || 'menu', room };
     this.cur = null; this.set = null;
@@ -32008,6 +32044,7 @@ const Spectate = {
     if (!t) return;
     Presence.send({ t: 'unwatch', to: t.id });
     this.target = null; this.cur = null; this.set = null;
+    this.clearTemporary();
     RankedWatch.close(true);
     if (typeof SpectatorChat !== 'undefined') SpectatorChat.refresh();
     if (t.room && Multiplayer.inRoom() && this.watchingNow()) Screens.go('multiplayer', {}, { replace: true }); // (watching from a room: back to it)
@@ -32219,19 +32256,30 @@ const Spectate = {
   autoDownload() { const c = this.cur; if (c && !c.ended && !this.findMap(c.head)) { this.resolveMap(c); if (c.lookup?.state === 'exact' && !c.downloadAttempted && (Settings.get('online.autoDownload') || RankedWatch.on)) this.download(); } },
   async download() {
     const c = this.cur;
-    if (!c || c.ended || this.findMap(c.head)) return;
-    await this.resolveMap(c);
-    if (this.cur !== c || c.ended || c.lookup?.state !== 'exact') return;
-    const id = c.lookup.setId, st = ExplorerScreen.downloads.get(id);
-    if (st?.state === 'downloading' || c.downloading) return;
-    c.downloading = true; c.downloadAttempted = true;
+    if (!c || c.ended || c.downloading || this.findMap(c.head)) return;
+    c.downloading = true;
+    const controller = new AbortController(); this.downloads.add(controller);
+    let batch;
     try {
-      await ExplorerScreen.download({ id, title: c.head.title, artist: c.head.artist, creator: c.head.creator, diffs: [] });
-      if (this.cur !== c || c.ended) return;
-      if (!await this.verifyLocal(c.head)) c.lookup.state = ExplorerScreen.downloads.get(id)?.state === 'error' ? 'error' : 'mismatch';
-      else this.tryStart();
-    } catch { if (this.cur === c) c.lookup.state = 'error'; }
-    finally { c.downloading = false; if (this.cur === c) SpectatorScreen.paint(); }
+      // Check exact local bytes both before the network request and again before installing its result.
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      await this.resolveMap(c);
+      if (this.cur !== c || c.ended || c.lookup?.state !== 'exact') return;
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      c.downloadAttempted = true;
+      const file = await OnlineBeatmaps.download(c.lookup.setId, null, undefined, controller.signal);
+      if (this.cur !== c || c.ended || controller.signal.aborted) return;
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      batch = await BeatmapManager.importTemporary(file);
+      if (this.cur !== c || c.ended || controller.signal.aborted) return;
+      if (await this.verifyLocal(c.head)) { this.tryStart(); return; }
+      batch.mount();
+      if (!await this.verifyLocal(c.head)) { c.lookup.state = 'mismatch'; return; }
+      if (this.cur !== c || c.ended || controller.signal.aborted) return;
+      this.temporary.add(batch); batch = null;
+      this.tryStart();
+    } catch { if (this.cur === c && !controller.signal.aborted && c.lookup) c.lookup.state = 'error'; }
+    finally { batch?.release(); this.downloads.delete(controller); c.downloading = false; if (this.cur === c) SpectatorScreen.paint(); }
   },
 
   /** Called by the watcher's gameplay every frame: start a little behind the player, and wait for the stream
@@ -33211,10 +33259,10 @@ const MpResults = {
     const map = BeatmapManager.mapByHash(s.mapHash) || {};
     const me = typeof Presence !== 'undefined' ? Presence.pid() : null, board = this.boards.get(s.mapHash);
     // (someone else's best from the server, as a score the results screen can open)
-    const asScore = e => ({ id: 'o-' + e.pid, pid: e.pid, online: true, player: e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
+    const asScore = e => ({ id: `o-${s.mapHash}-${e.pid}-${e.date}-${e.score}`, pid: e.pid, online: true, player: e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
       grade: e.grade, mods: e.mods || [], counts: e.counts && e.counts.length === 6 ? e.counts : [0, 0, 0, 0, 0, 0], pp: e.pp, srVersion: SR_VERSION, passed: true, date: e.date, replayId: null,
-      mapHash: s.mapHash, onlineSetId: map.setId || s.onlineSetId, mapId: map.id || s.mapId, title: map.title || s.title, artist: map.artist || s.artist, version: map.version || s.version, creator: map.creator || s.creator, keys: map.keys || s.keys, stars: e.stars > 0 ? e.stars : map.stars || s.stars });
-    const theirs = board ? board.scores.filter(e => e.pid !== me && 'o-' + e.pid !== s.id).map(asScore) : [];
+      mapHash: s.mapHash, onlineSetId: BeatmapManager.setById.get(map.setId)?.onlineId || s.onlineSetId, mapId: map.id || s.mapId, title: map.title || s.title, artist: map.artist || s.artist, version: map.version || s.version, creator: map.creator || s.creator, keys: map.keys || s.keys, stars: e.stars > 0 ? e.stars : map.stars || s.stars });
+    const theirs = board ? board.scores.filter(e => e.pid !== me && !(s.online && e.pid === s.pid && dateMs(e.date) === dateMs(s.date) && e.score === ScoreManager.value(s))).map(asScore) : [];
     const all = [...mineHere, ...theirs, s].sort((a, b) => ScoreManager.value(b) - ScoreManager.value(a) || b.accuracy - a.accuracy);
     const row = (x, i) => ({ id: x.id, local: !x.online, name: x.player || ProfileManager.profile.name, avatar: x.avatar, score: ScoreManager.value(x), accuracy: x.accuracy, maxCombo: x.maxCombo,
       counts: x.online && !(x.counts || []).some(Boolean) ? null : x.counts, grade: x.grade, mods: x.mods, place: i + 1, src: x });
@@ -35614,7 +35662,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = '69363d7ab2e5';
+const APP_BUILD = '07cf92c83b45';
 
 const App = {
   lastReport: null,

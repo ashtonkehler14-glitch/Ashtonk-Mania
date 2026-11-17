@@ -53,10 +53,10 @@ const MpResults = {
     const map = BeatmapManager.mapByHash(s.mapHash) || {};
     const me = typeof Presence !== 'undefined' ? Presence.pid() : null, board = this.boards.get(s.mapHash);
     // (someone else's best from the server, as a score the results screen can open)
-    const asScore = e => ({ id: 'o-' + e.pid, pid: e.pid, online: true, player: e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
+    const asScore = e => ({ id: `o-${s.mapHash}-${e.pid}-${e.date}-${e.score}`, pid: e.pid, online: true, player: e.name, avatar: e.avatar, score: e.score, scoreStd: e.score, accuracy: e.acc, maxCombo: e.combo,
       grade: e.grade, mods: e.mods || [], counts: e.counts && e.counts.length === 6 ? e.counts : [0, 0, 0, 0, 0, 0], pp: e.pp, srVersion: SR_VERSION, passed: true, date: e.date, replayId: null,
-      mapHash: s.mapHash, onlineSetId: map.setId || s.onlineSetId, mapId: map.id || s.mapId, title: map.title || s.title, artist: map.artist || s.artist, version: map.version || s.version, creator: map.creator || s.creator, keys: map.keys || s.keys, stars: e.stars > 0 ? e.stars : map.stars || s.stars });
-    const theirs = board ? board.scores.filter(e => e.pid !== me && 'o-' + e.pid !== s.id).map(asScore) : [];
+      mapHash: s.mapHash, onlineSetId: BeatmapManager.setById.get(map.setId)?.onlineId || s.onlineSetId, mapId: map.id || s.mapId, title: map.title || s.title, artist: map.artist || s.artist, version: map.version || s.version, creator: map.creator || s.creator, keys: map.keys || s.keys, stars: e.stars > 0 ? e.stars : map.stars || s.stars });
+    const theirs = board ? board.scores.filter(e => e.pid !== me && !(s.online && e.pid === s.pid && dateMs(e.date) === dateMs(s.date) && e.score === ScoreManager.value(s))).map(asScore) : [];
     const all = [...mineHere, ...theirs, s].sort((a, b) => ScoreManager.value(b) - ScoreManager.value(a) || b.accuracy - a.accuracy);
     const row = (x, i) => ({ id: x.id, local: !x.online, name: x.player || ProfileManager.profile.name, avatar: x.avatar, score: ScoreManager.value(x), accuracy: x.accuracy, maxCombo: x.maxCombo,
       counts: x.online && !(x.counts || []).some(Boolean) ? null : x.counts, grade: x.grade, mods: x.mods, place: i + 1, src: x });

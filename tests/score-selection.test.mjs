@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {load} from './load.mjs';
+function fixture(){const x=load(['00-util.js','08-mods.js','14-screen-songselect.js']);const saved={id:'saved-play',mapHash:'map-hash',score:534702,accuracy:.8473,maxCombo:258,mods:['SD'],counts:[505,609,298,96,22,45],date:1000,replayId:'right-replay'};x.__ctx.ScoreManager={forMap:hash=>hash==='map-hash'?[{...saved,id:'other-play',date:1001},saved]:[],value:s=>s.scoreStd??s.score};const remote={...saved,id:'o-player',pid:'player',online:true,own:true,replayId:null};return {...x,saved,remote,map:{hash:'map-hash',title:'MTC',artist:'S3RL',version:'4K HD',keys:4,stars:2.56}};}
+test('opening an online copy of your exact local play preserves its score ID and replay',()=>{const x=fixture();assert.equal(x.SongSelect.scoreForResult(x.remote,x.map),x.saved);});
+test('a similar score from another date cannot replace the selected online play',()=>{const x=fixture();x.remote.date=2000;const result=x.SongSelect.scoreForResult(x.remote,x.map);assert.equal(result.online,true);assert.equal(result.date,2000);assert.equal(result.mapHash,x.map.hash);assert.equal(result.version,'4K HD');assert.equal(result.replayId,null);});
+test('another player’s score never resolves to a matching local score',()=>{const x=fixture();x.remote.own=false;const result=x.SongSelect.scoreForResult(x.remote,x.map);assert.equal(result.online,true);assert.equal(result.pid,'player');assert.notEqual(result.id,x.saved.id);assert.deepEqual(result.counts,x.remote.counts);});
+test('local score selection keeps the original play intact',()=>{const x=fixture();assert.equal(x.SongSelect.scoreForResult(x.saved,x.map),x.saved);});

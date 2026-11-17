@@ -1068,7 +1068,7 @@ const BeatmapStatus = {
       Rankings.report(); Verified.catchUp();
     })().catch(e => console.warn('imported map verification', e)).finally(() => { this._importing = false; });
   },
-  mapDue(m, now = Date.now()) { return !m.rankChecked || now - m.rankChecked > (m.rankError ? 60000 : 7 * this.DAY); },
+  mapDue(m, now = Date.now()) { return !m.temporary && (!m.rankChecked || now - m.rankChecked > (m.rankError ? 60000 : 7 * this.DAY)); },
   async keepMapStatus(m, status) {
     if (!m || BeatmapManager.maps.get(m.id) !== m) return;
     const changed = m.rankStatus !== status;

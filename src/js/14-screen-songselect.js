@@ -1321,6 +1321,16 @@ const SongSelect = {
    *  the avatar, the time since ("3hrs") over the name, COMBO and ACCURACY (lime when perfect), and on the right the
    *  score with its mods over a gradient into the grade's colour, the grade letter in a 35px strip of it. Narrower
    *  leaderboards drop the rank, then stack the statistics, then hide them (as lazer's display modes do). */
+  /** An online copy of your play must resolve to that exact local record, never an arbitrary score on the map. */
+  scoreForResult(s,m) {
+    if (!s.online) return s;
+    if (s.own) {
+      const mods=v=>[...(v.mods || [])].sort().join(',');
+      const matches=ScoreManager.forMap(m.hash).filter(local=>dateMs(local.date)===dateMs(s.date) && ScoreManager.value(local)===ScoreManager.value(s) && local.maxCombo===s.maxCombo && Math.abs(local.accuracy-s.accuracy)<1e-9 && mods(local)===mods(s) && JSON.stringify(local.counts)===JSON.stringify(s.counts));
+      if(matches.length===1)return matches[0];
+    }
+    return {...s,id:`o-${m.hash}-${s.pid}-${s.date}-${s.score}`,mapHash:m.hash,title:m.title,artist:m.artist,version:m.version,creator:m.creator,keys:m.keys,stars:s.stars || m.stars,counts:s.counts || [0,0,0,0,0,0],replayId:null};
+  },
   lbScore(s, i, who, m, delay = i) {
     const own = s.online ? s.own : !s.player || s.player === who;
     const g = s.grade || 'D', letter = g === 'XH' || g === 'X' ? 'SS' : g === 'SH' ? 'S' : g;
@@ -1330,7 +1340,7 @@ const SongSelect = {
     const row = h('button.lbs', {
       style: { animationDelay: `${Math.min(delay, 20) * 25}ms`, '--rc': RANK_COLOURS[g] || '#3f3f3f', '--rt': RANK_INK[g] || '#fff' },
       title: `${s.player || who} · ${fmtScore(ScoreManager.value(s))} · ${fmtAcc(s.accuracy)} · ${fmtInt(s.maxCombo)}x${pp ? ` · ${fmtInt(pp)}pp` : ''}\n${new Date(s.date).toLocaleString()}`,
-      onclick: () => { UISounds.click(); Screens.go('results', s.online ? { score: { ...s, mapHash: m.hash, title: m.title, artist: m.artist, version: m.version, creator: m.creator, keys: m.keys, stars: s.stars || m.stars, counts: s.counts || [0, 0, 0, 0, 0, 0], replayId: null }, fromList: true, browse: true, watched: 'online' } : { score: s, fromList: true, browse: true }, { transition: 'right' }); },
+      onclick: () => { UISounds.click(); const score=this.scoreForResult(s,m); Screens.go('results', {score,fromList:true,browse:true,...(score.online?{watched:'online'}:{})}, {transition:'right'}); },
       oncontextmenu: e => { e.preventDefault(); this.lbMenu(e, s, m); },
     },
       h('span.lbs-rank', h('b', '#' + fmtInt(i + 1))),

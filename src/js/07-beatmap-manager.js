@@ -63,7 +63,7 @@ const BeatmapManager = {
     const set = this.setById.get(setId);
     if (!set) return null;
     const real = set.fileIndex[normPath(path).toLowerCase()];
-    return real ? DB.get('files', `${setId}/${real}`) : null;
+    return real ? set._temporaryFiles ? set._temporaryFiles.get(`${setId}/${real}`) || null : DB.get('files', `${setId}/${real}`) : null;
   },
   hasFile(setId, path) { const s = this.setById.get(setId); return !!(s && path && s.fileIndex[normPath(path).toLowerCase()]); },
   /** Song cards' pictures: sharp on big and high-density screens (they were 640px wide, which looked soft). */
@@ -76,7 +76,7 @@ const BeatmapManager = {
     if (!set || !set.thumb) return null;
     const cached = BlobURLs.map.get(`thumb:${set.id}`);
     if (cached) return cached;
-    const b = await DB.get('files', `${set.id}/__thumb.jpg`);
+    const b = set._temporaryFiles ? set._temporaryFiles.get(`${set.id}/__thumb.jpg`) : await DB.get('files', `${set.id}/__thumb.jpg`);
     return BlobURLs.get(`thumb:${set.id}`, b);
   },
   /** Song panels in Performance mode (pictures at a lower resolution): a smaller copy of the card picture (CARD_W),
@@ -86,6 +86,7 @@ const BeatmapManager = {
   CARD_W: 768, CARD_Q: 0.85,
   async cardURL(set) {
     if (!set || !set.thumb) return null;
+    if (set._temporaryFiles) return this.thumbURL(set);
     const key = `card:${set.id}`;
     if (BlobURLs.map.has(key)) return BlobURLs.map.get(key);
     if (set.thumbV !== this.THUMB_V) return this.thumbURL(set);
@@ -239,6 +240,24 @@ const BeatmapManager = {
     return report;
   },
 
+  /** A spectated archive lives only in memory, outside the saved library, with isolated file and map IDs. */
+  async importTemporary(file) {
+    const files = new Map(), manager = Object.assign(Object.create(this), {sets:[],setById:new Map(),maps:new MapIndex()});
+    const storage = {
+      async put(store,value,key){if(store==='files')files.set(key,value);},
+      async putMany(items){for(const item of items)if(item.store==='files')files.set(item.key,item.value);},
+      async delPrefix(store,prefix){if(store==='files')for(const key of files.keys())if(key.startsWith(prefix))files.delete(key);}
+    };
+    const report = {sets:[],errors:[],warnings:[],temporary:crypto.randomUUID(),storage};
+    report.sets = await manager.importOsz(file,report);
+    const mounted=[];
+    const result = {sets:report.sets,errors:report.errors,warnings:report.warnings,
+      mount:()=>{for(const set of report.sets){if(mounted.includes(set))continue;set._temporaryFiles=files;this.setById.set(set.id,set);for(const map of set.maps)this.maps.set(map.id,map);mounted.push(set);}},
+      release:()=>{for(const set of mounted){if(this.setById.get(set.id)!==set)continue;for(const map of set.maps)if(this.maps.get(map.id)===map)this.maps.delete(map.id);this.setById.delete(set.id);for(const prefix of [`thumb:${set.id}`,`card:${set.id}`,`bg:${set.id}/`,`bgthumb:${set.id}/`])BlobURLs.drop(prefix);}mounted.length=0;files.clear();}
+    };
+    return result;
+  },
+
   async importOsz(file, report) {
     let zip;
     try { zip = await ZipReader.fromFile(file); } // (a part at a time: a beatmap pack can be gigabytes)
@@ -327,7 +346,8 @@ const BeatmapManager = {
   /** What a set keeps when it's imported again (BeatmapStatus and the beatmap listing found these out). */
   KEPT: ['status', 'statusChecked', 'statusV', 'statusErr', 'statusMiss', 'genreId', 'languageId', 'rankedDate', 'submittedDate'],
   async _storeSet(keySrc, diffs, entries, lowerIndex, available, sourceName, report) {
-    const setId = 'set-' + (await hashHex(keySrc)).slice(0, 16);
+    const storage = report?.storage || DB;
+    const setId = (report?.temporary ? `spectator-${report.temporary}-set-` : 'set-') + (await hashHex(keySrc)).slice(0, 16);
     const existing = this.setById.get(setId);
     const md = diffs[0].info.metadata;
     // which files do we keep? .osu, audio, backgrounds, samples, skip video & big storyboards
@@ -381,9 +401,9 @@ const BeatmapManager = {
       const [n, e] = want[i];
       items.push({ store: 'files', key: `${setId}/${e.name}`, value: blobs[i] });
       fileIndex[n] = e.name;
-      if (items.length >= 20) { await this.breathe(); await DB.putMany(items.splice(0)); }
+      if (items.length >= 20) { await this.breathe(); await storage.putMany(items.splice(0)); }
     }
-    if (items.length) { await this.breathe(); await DB.putMany(items); }
+    if (items.length) { await this.breathe(); await storage.putMany(items); }
     const blobOf = name => { const i = want.findIndex(([n]) => n === name); return i < 0 ? null : blobs[i]; };
 
     // difficulties
@@ -393,10 +413,11 @@ const BeatmapManager = {
       const rec = this._mapRecord(d, setId, available, existing?.added || Date.now());
       // difficulties that can't be played (other game modes, missing audio…) aren't kept at all
       if (rec.problems.length) { if (report) report.warnings.push(`${rec.artist} - ${rec.title} [${rec.version}]: ${rec.problems.join('; ')}`); continue; }
+      if (report?.temporary) { rec.id = `spectator-${report.temporary}-` + rec.id; rec.temporary = true; }
       mapRecords.push(rec);
     }
     if (!mapRecords.length && !existing) {
-      await DB.delPrefix('files', `${setId}/`);
+      await storage.delPrefix('files', `${setId}/`);
       throw new Error(`${md.Title || sourceName}: no playable difficulties`);
     }
     // thumbnail from first background available
@@ -407,7 +428,7 @@ const BeatmapManager = {
         const e = lowerIndex.get(bgRec.bgFile.toLowerCase());
         await this.breathe();
         const t = await makeThumbnail(blobOf(bgRec.bgFile.toLowerCase()) || new Blob([await e.read()]), this.THUMB_W, this.THUMB_Q);
-        if (t) { await DB.put('files', t, `${setId}/__thumb.jpg`); thumb = true; }
+        if (t) { await storage.put('files', t, `${setId}/__thumb.jpg`); thumb = true; }
       } catch (e) { /* ignore */ }
     }
     const mapIds = new Set(existing ? existing.mapIds : []);
@@ -425,7 +446,7 @@ const BeatmapManager = {
       mapIds: [...mapIds], fileIndex, thumb, thumbV: existing && existing.thumb ? existing.thumbV : this.THUMB_V, storyboard, video,
       added: existing?.added || Date.now(), sourceName,
     };
-    await DB.putMany([{ store: 'sets', value: set }, ...mapRecords.map(r => ({ store: 'maps', value: r }))]);
+    await storage.putMany([{ store: 'sets', value: set }, ...mapRecords.map(r => ({ store: 'maps', value: r }))]);
     for (const r of mapRecords) this.maps.set(r.id, r);
     set.maps = set.mapIds.map(id => this.maps.get(id)).filter(Boolean).sort((a, b) => a.stars - b.stars);
     if (existing) this.sets[this.sets.indexOf(existing)] = set; else this.sets.push(set);

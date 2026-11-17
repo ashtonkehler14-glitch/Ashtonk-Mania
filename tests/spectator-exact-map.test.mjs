@@ -7,7 +7,8 @@ function fixture() {
   c.AbortController=AbortController;c.AbortSignal=AbortSignal;
   c.Settings={get:()=>false};c.RankedWatch={on:false};c.Host={api:p=>'https://game.test/'+p};
   const maps=new Map();c.BeatmapManager={maps,mapByHash:hash=>[...maps.values()].find(m=>m.hash===hash),getFile:async(id,path)=>new Blob([path])};
-  c.ExplorerScreen={downloads:new Map(),download:async()=>{}};
+  c.ExplorerScreen={downloads:new Map(),download:async()=>{}};c.OnlineBeatmaps={download:async()=>new Blob()};
+  c.BeatmapManager.importTemporary=async()=>({mount(){},release(){}});
   x.SpectatorScreen.paint=()=>{};x.Spectate.tryStart=()=>{};
   const checksum=x.md5Hex(new TextEncoder().encode('original bytes'));
   const play={head:{mapHash:'original-hash',checksum,onlineId:7,onlineSetId:99,title:'Song',version:'Hard'},ended:false};
@@ -47,7 +48,7 @@ test('a lookup finishing after a song switch cannot change the new play',async()
 });
 test('a downloaded newer revision with the same ID cannot start spectating',async()=>{
   const {Spectate,c,maps,play,checksum}=fixture();c.fetch=async()=>Response.json({checksum,setId:42,beatmapId:8});
-  c.ExplorerScreen.download=async()=>maps.set('wrong',{id:'wrong',hash:'new-revision',onlineId:8,osuPath:'different bytes',problems:[]});
+  c.BeatmapManager.importTemporary=async()=>({mount(){maps.set('wrong',{id:'wrong',hash:'new-revision',onlineId:8,osuPath:'different bytes',problems:[]});},release(){maps.delete('wrong');}});
   await Spectate.download();assert.equal(play.lookup.state,'mismatch');assert.equal(Spectate.canStart(),false);
 });
 test('late checksum details keep the current play and its already streamed frames',()=>{
@@ -56,4 +57,22 @@ test('late checksum details keep the current play and its already streamed frame
   const sum='a'.repeat(32),out=p.message('host',{t:'playMap',mapHash:'original',checksum:sum});
   assert.equal(out[0].msg.t,'specMap');assert.equal(p.users.get('host').play.checksum,sum);assert.equal(p.users.get('host').ev.length,3);
   assert.deepEqual(p.message('host',{t:'playMap',mapHash:'old-play',checksum:'b'.repeat(32)}),[]);
+});
+
+test('existing exact maps skip downloads and installs even with a different local hash format',async()=>{
+ const {Spectate,c,maps}=fixture();maps.set('owned',{id:'owned',hash:'legacy-hash',onlineId:7,osuPath:'original bytes',problems:[]});let downloads=0,imports=0;
+ c.OnlineBeatmaps.download=async()=>{downloads++;};c.BeatmapManager.importTemporary=async()=>{imports++;};
+ await Spectate.download();assert.equal(downloads,0);assert.equal(imports,0);assert.ok(maps.has('owned'));
+});
+test('concurrent spectator download requests share one installation',async()=>{
+ const {Spectate,c,maps,checksum}=fixture();c.fetch=async()=>Response.json({checksum,setId:42,beatmapId:8});let downloads=0,imports=0;
+ c.OnlineBeatmaps.download=async()=>{downloads++;await new Promise(r=>setTimeout(r,10));return new Blob();};
+ c.BeatmapManager.importTemporary=async()=>{imports++;return {mount(){maps.set('temp',{id:'temp',hash:'original-hash',problems:[]});},release(){maps.delete('temp');}};};
+ await Promise.all([Spectate.download(),Spectate.download()]);assert.equal(downloads,1);assert.equal(imports,1);assert.equal(Spectate.temporary.size,1);
+ Spectate.clearTemporary();assert.equal(maps.size,0);
+});
+test('a download finishing after the watched song changes does not install anything',async()=>{
+ const {Spectate,c,checksum}=fixture();c.fetch=async()=>Response.json({checksum,setId:42,beatmapId:8});let done,imports=0;
+ c.OnlineBeatmaps.download=()=>new Promise(r=>done=r);c.BeatmapManager.importTemporary=async()=>{imports++;};
+ const pending=Spectate.download();while(!done)await new Promise(r=>setTimeout(r,0));Spectate.cur={head:{mapHash:'next'}};done(new Blob());await pending;assert.equal(imports,0);
 });

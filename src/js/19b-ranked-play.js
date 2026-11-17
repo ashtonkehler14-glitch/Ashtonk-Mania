@@ -1079,14 +1079,9 @@ const RankedWatch = {
     }
   },
   qpClock(room) { const g = room && room.rp; this.qpEndAt = g && g.left ? performance.now() + g.left - this.rtt / 2 : 0; },
-  /** The card they played: its beatmap fetched as soon as it's picked (with automatic downloads on), so their song can
-   *  be watched from its start. */
+  /** Ranked spectators share the exact-file checks and temporary storage of regular spectating. */
   prefetch() {
-    const map = this.room && this.room.map;
-    if (!map || !(map.onlineSetId > 0) || this.localMap(map) || !Settings.get('online.autoDownload')) return;
-    const st = ExplorerScreen.downloads.get(map.onlineSetId);
-    if (st && st.state === 'downloading') return;
-    ExplorerScreen.download({ id: map.onlineSetId, title: map.title, artist: map.artist, creator: map.creator, diffs: [] }).catch(() => {});
+    if (this.on && Spectate.cur && !Spectate.cur.ended) Spectate.autoDownload();
   },
   // (what RankedMatch asks of its source: as Multiplayer's, for the player watched — and nothing sent)
   self() { return this.room ? this.room.players.find(p => p.id === this.me) || null : null; },

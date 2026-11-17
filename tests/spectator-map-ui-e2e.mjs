@@ -59,7 +59,8 @@ try {
   await page.evaluate(()=>{Settings.set('ui.scale',1.25);Zoom.update();});
   await page.screenshot({path:process.env.CARD_TOUCH==='1'?'/tmp/spectate-exact-mobile.png':'/tmp/spectate-exact-desktop.png'});
   await page.evaluate(()=>{
-    ExplorerScreen.download=async()=>{BeatmapManager.maps.set('modified',{id:'modified',hash:'different',onlineId:8,osuPath:'modified',problems:[]});};
+    OnlineBeatmaps.download=async()=>new Blob();
+    BeatmapManager.importTemporary=async()=>({mount(){BeatmapManager.maps.set('modified',{id:'modified',hash:'different',onlineId:8,osuPath:'modified',problems:[]});},release(){BeatmapManager.maps.delete('modified');}});
     BeatmapManager.getFile=async()=>new Blob(['modified bytes']);
   });
   await page.getByRole('button',{name:'Download exact beatmap',exact:true}).click();await page.waitForFunction(()=>Spectate.cur.lookup.state==='mismatch');
