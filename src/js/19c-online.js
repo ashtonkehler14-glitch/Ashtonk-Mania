@@ -466,7 +466,7 @@ const Spectate = {
     if (!Presence.ws) return;
     const set = BeatmapManager.setById.get(s.rec.setId);
     Presence.send({ t: 'play', head: {
-      mapHash: s.rec.hash, checksum: this.checksums.get(s.rec.hash) || '', onlineId: s.rec.onlineId > 0 ? s.rec.onlineId : -1, onlineSetId: set && set.onlineId > 0 ? set.onlineId : -1,
+      mapHash: s.rec.hash, stars: s.stars, checksum: this.checksums.get(s.rec.hash) || '', onlineId: s.rec.onlineId > 0 ? s.rec.onlineId : -1, onlineSetId: set && set.onlineId > 0 ? set.onlineId : -1,
       title: s.rec.title, artist: s.rec.artist, version: s.rec.version, creator: s.rec.creator,
       keys: s.keys, mods: s.mods, rate: s.rate, seed: s.seed, windows: s.windows, accuracyMode: s.accuracyMode, hp: s.bm.hp,
       modConfig: s.modConfig, noFail: !!s.mp, rules: s.rules, player: ProfileManager.profile.name,
@@ -617,7 +617,7 @@ const SpectatorScreen = {
     if (local) BeatmapManager.bgURL(local).then(url => show(url ? `url("${url}")` : '')).catch(() => {});
     else if (sid) { const temp = h('div'); OnlineBeatmaps.loadCover(temp, sid, ['cover', 'card'], () => show(temp.style.backgroundImage)); }
   },
-  mapSig(c) { const st = c && c.head.onlineSetId > 0 ? ExplorerScreen.downloads.get(c.head.onlineSetId) : null; return c ? [c.head.mapHash, !!Spectate.findMap(c.head), st ? st.state : '', c.ended, c.lookup?.state || '', !!c.downloading].join() : ''; },
+  mapSig(c) { const st = c && c.head.onlineSetId > 0 ? ExplorerScreen.downloads.get(c.head.onlineSetId) : null; return c ? [c.head.mapHash, !!Spectate.findMap(c.head), st ? st.state : '', c.ended, c.lookup?.state || '', !!c.downloading, c.head.stars].join() : ''; },
   /** A download's progress, as it goes (the card is built again only when its state changes). */
   paintProgress() {
     const c = Spectate.cur;
@@ -645,7 +645,7 @@ const SpectatorScreen = {
       h('div.ex-cb',
         h('div.ex-cb-top', h('div.ex-titles', h('div.ex-t', { title: head.title }, h('span.ex-tt', head.title)), h('div.ex-a', { title: head.artist }, head.artist))),
         h('div.ex-m', 'mapped by ', h('b', head.creator || '—')),
-        h('div.ex-foot', local && local.stars ? starBadge(local.stars) : null, h('span.ex-keys', `${head.keys}K`), h('span.spm-v', head.version), h('span.grow'),
+        h('div.ex-foot', Number.isFinite(head.stars) ? starBadge(head.stars) : local ? ModdedStars.badge(local, { mods: head.mods, modConfig: head.modConfig, rate: head.rate, seed: head.seed, rules: head.rules }) : null, h('span.ex-keys', `${head.keys}K`), h('span.spm-v', head.version), h('span.grow'),
           local ? h('span.ex-owned', { title: 'In your library' }, icon('check')) : !sid ? h('span.spm-miss', 'Not in your library') : null)),
       side ? h('div.ex-side', side) : null);
     return card;

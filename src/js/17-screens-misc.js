@@ -906,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17b', title: 'Star ratings with mods', sections: [
+    { title: 'Spectating and multiplayer', items: ['Spectator song cards show the star rating of the play with its mods.', 'Lobby song cards, difficulty choices, player labels and queued songs show ratings with the applicable room and player mods.'] }
+  ] },
   { id: '2026.11.17', title: 'A clearer spectate page and exact beatmap matching', sections: [
     { title: 'Spectating', items: ['The waiting page shows the current song, its artwork and clear connection/download status beside chat.', 'Missing beatmaps are looked up by the original file checksum. Similar songs, reused IDs and different map revisions cannot start spectating.'] }
   ] },

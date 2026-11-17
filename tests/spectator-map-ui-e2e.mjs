@@ -30,13 +30,14 @@ try {
     Overlays.closeAll();Settings.set('audio.autoplay',false);Settings.set('online.autoDownload',false);
     Presence.ws={readyState:1,send(){}};Presence.send=()=>{};
     Spectate.target={id:'host',pid:'hostpid',name:'Player',status:'playing',room:false};
-    Spectate.cur={id:'host',name:'Player',head:{mapHash:'original',checksum:sum,onlineId:123,onlineSetId:999,title:'Exact Song',artist:'Artist',version:'Hard',keys:4},feed:[],at:100,ready:true,ended:false,acts:[]};
+    Spectate.cur={id:'host',name:'Player',head:{mapHash:'original',stars:6.37,checksum:sum,onlineId:123,onlineSetId:999,title:'Exact Song',artist:'Artist',version:'Hard',keys:4},feed:[],at:100,ready:true,ended:false,acts:[]};
     OnlineBeatmaps.loadCover=(el,id,kinds,done)=>{el.style.backgroundImage='linear-gradient(120deg,#9b306b,#8c32ed)';done?.();};
     await Screens.go('spectator');
   },sum);
   await page.waitForFunction(()=>!Screens.busy && Spectate.cur?.lookup?.state==='exact');
   assert.equal(await page.getByRole('button',{name:'Download exact beatmap',exact:true}).count(),1);
   assert.equal(await page.getByRole('button',{name:'Start Watching',exact:true}).isDisabled(),true);
+  assert.equal((await page.locator('.spm-card .stars').textContent()).trim(),'6.37','Spectator card shows the played rating');
   const chat=await page.locator('.spectator-chat').boundingBox(),song=await page.locator('.spm-stage').boundingBox();
   assert.ok(song.x>=chat.x+chat.width,'Song panel does not overlap chat');
   await page.screenshot({path:process.env.CARD_TOUCH==='1'?'/tmp/spectate-exact-mobile.png':'/tmp/spectate-exact-desktop.png'});

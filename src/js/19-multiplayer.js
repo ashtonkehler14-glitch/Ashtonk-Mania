@@ -347,11 +347,23 @@ const Multiplayer = {
     const d = this.myDiffId && BeatmapManager.maps.get(this.myDiffId);
     return d && d.setId === local.setId && !d.problems.length ? d : local;
   },
+  starContext(player = this.self()) {
+    const r = this.room || {}, p = player || {};
+    const mods = ModSystem.normalize([...(r.mods || []), ...(p.mods || [])]);
+    const modConfig = this.ownSpeed() ? p.id === this.me ? ModSystem.config() : ModSystem.config(p.modConfig || {}) : ModSystem.config(r.modConfig || {});
+    return { mods, modConfig };
+  },
+  playerDifficulty(player) {
+    const base = this.localMap(); if (!base || !player?.diff) return base;
+    const d = player.diff, set = BeatmapManager.setById.get(base.setId), candidates = set?.maps || [base];
+    const matches = candidates.filter(m => !m.problems.length && (d.hash ? m.hash === d.hash : d.onlineId > 0 ? m.onlineId === d.onlineId : m.version === d.version && m.keys === d.keys));
+    return matches.length === 1 ? matches[0] : null;
+  },
   chooseDiff(mapId) {
     const d = BeatmapManager.maps.get(mapId), local = this.localMap();
     if (!d || !local || d.setId !== local.setId) return;
     this.myDiffId = d.id === local.id ? null : d.id;
-    this.send({ t: 'diff', diff: this.myDiffId ? { version: d.version, stars: d.stars, keys: d.keys } : null });
+    this.send({ t: 'diff', diff: this.myDiffId ? { version: d.version, stars: d.stars, keys: d.keys, hash: d.hash, onlineId: d.onlineId } : null });
     Bus.emit('mp:changed');
   },
 
@@ -1410,7 +1422,7 @@ const MultiplayerScreen = {
     const bg = h('div.mp-map-bg');
     if (local) BeatmapManager.bgURL(local).then(u => u && (bg.style.backgroundImage = `url("${u}")`));
     else if (map && map.onlineSetId > 0) bg.style.backgroundImage = `url("${OnlineBeatmaps.coverURL(map.onlineSetId, 'cover')}")`;
-    const mapInfo = map ? [h('div.mp-map-t', map.title), h('div.mp-map-a', map.artist), h('div.mp-map-d', starBadge(map.stars), h('span', map.version), h('span.keys-tag', `${map.keys}K`),
+    const mapInfo = map ? [h('div.mp-map-t', map.title), h('div.mp-map-a', map.artist), h('div.mp-map-d', ModdedStars.badge(local || map, Multiplayer.starContext()), h('span', map.version), h('span.keys-tag', `${map.keys}K`),
       ...(r.mods || []).map(m => ModSystem.badge(m, true)))] : [h('div.mp-map-t', 'No beatmap selected'), h('div.mp-map-a', host ? 'Pick one from song select or search beatmaps.' : 'Waiting for the host to pick a beatmap — you can recommend one from your library or search beatmaps.')];
     const mapActions = h('div.mp-map-actions');
     // (anyone else: song select to recommend a beatmap of theirs to the host)
@@ -1433,7 +1445,12 @@ const MultiplayerScreen = {
       const mine = Multiplayer.myMap() || local;
       // a set with a single difficulty has nothing to choose (the picker would only look like it does something)
       if (diffs.length > 1) {
-        const sel = h('select.select', { 'aria-label': 'Your difficulty' }, ...diffs.map(m => h('option', { value: m.id, selected: m.id === mine.id }, `${m.version}${new RegExp(`\\b${m.keys}K\\b`, 'i').test(m.version) ? '' : ` · ${m.keys}K`} · ★${m.stars.toFixed(2)}${m.id === local.id ? ' (room)' : ''}`)));
+        const context = Multiplayer.starContext();
+        const sel = h('select.select', { 'aria-label': 'Your difficulty' }, ...diffs.map(m => {
+          const option = h('option', { value: m.id, selected: m.id === mine.id });
+          const paint = stars => { option.textContent = `${m.version}${new RegExp(`\\b${m.keys}K\\b`, 'i').test(m.version) ? '' : ` · ${m.keys}K`} · ★${stars === null ? '…' : stars.toFixed(2)}${m.id === local.id ? ' (room)' : ''}`; };
+          paint(ModdedStars.value(m, context)); ModdedStars.calculate(m, context).then(paint).catch(()=>{}); return option;
+        }));
         sel.addEventListener('change', () => { UISounds.click(); Multiplayer.chooseDiff(sel.value); });
         sel.addEventListener('keydown', e => e.stopPropagation());
         diffPick = h('label.mp-diff', h('span', 'Your difficulty'), sel);
@@ -1476,7 +1493,7 @@ const MultiplayerScreen = {
         h('span.mp-pav', isMe ? ProfileManager.avatarEl(40) : Presence.avatarEl(p, 40)),
         // (the name, and under it the difficulty they're playing — side by side, a ready player's difficulty was cut off)
         h('span.mp-pinfo', h('span.mp-pname', fxName(h('span', p.name), roleOfPid(isMe ? Presence.pid() : p.pid)), isMe ? h('span.mp-you', ' (you)') : null),
-          r.map ? h('span.mp-pdiff', p.diff ? `${p.diff.version} · ★${p.diff.stars.toFixed(2)}` : `${r.map.version} · ★${r.map.stars.toFixed(2)}`) : null),
+          r.map ? h('span.mp-pdiff', ModdedStars.label(Multiplayer.playerDifficulty(p) || p.diff || r.map, p.diff?.version || r.map.version, Multiplayer.starContext(p))) : null),
         (p.mods || []).length ? h('span.mp-pmods', ...p.mods.map(m => ModSystem.badge(m, true))) : null,
         // still playing while you're back in the room: watch them finish
         !isMe && p.playing && !p.fin && Screens.currentName === 'multiplayer' && p.pid ? h('button.btn.sm.mp-spec', { title: `Watch ${p.name} play`, onclick: () => {
@@ -1612,7 +1629,7 @@ const MultiplayerScreen = {
     const seen = this._qSeen;
     const item = (it, i) => h(`li.mp-qi${seen.has(it.id) ? '.still' : (seen.add(it.id), '')}`, h('span.mp-qi-n', String(i + 1)),
       h('div.mp-qi-main', h('div.mp-qi-t', `${it.map.artist} - ${it.map.title}`),
-        h('div.mp-qi-s', starBadge(it.map.stars || 0), h('span', it.map.version), h('span.mp-qi-by', `added by ${it.by === Multiplayer.me ? 'you' : it.byName}`))),
+        h('div.mp-qi-s', ModdedStars.badge(Multiplayer.localMap(it.map) || it.map, Multiplayer.starContext()), h('span', it.map.version), h('span.mp-qi-by', `added by ${it.by === Multiplayer.me ? 'you' : it.byName}`))),
       host && lobby ? btn('Play this one now', 'play', () => Multiplayer.queueOp('play', it.id)) : null,
       host && i > 0 ? btn('Move up', 'up', () => Multiplayer.queueOp('up', it.id)) : null,
       host || it.by === Multiplayer.me ? btn('Take it off the queue', 'x', () => Multiplayer.queueOp('remove', it.id), '.del') : null);
@@ -1744,7 +1761,7 @@ const MultiplayerScreen = {
     else if (local) BeatmapManager.bgURL(local).then(u => u && (bg.style.backgroundImage = `url("${u}")`));
     const len = m.length > 0 ? `${Math.floor(m.length / 60000)}:${String(Math.floor(m.length / 1000) % 60).padStart(2, '0')}` : '';
     return h('button.qp-card', { 'data-i': i, onclick: () => { const q = Multiplayer.room && Multiplayer.room.qp; if (q && q.phase === 'pick') { UISounds.click(); Multiplayer.pick(i); } } }, bg,
-      h('div.qp-card-body', h('div.qp-card-top', starBadge(m.stars), h('span.keys-tag', `${m.keys}K`), len ? h('span.qp-len', len) : null),
+      h('div.qp-card-body', h('div.qp-card-top', ModdedStars.badge(local || m, Multiplayer.starContext()), h('span.keys-tag', `${m.keys}K`), len ? h('span.qp-len', len) : null),
         h('div.qp-card-t', m.title), h('div.qp-card-a', m.artist), h('div.qp-card-v', m.version)),
       h('div.qp-pickers'));
   },

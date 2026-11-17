@@ -201,7 +201,7 @@ export class RoomLogic {
         pool: q.pool, picks: { ...q.picks }, chosen: q.chosen, points: { ...q.points } } : null,
       vote: this.vote ? { mods: this.vote.mods, by: this.vote.by, yes: [...this.vote.yes] } : null,
       queue: this.queue.map(q => ({ id: q.id, map: q.map, by: q.by, byName: q.byName })),
-      starting: !!this.pendingStart, players: this.players.map(p => ({ id: p.id, pid: p.pid, name: p.name, avatar: p.avatar, ready: p.ready, hasMap: p.hasMap, playing: p.playing, diff: p.diff, mods: p.mods, team: p.team, away: !!p.away,
+      starting: !!this.pendingStart, players: this.players.map(p => ({ id: p.id, pid: p.pid, name: p.name, avatar: p.avatar, ready: p.ready, hasMap: p.hasMap, playing: p.playing, diff: p.diff, mods: p.mods, ...(p.modConfig ? { modConfig: p.modConfig } : {}), team: p.team, away: !!p.away,
         // (their song's over: what they got — judged, or as their game reported it while the judge checks it)
         fin: this.state === 'playing' && p.playing && (p.finished || p.claimed) ? (({ score, accuracy, maxCombo, counts, grade, passed, forfeit, pp }) => ({ score, accuracy, maxCombo, counts, grade, passed, forfeit, pp: pp || 0, checked: !!p.finished }))(p.finished || p.claimed) : null })),
     };
@@ -520,7 +520,7 @@ export class RoomLogic {
         // each player may play any difficulty of the room's beatmap set (in Ranked Play: the one dealt to them)
         if (this.rp || this.state !== 'lobby' || !this.map) return [];
         const d = m.diff && typeof m.diff === 'object' ? m.diff : null;
-        p.diff = d ? { version: str(d.version, 200), stars: num(d.stars, 0, 100), keys: Math.round(num(d.keys, 1, 18, 4)) } : null;
+        p.diff = d ? { version: str(d.version, 200), stars: num(d.stars, 0, 100), keys: Math.round(num(d.keys, 1, 18, 4)), ...(d.hash ? { hash: str(d.hash, 64) } : {}), ...(Number(d.onlineId) > 0 ? { onlineId: Math.round(num(d.onlineId, 1, 1e10)) } : {}) } : null;
         return [this.roomMsg()];
       }
       case 'hasMap':
@@ -2607,7 +2607,7 @@ const cleanHead = h => {
   if (!hash) return null;
   const nums = o => o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).slice(0, 16).map(([k, v]) => [str(k, 16), typeof v === 'number' ? num(v, -1e6, 1e6) : str(String(v), 32)])) : {};
   return {
-    mapHash: hash, ...(/^[a-f0-9]{32}$/i.test(h.checksum || '') ? { checksum: h.checksum.toLowerCase() } : {}), onlineId: Math.round(num(h.onlineId, -1, 1e10, -1)), onlineSetId: Math.round(num(h.onlineSetId, -1, 1e10, -1)),
+    mapHash: hash, ...(Number.isFinite(h.stars) && h.stars >= 0 && h.stars <= 100 ? { stars: h.stars } : {}), ...(/^[a-f0-9]{32}$/i.test(h.checksum || '') ? { checksum: h.checksum.toLowerCase() } : {}), onlineId: Math.round(num(h.onlineId, -1, 1e10, -1)), onlineSetId: Math.round(num(h.onlineSetId, -1, 1e10, -1)),
     title: str(h.title, 120), artist: str(h.artist, 120), version: str(h.version, 80), creator: str(h.creator, 40),
     keys: Math.round(num(h.keys, 1, 18, 4)), mods: cleanMods(h.mods), rate: num(h.rate, 0.25, 4, 1), seed: Math.round(num(h.seed, 0, 2 ** 32, 0)),
     windows: Array.isArray(h.windows) ? h.windows.slice(0, 8).map(x => num(x, 0, 1000, 100)) : nums(h.windows), accuracyMode: str(h.accuracyMode, 16), hp: num(h.hp, 0, 10, 5), modConfig: nums(h.modConfig),

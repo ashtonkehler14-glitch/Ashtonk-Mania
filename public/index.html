@@ -16547,6 +16547,51 @@ const GameDropdowns = {
   },
 };
 
+/* ===== 12e-modded-stars.js ===== */
+/* Menu ratings use the same converted notes, rate and strain calculator as gameplay. */
+const ModdedStars = {
+  values: new Map(), pending: new Map(), queue: Promise.resolve(),
+  context(map, options = {}) {
+    const mods = ModSystem.normalize(options.mods || []), config = ModSystem.config(options.modConfig || {});
+    const rate = Number.isFinite(options.rate) && options.rate > 0 ? options.rate : ModSystem.rate(mods, config);
+    const keys = map?.mode === 0 ? ModSystem.keyMod(mods) : 0, conversion = mods.filter(id => id === 'NLN' || id === 'IN');
+    return { mods, rate, keys, conversion, seed: options.seed || 0, legacy: options.rules && options.rules < 4, key: `${map?.hash}|${rate}|${keys}|${conversion.join(',')}|${options.seed || 0}|${options.rules && options.rules < 4 ? 'legacy' : 'current'}` };
+  },
+  baseUnchanged(map, c) { return c.rate === 1 && !c.keys && !c.conversion.length && !c.legacy && Number.isFinite(map?.stars); },
+  value(map, options = {}) {
+    const c = this.context(map, options);
+    if (this.baseUnchanged(map, c)) return map.stars;
+    return this.values.get(c.key) ?? null;
+  },
+  calculate(map, options = {}) {
+    const c = this.context(map, options), cached = this.value(map, options);
+    if (cached !== null) return Promise.resolve(cached);
+    if (!map?.id || !BeatmapManager.maps.has(map.id)) return Promise.reject(new Error('Beatmap not installed'));
+    if (this.pending.has(c.key)) return this.pending.get(c.key);
+    const work = this.queue.catch(()=>{}).then(async()=>{
+      const { bm, notes } = await BeatmapManager.load(map.id), keys = c.keys || map.keys;
+      const source = c.legacy ? BeatmapParser.toManiaNotes(bm, c.keys, { legacy: true }) : c.keys ? BeatmapParser.toManiaNotes(bm, c.keys) : notes;
+      const prepared = c.conversion.length ? prepareNotes(source, keys, c.mods, c.seed, { red: BeatmapParser.timing(bm).red }) : source;
+      const stars = DifficultyCalculator.calculate(prepared, keys, c.rate, { legacy: !!c.legacy });
+      this.values.set(c.key, stars); while (this.values.size > 150) this.values.delete(this.values.keys().next().value);
+      await sleep(0);
+      return stars;
+    }).finally(()=>this.pending.delete(c.key));
+    this.pending.set(c.key, work); this.queue = work.catch(()=>{}); return work;
+  },
+  badge(map, options = {}) {
+    const el = h('span.mod-star-rating'), known = this.value(map, options);
+    if (known !== null) { el.append(starBadge(known)); return el; }
+    el.append(h('span.muted', icon('star'), ' …')); el.title = 'Calculating the rating with mods';
+    this.calculate(map, options).then(stars=>{el.replaceChildren(starBadge(stars));el.title='';}).catch(()=>{el.title='Download the beatmap to calculate its rating with mods';});
+    return el;
+  },
+  label(map, version, options = {}) {
+    const el = h('span'), paint = stars => { el.textContent = `${version} · ★${stars === null ? '…' : stars.toFixed(2)}`; };
+    paint(this.value(map, options));this.calculate(map, options).then(paint).catch(()=>{});return el;
+  },
+};
+
 /* ===== 12r-render-scale.js ===== */
 /* One resolution surface for menus, overlays and gameplay; input/layout coordinates stay unchanged. */
 const RenderScale = {
@@ -25824,6 +25869,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17b', title: 'Star ratings with mods', sections: [
+    { title: 'Spectating and multiplayer', items: ['Spectator song cards show the star rating of the play with its mods.', 'Lobby song cards, difficulty choices, player labels and queued songs show ratings with the applicable room and player mods.'] }
+  ] },
   { id: '2026.11.17', title: 'A clearer spectate page and exact beatmap matching', sections: [
     { title: 'Spectating', items: ['The waiting page shows the current song, its artwork and clear connection/download status beside chat.', 'Missing beatmaps are looked up by the original file checksum. Similar songs, reused IDs and different map revisions cannot start spectating.'] }
   ] },
@@ -29104,11 +29152,23 @@ const Multiplayer = {
     const d = this.myDiffId && BeatmapManager.maps.get(this.myDiffId);
     return d && d.setId === local.setId && !d.problems.length ? d : local;
   },
+  starContext(player = this.self()) {
+    const r = this.room || {}, p = player || {};
+    const mods = ModSystem.normalize([...(r.mods || []), ...(p.mods || [])]);
+    const modConfig = this.ownSpeed() ? p.id === this.me ? ModSystem.config() : ModSystem.config(p.modConfig || {}) : ModSystem.config(r.modConfig || {});
+    return { mods, modConfig };
+  },
+  playerDifficulty(player) {
+    const base = this.localMap(); if (!base || !player?.diff) return base;
+    const d = player.diff, set = BeatmapManager.setById.get(base.setId), candidates = set?.maps || [base];
+    const matches = candidates.filter(m => !m.problems.length && (d.hash ? m.hash === d.hash : d.onlineId > 0 ? m.onlineId === d.onlineId : m.version === d.version && m.keys === d.keys));
+    return matches.length === 1 ? matches[0] : null;
+  },
   chooseDiff(mapId) {
     const d = BeatmapManager.maps.get(mapId), local = this.localMap();
     if (!d || !local || d.setId !== local.setId) return;
     this.myDiffId = d.id === local.id ? null : d.id;
-    this.send({ t: 'diff', diff: this.myDiffId ? { version: d.version, stars: d.stars, keys: d.keys } : null });
+    this.send({ t: 'diff', diff: this.myDiffId ? { version: d.version, stars: d.stars, keys: d.keys, hash: d.hash, onlineId: d.onlineId } : null });
     Bus.emit('mp:changed');
   },
 
@@ -30167,7 +30227,7 @@ const MultiplayerScreen = {
     const bg = h('div.mp-map-bg');
     if (local) BeatmapManager.bgURL(local).then(u => u && (bg.style.backgroundImage = `url("${u}")`));
     else if (map && map.onlineSetId > 0) bg.style.backgroundImage = `url("${OnlineBeatmaps.coverURL(map.onlineSetId, 'cover')}")`;
-    const mapInfo = map ? [h('div.mp-map-t', map.title), h('div.mp-map-a', map.artist), h('div.mp-map-d', starBadge(map.stars), h('span', map.version), h('span.keys-tag', `${map.keys}K`),
+    const mapInfo = map ? [h('div.mp-map-t', map.title), h('div.mp-map-a', map.artist), h('div.mp-map-d', ModdedStars.badge(local || map, Multiplayer.starContext()), h('span', map.version), h('span.keys-tag', `${map.keys}K`),
       ...(r.mods || []).map(m => ModSystem.badge(m, true)))] : [h('div.mp-map-t', 'No beatmap selected'), h('div.mp-map-a', host ? 'Pick one from song select or search beatmaps.' : 'Waiting for the host to pick a beatmap — you can recommend one from your library or search beatmaps.')];
     const mapActions = h('div.mp-map-actions');
     // (anyone else: song select to recommend a beatmap of theirs to the host)
@@ -30190,7 +30250,12 @@ const MultiplayerScreen = {
       const mine = Multiplayer.myMap() || local;
       // a set with a single difficulty has nothing to choose (the picker would only look like it does something)
       if (diffs.length > 1) {
-        const sel = h('select.select', { 'aria-label': 'Your difficulty' }, ...diffs.map(m => h('option', { value: m.id, selected: m.id === mine.id }, `${m.version}${new RegExp(`\\b${m.keys}K\\b`, 'i').test(m.version) ? '' : ` · ${m.keys}K`} · ★${m.stars.toFixed(2)}${m.id === local.id ? ' (room)' : ''}`)));
+        const context = Multiplayer.starContext();
+        const sel = h('select.select', { 'aria-label': 'Your difficulty' }, ...diffs.map(m => {
+          const option = h('option', { value: m.id, selected: m.id === mine.id });
+          const paint = stars => { option.textContent = `${m.version}${new RegExp(`\\b${m.keys}K\\b`, 'i').test(m.version) ? '' : ` · ${m.keys}K`} · ★${stars === null ? '…' : stars.toFixed(2)}${m.id === local.id ? ' (room)' : ''}`; };
+          paint(ModdedStars.value(m, context)); ModdedStars.calculate(m, context).then(paint).catch(()=>{}); return option;
+        }));
         sel.addEventListener('change', () => { UISounds.click(); Multiplayer.chooseDiff(sel.value); });
         sel.addEventListener('keydown', e => e.stopPropagation());
         diffPick = h('label.mp-diff', h('span', 'Your difficulty'), sel);
@@ -30233,7 +30298,7 @@ const MultiplayerScreen = {
         h('span.mp-pav', isMe ? ProfileManager.avatarEl(40) : Presence.avatarEl(p, 40)),
         // (the name, and under it the difficulty they're playing — side by side, a ready player's difficulty was cut off)
         h('span.mp-pinfo', h('span.mp-pname', fxName(h('span', p.name), roleOfPid(isMe ? Presence.pid() : p.pid)), isMe ? h('span.mp-you', ' (you)') : null),
-          r.map ? h('span.mp-pdiff', p.diff ? `${p.diff.version} · ★${p.diff.stars.toFixed(2)}` : `${r.map.version} · ★${r.map.stars.toFixed(2)}`) : null),
+          r.map ? h('span.mp-pdiff', ModdedStars.label(Multiplayer.playerDifficulty(p) || p.diff || r.map, p.diff?.version || r.map.version, Multiplayer.starContext(p))) : null),
         (p.mods || []).length ? h('span.mp-pmods', ...p.mods.map(m => ModSystem.badge(m, true))) : null,
         // still playing while you're back in the room: watch them finish
         !isMe && p.playing && !p.fin && Screens.currentName === 'multiplayer' && p.pid ? h('button.btn.sm.mp-spec', { title: `Watch ${p.name} play`, onclick: () => {
@@ -30369,7 +30434,7 @@ const MultiplayerScreen = {
     const seen = this._qSeen;
     const item = (it, i) => h(`li.mp-qi${seen.has(it.id) ? '.still' : (seen.add(it.id), '')}`, h('span.mp-qi-n', String(i + 1)),
       h('div.mp-qi-main', h('div.mp-qi-t', `${it.map.artist} - ${it.map.title}`),
-        h('div.mp-qi-s', starBadge(it.map.stars || 0), h('span', it.map.version), h('span.mp-qi-by', `added by ${it.by === Multiplayer.me ? 'you' : it.byName}`))),
+        h('div.mp-qi-s', ModdedStars.badge(Multiplayer.localMap(it.map) || it.map, Multiplayer.starContext()), h('span', it.map.version), h('span.mp-qi-by', `added by ${it.by === Multiplayer.me ? 'you' : it.byName}`))),
       host && lobby ? btn('Play this one now', 'play', () => Multiplayer.queueOp('play', it.id)) : null,
       host && i > 0 ? btn('Move up', 'up', () => Multiplayer.queueOp('up', it.id)) : null,
       host || it.by === Multiplayer.me ? btn('Take it off the queue', 'x', () => Multiplayer.queueOp('remove', it.id), '.del') : null);
@@ -30501,7 +30566,7 @@ const MultiplayerScreen = {
     else if (local) BeatmapManager.bgURL(local).then(u => u && (bg.style.backgroundImage = `url("${u}")`));
     const len = m.length > 0 ? `${Math.floor(m.length / 60000)}:${String(Math.floor(m.length / 1000) % 60).padStart(2, '0')}` : '';
     return h('button.qp-card', { 'data-i': i, onclick: () => { const q = Multiplayer.room && Multiplayer.room.qp; if (q && q.phase === 'pick') { UISounds.click(); Multiplayer.pick(i); } } }, bg,
-      h('div.qp-card-body', h('div.qp-card-top', starBadge(m.stars), h('span.keys-tag', `${m.keys}K`), len ? h('span.qp-len', len) : null),
+      h('div.qp-card-body', h('div.qp-card-top', ModdedStars.badge(local || m, Multiplayer.starContext()), h('span.keys-tag', `${m.keys}K`), len ? h('span.qp-len', len) : null),
         h('div.qp-card-t', m.title), h('div.qp-card-a', m.artist), h('div.qp-card-v', m.version)),
       h('div.qp-pickers'));
   },
@@ -32282,7 +32347,7 @@ const Spectate = {
     if (!Presence.ws) return;
     const set = BeatmapManager.setById.get(s.rec.setId);
     Presence.send({ t: 'play', head: {
-      mapHash: s.rec.hash, checksum: this.checksums.get(s.rec.hash) || '', onlineId: s.rec.onlineId > 0 ? s.rec.onlineId : -1, onlineSetId: set && set.onlineId > 0 ? set.onlineId : -1,
+      mapHash: s.rec.hash, stars: s.stars, checksum: this.checksums.get(s.rec.hash) || '', onlineId: s.rec.onlineId > 0 ? s.rec.onlineId : -1, onlineSetId: set && set.onlineId > 0 ? set.onlineId : -1,
       title: s.rec.title, artist: s.rec.artist, version: s.rec.version, creator: s.rec.creator,
       keys: s.keys, mods: s.mods, rate: s.rate, seed: s.seed, windows: s.windows, accuracyMode: s.accuracyMode, hp: s.bm.hp,
       modConfig: s.modConfig, noFail: !!s.mp, rules: s.rules, player: ProfileManager.profile.name,
@@ -32433,7 +32498,7 @@ const SpectatorScreen = {
     if (local) BeatmapManager.bgURL(local).then(url => show(url ? `url("${url}")` : '')).catch(() => {});
     else if (sid) { const temp = h('div'); OnlineBeatmaps.loadCover(temp, sid, ['cover', 'card'], () => show(temp.style.backgroundImage)); }
   },
-  mapSig(c) { const st = c && c.head.onlineSetId > 0 ? ExplorerScreen.downloads.get(c.head.onlineSetId) : null; return c ? [c.head.mapHash, !!Spectate.findMap(c.head), st ? st.state : '', c.ended, c.lookup?.state || '', !!c.downloading].join() : ''; },
+  mapSig(c) { const st = c && c.head.onlineSetId > 0 ? ExplorerScreen.downloads.get(c.head.onlineSetId) : null; return c ? [c.head.mapHash, !!Spectate.findMap(c.head), st ? st.state : '', c.ended, c.lookup?.state || '', !!c.downloading, c.head.stars].join() : ''; },
   /** A download's progress, as it goes (the card is built again only when its state changes). */
   paintProgress() {
     const c = Spectate.cur;
@@ -32461,7 +32526,7 @@ const SpectatorScreen = {
       h('div.ex-cb',
         h('div.ex-cb-top', h('div.ex-titles', h('div.ex-t', { title: head.title }, h('span.ex-tt', head.title)), h('div.ex-a', { title: head.artist }, head.artist))),
         h('div.ex-m', 'mapped by ', h('b', head.creator || '—')),
-        h('div.ex-foot', local && local.stars ? starBadge(local.stars) : null, h('span.ex-keys', `${head.keys}K`), h('span.spm-v', head.version), h('span.grow'),
+        h('div.ex-foot', Number.isFinite(head.stars) ? starBadge(head.stars) : local ? ModdedStars.badge(local, { mods: head.mods, modConfig: head.modConfig, rate: head.rate, seed: head.seed, rules: head.rules }) : null, h('span.ex-keys', `${head.keys}K`), h('span.spm-v', head.version), h('span.grow'),
           local ? h('span.ex-owned', { title: 'In your library' }, icon('check')) : !sid ? h('span.spm-miss', 'Not in your library') : null)),
       side ? h('div.ex-side', side) : null);
     return card;
@@ -35494,7 +35559,7 @@ const SpectatorChat = {
 const BUNDLED_KORI_VERSION = 2;
 /** This page's build (build.mjs puts it in, and the same one in public/sw.js): how an update is told from the page you
  *  already have. */
-const APP_BUILD = 'f956743cf160';
+const APP_BUILD = 'e92ee552dfe1';
 
 const App = {
   lastReport: null,
