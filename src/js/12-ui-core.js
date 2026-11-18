@@ -1566,7 +1566,7 @@ const Screens = {
   register(name, screen) { this.registry[name] = screen; },
   syncMenuFrame(el = this.current && this.current.el) {
     if (!el || !this.current) return;
-    const floating = this.currentName !== 'home' && this.currentName !== 'songselect' && !this.current.inGame && !this.current.transient && !el.classList.contains('destination-screen');
+    const floating = Settings.get('ui.gui') !== 'og' && this.currentName !== 'home' && this.currentName !== 'songselect' && !this.current.inGame && !this.current.transient && !el.classList.contains('destination-screen');
     el.classList.toggle('menu-surface', floating);
     $('#app').classList.toggle('full-screen-menu', this.currentName !== 'home' && !this.current.inGame && !floating);
   },

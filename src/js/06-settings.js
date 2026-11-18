@@ -141,6 +141,7 @@ const SETTINGS_SCHEMA = [
   { x: 1, s: 'Input', g: 'Display', k: 'input.fullscreenOnPlay', l: 'Fullscreen while playing (tap the game to go back)', t: 'bool', d: TOUCH_DEVICE },
   // ── Interface
   { s: 'Graphics', g: 'Layout', k: 'ui.scale', l: 'UI scaling', t: 'range', d: TOUCH_DEVICE ? 1.25 : 0.9, min: 0.75, max: 1.5, step: 0.05, fmt: v => `${Math.round(v * 100)}%` },
+  { s: 'User Interface', g: 'Style', k: 'ui.gui', l: 'GUI', t: 'select', d: 'default', o: [['default', 'Default'], ['og', 'OG']], hint: 'Default uses the current menus. OG restores the UI from before the overhaul.' },
   { x: 1, s: 'User Interface', g: 'Style', k: 'ui.animSpeed', l: 'Animation speed', t: 'range', d: 1, min: 0, max: 2, step: 0.1, fmt: v => v === 0 ? 'Off' : `${v.toFixed(1)}×` },
   { s: 'User Interface', g: 'General', k: 'ui.parallax', l: 'Parallax', t: 'bool', d: true },
   { s: 'User Interface', g: 'Main Menu', k: 'ui.menuBackground', l: 'Background source', t: 'select', d: 'beatmap', o: [['skin', 'Triangles'], ['beatmap', 'Beatmap']], hint: 'Use the song background on Home, with triangles when no song background is available.' },
@@ -412,7 +413,11 @@ const Settings = {
     if (typeof Zoom !== 'undefined' && Zoom.z !== undefined) Zoom.update();
     const sp = this.get('ui.animSpeed');
     r.style.setProperty('--anim', sp <= 0 ? 0 : (1 / sp));
-    r.dataset.theme = 'zako';
+    const og = this.get('ui.gui') === 'og';
+    r.dataset.gui = og ? 'og' : 'default';
+    r.dataset.theme = og ? 'lazer' : 'zako';
+    r.classList.toggle('og-ui', og); cssSheet('og', og);
+    if (typeof GuiStyle !== 'undefined') GuiStyle.apply(og);
     r.classList.toggle('no-effects', !this.get('graphics.effects'));
     // (animations turned off by the player: everything still. Performance mode's own sheet stills the menus, and leaves
     // Neru hers)

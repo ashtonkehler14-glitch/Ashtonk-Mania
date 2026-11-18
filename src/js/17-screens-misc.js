@@ -906,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.18', title: 'Choose your GUI', sections: [
+    { title: 'Interface', items: ['Choose Default or OG under Settings → User Interface → GUI. OG brings back the older menu styling, font, colors and triangle artwork while keeping the current game features.'] }
+  ] },
   { id: '2026.11.17h', title: 'A leaderboard that follows your play', sections: [
     { title: 'Gameplay', items: ['The live leaderboard shows nearby places and shifts as you climb, instead of showing every score together. Multiplayer standings follow your position too.'] },
     { title: 'Beatmap explorer', items: ['Cards keep their slanted artwork shape with simpler details and fewer decorative borders.'] }

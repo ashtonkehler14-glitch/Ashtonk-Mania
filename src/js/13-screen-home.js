@@ -641,7 +641,7 @@ onmessage = async ({ data: m }) => {
       const wait = new Map(); let id = 0;
       w.onmessage = ({ data }) => { const f = wait.get(data.id); if (f) { wait.delete(data.id); f(data); } };
       w.onerror = () => { for (const f of wait.values()) f({ err: 'worker' }); wait.clear(); this._w = null; };
-      this._w = { ask: m => new Promise(r => { const k = ++id; wait.set(k, r); w.postMessage({ ...m, id: k }); }) };
+      this._w = { ask: m => new Promise(r => { const k = ++id; wait.set(k, r); w.postMessage({ ...m, id: k }); }), close: () => { w.terminate(); for (const done of wait.values()) done({ err: 'closed' }); wait.clear(); } };
     } catch (e) { this._w = null; }
     return this._w;
   },
@@ -685,7 +685,7 @@ onmessage = async ({ data: m }) => {
     if (!el || !el.isConnected || !this.col) { if (el && !el.isConnected && this.running) requestAnimationFrame(() => this.running && this.render(resized)); return; }
     const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     const W = Math.max(1, Math.round(el.clientWidth * dpr)), H = Math.max(1, Math.round(el.clientHeight * dpr));
-    const key = `${this.col[0].toFixed(1)}|${this.col[1].toFixed(3)}|${W}x${H}`;
+    const key = `${this.guiMode || 'default'}|${this.col[0].toFixed(1)}|${this.col[1].toFixed(3)}|${W}x${H}`;
     if (key === this._drawn) return;
     this._drawn = key;
     // (the pictures already made are kept: coming back to the menu shows the last one straight away)
@@ -711,7 +711,7 @@ onmessage = async ({ data: m }) => {
     const here = () => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; this.paint(cv.getContext('2d'), W, H, col); return new Promise(r => cv.toBlob(r, 'image/jpeg', 0.95)); };
     const encoded = w ? w.ask({ W, H, col }).then(a => a.blob || here()) : here();
     encoded.catch(() => null).then(blob => {
-      if (!blob) return;
+      if (!blob || key !== this._drawn) return;
       const url = URL.createObjectURL(blob);
       this._urls.set(key, url);
       if (this._urls.size > 4) { const [k, u] = this._urls.entries().next().value; this._urls.delete(k); setTimeout(() => URL.revokeObjectURL(u), 2000); }

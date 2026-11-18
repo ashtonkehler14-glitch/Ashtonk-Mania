@@ -50,6 +50,12 @@ test('the stylesheet has no :has() selectors', () => {
   // (a :has() rule anywhere made the browser restyle the whole page for every element added, removed or changed —
   // a text tick, a toast — which was most of what kept the menus busy on a slow device; a class set from the script
   // does the same job, see BodyFlag and makeOverlay's flags)
-  const css = read('src/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = (read('src/styles.css') + read('src/styles-og.css')).replace(/\/\*[\s\S]*?\*\//g, '');
   assert.ok(!css.includes(':has('), 'src/styles.css uses :has() — set a class from the script instead');
+});
+
+// The optional style is bundled but inactive until selected, including in saved HTML copies.
+test('OG appearance is bundled as an opt-in stylesheet with its font and license',()=>{
+ const page=read('index.html');assert.ok(page.includes(read('src/styles-og.css')));assert.ok(page.includes('id="css-og" media="not all"'));
+ const files=JSON.parse(read('public/files.json'));assert.ok(files.includes('fonts/Outfit-Variable.ttf'));assert.ok(files.includes('fonts/Outfit-LICENSE.txt'));
 });
