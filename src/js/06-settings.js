@@ -416,7 +416,7 @@ const Settings = {
     const og = this.get('ui.gui') === 'og';
     r.dataset.gui = og ? 'og' : 'default';
     r.dataset.theme = og ? 'lazer' : 'zako';
-    r.classList.toggle('og-ui', og); cssSheet('og', og);
+    r.classList.toggle('og-ui', og); cssSheet('default', !og); cssSheet('og', og);
     if (typeof GuiStyle !== 'undefined') GuiStyle.apply(og);
     r.classList.toggle('no-effects', !this.get('graphics.effects'));
     // (animations turned off by the player: everything still. Performance mode's own sheet stills the menus, and leaves

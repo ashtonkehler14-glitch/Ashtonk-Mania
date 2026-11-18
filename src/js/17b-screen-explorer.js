@@ -355,7 +355,7 @@ const ExplorerScreen = {
 
   enter(params = {}) {
     this._active = true;
-    const el = h('div.explorer.ov', { style: { '--o-h': OVERLAY_HUES.pink } });
+    const el = h('div.explorer.ov', { style: { '--o-h': Settings.get('ui.gui') === 'og' ? OVERLAY_HUES.blue : OVERLAY_HUES.pink } });
     const st = this.state;
     // opened from a multiplayer room: every card picks (host) or suggests (other players) a difficulty for the room
     this.mpPick = !!params.mpPick && typeof Multiplayer !== 'undefined' && Multiplayer.inRoom();
@@ -619,7 +619,7 @@ const ExplorerScreen = {
     // the real distance from one row to the next, measured on the page (an estimate drifts further off the further
     // down the list you go, until the window is drawn off screen)
     const kids = grid.children;
-    let rowH = 128 + (parseFloat(cs.rowGap) || 0);
+    let rowH = (Settings.get('ui.gui') === 'og' ? 100 : 128) + (parseFloat(cs.rowGap) || 0);
     if (kids.length > cols && kids[cols].offsetTop > kids[0].offsetTop) rowH = kids[cols].offsetTop - kids[0].offsetTop;
     else if (kids[0] && kids[0].offsetHeight) rowH = kids[0].offsetHeight + (parseFloat(cs.rowGap) || 0);
     // where the grid starts in the list, from layout offsets (the header's scroll effects move things on screen,
@@ -692,7 +692,7 @@ const ExplorerScreen = {
     }
   },
   /** What a card shows that can change without a new search. */
-  cardSig(set) { const dl = this.downloads.get(set.id); return [!!this.owned(set.id), dl ? dl.state : '', this.liked().has(set.id), !!this.mpPick, Settings.get('ui.unicodeMetadata')].join(); },
+  cardSig(set) { const dl = this.downloads.get(set.id); return [!!this.owned(set.id), dl ? dl.state : '', this.liked().has(set.id), !!this.mpPick, Settings.get('ui.unicodeMetadata'), Settings.get('ui.gui')].join(); },
   /** Only swap the play/pause icons — previewing never re-renders the list. */
   syncPreviewButtons() {
     if (!this.grid) return;
@@ -731,7 +731,7 @@ const ExplorerScreen = {
     const title = Settings.get('ui.unicodeMetadata') && set.titleUnicode ? set.titleUnicode : set.title;
     const artist = Settings.get('ui.unicodeMetadata') && set.artistUnicode ? set.artistUnicode : set.artist;
     const playBtn = h('button.ex-play', { title: 'Preview', 'aria-label': 'Preview', dataset: { ic: this.previewId === set.id ? 'pause' : 'play' }, onclick: e => { e.stopPropagation(); if (e.detail > 0) e.currentTarget.blur(); this.togglePreview(set.id); } }, icon(this.previewId === set.id ? 'pause' : 'play'));
-    const spectrum = set.diffs.length > 5
+    const spectrum = set.diffs.length > (Settings.get('ui.gui') === 'og' ? 10 : 5)
       ? h('span.ex-spec-more', ...[...new Set(set.diffs.map(d => starColour(d.stars)))].slice(0, 1).map(c => h('i', { style: { '--sc': c } })), `${set.diffs.length}`)
       : h('span.ex-spec', ...set.diffs.map(d => h('i', { style: { '--sc': starColour(d.stars) }, title: `[${d.version}] ${d.stars.toFixed(2)}★ ${d.keys}K` })));
     // lazer's hover panel on the card's right edge: like and download (or play when it's already in the library)
@@ -750,7 +750,7 @@ const ExplorerScreen = {
       h('div.ex-cb',
         h('div.ex-cb-top',
           h('div.ex-titles', h('div.ex-t', { title }, h('span.ex-tt', title), set.video ? h('span.ex-vid', { title: 'Has video' }, flatIcon('film', 0.7)) : null), h('div.ex-a', { title: artist }, artist)),
-          null),
+          Settings.get('ui.gui') === 'og' ? h('div.ex-counts', h('span', {title:'Favourites'}, flatIcon('heart',.68), fmtCompact(set.favourites)), h('span', {title:'Play count'}, flatIcon('play',.68), fmtCompact(set.playCount))) : null),
         h('div.ex-m', 'mapped by ', h('b', set.creator)),
         h('div.ex-foot', h(`span.ex-statuspill.st-${set.status}`, h('span', set.status.toUpperCase())), spectrum,
           h('span.ex-keys', h('span', keys.length > 3 ? `${keys[0]}–${keys[keys.length - 1]}K` : keys.map(k => k + 'K').join(' '))),
@@ -838,7 +838,7 @@ const ExplorerScreen = {
     const hover = h('div.bso-diffhover');
     const diffs = h('div.bso-diffs', ...set.diffs.map(x => {
       const b = h(`button.bso-diff${x === d ? '.on' : ''}`, { style: { '--sc': starColour(x.stars) }, 'aria-label': `${x.version} ${x.stars.toFixed(2)} stars`,
-        onclick: () => { this.setView.diff = x; UISounds.click(); this.renderSet(); } }, icon('star'));
+        onclick: () => { this.setView.diff = x; UISounds.click(); this.renderSet(); } }, icon(Settings.get('ui.gui') === 'og' ? 'mania' : 'star'));
       b.addEventListener('pointerenter', () => { UISounds.hover(); clearEl(hover).append(h('b', x.version), starBadge(x.stars)); });
       b.addEventListener('pointerleave', () => clearEl(hover).append(h('b', d.version), starBadge(d.stars)));
       return b;

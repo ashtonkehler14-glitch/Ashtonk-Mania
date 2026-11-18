@@ -35,6 +35,7 @@ try {
   await page.waitForFunction(()=>document.documentElement.classList.contains('og-ui'));
   await page.waitForFunction(()=>document.querySelector('.lz-tri img') && document.querySelector('.lz-tri img').complete);
   assert.equal(await page.evaluate(()=>document.getElementById('css-og').media),'all');
+  assert.equal(await page.evaluate(()=>document.getElementById('css-default').media),'not all','Modern styling is entirely inactive in OG');
   assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.lz-btn[data-id=play]')).getPropertyValue('--c').trim()),'#6644cc');
   assert.ok(await page.evaluate(()=>getComputedStyle(document.body).fontFamily.includes('Outfit')));
   await page.evaluate(()=>SettingsPanel.close());await page.waitForTimeout(400);await page.screenshot({path:'/tmp/gui-og-desktop.png'});
@@ -46,10 +47,20 @@ try {
     await page.setViewportSize(viewport);
     await page.evaluate(async()=>{await Screens.go('explore');SettingsPanel.open('User Interface');});
     await page.waitForTimeout(750);
+    await page.waitForFunction(()=>{const el=document.querySelector('.settings-panel');if(!el)return false;const r=el.getBoundingClientRect();return r.x>=-1 && r.right<=innerWidth+1 && r.y>=-1 && r.bottom<=innerHeight+1 && el.scrollWidth<=el.clientWidth+1;});
     const fits=await page.locator('.settings-panel').evaluate(el=>{const r=el.getBoundingClientRect();return r.x>=-1 && r.right<=innerWidth+1 && r.y>=-1 && r.bottom<=innerHeight+1 && el.scrollWidth<=el.clientWidth+1;});if(!fits){await page.screenshot({path:'/tmp/og-fit-failure.png'});console.log(await page.locator('.settings-panel').evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,sw:el.scrollWidth,cw:el.clientWidth,zoom:Zoom.z,css:getComputedStyle(el).cssText};}));}assert.ok(fits,'OG settings remain accessible at '+JSON.stringify(viewport));
     await page.evaluate(()=>SettingsPanel.close());await page.waitForTimeout(250);
     assert.equal(await page.evaluate(()=>Screens.current.el.classList.contains('menu-surface')),false,'OG menus use their original full-screen layout');
     assert.ok(await page.locator('.explorer').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+    if(viewport.width===1280){
+      await page.waitForSelector('.ex-card .ex-counts');
+      await page.evaluate(()=>Settings.set('ui.gui','default'));await page.waitForTimeout(450);
+      assert.equal(await page.locator('.ex-card .ex-counts').count(),0,'Existing explorer cards restore Default details');
+      assert.equal(await page.locator('.ex-card').first().evaluate(el=>getComputedStyle(el).height),'128px');
+      await page.evaluate(()=>Settings.set('ui.gui','og'));await page.waitForTimeout(450);
+      assert.ok(await page.locator('.ex-card .ex-counts').count(),'Existing explorer cards restore original details');
+      assert.equal(await page.locator('.ex-card').first().evaluate(el=>getComputedStyle(el).height),'100px');
+    }
     await page.evaluate(async()=>{await Screens.go('home');});
   }
   await page.setViewportSize({width:1280,height:591});

@@ -127,6 +127,7 @@ const HomeScreen = {
       if (!Background.current || !Music.meta) this.startMenuMusic();
     });
     if (Presence.ws) Daily.ask();
+    if (Settings.get('ui.gui') === 'og') { this.tip = h('div.lz-tipbox'); el.append(h('div.lz-bottom',this.tip)); this.showTip(); }
     this.paintDaily(); this._dailyT = setInterval(() => this.paintDaily(), 1000);
     this.loop();
     return el;
@@ -658,12 +659,14 @@ onmessage = async ({ data: m }) => {
   /** Keep the graphite base; song artwork only nudges its hue and saturation. */
   async fromImage(url) {
     const seq = this._sampleSeq = (this._sampleSeq || 0) + 1;
-    if (!this.col || !url) { this.col = [255, .14]; this.render(); }
+    const og = Settings.get('ui.gui') === 'og';
+    if (!this.col || !url) { this.col = og ? [326, .38] : [255, .14]; this.render(); }
     if (!url) return;
     try {
       let col;
       const worker = this.worker();
       if (worker) col = (await worker.ask({ avg: url })).col;
+      const fromWorker = !!col;
       if (!col) {
         const img = new Image(); img.crossOrigin = 'anonymous'; img.src = url; await img.decode();
         const cv = document.createElement('canvas'); cv.width = cv.height = 12;
@@ -675,7 +678,7 @@ onmessage = async ({ data: m }) => {
       }
       if (!this.running || seq !== this._sampleSeq) return;
       const delta = ((col[0] - 255 + 540) % 360) - 180;
-      this.col = [255 + delta * .18, .12 + Math.min(.04, col[1] * .06)];
+      this.col = og ? [col[0], fromWorker ? col[1] : clamp(col[1] * 1.1 + .08, .16, .62)] : [255 + delta * .18, .12 + Math.min(.04, col[1] * .06)];
       this.render();
     } catch { /* Artwork unavailable: keep the quiet graphite background. */ }
   },

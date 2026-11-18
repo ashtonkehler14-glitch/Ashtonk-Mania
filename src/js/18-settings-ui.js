@@ -97,8 +97,10 @@ const SettingsPanel = {
     let sectionIndex = 0;
     for (const [sec, groups] of bySec) {
       const accent = ['#ce3f87', '#8d50d6', '#bb870e'][sectionIndex++ % 3];
-      const secEl = h('div.sp-section', { dataset: { section: sec }, style: { '--section-accent': accent } }, h('h3', h('span', sec)));
+      const og = Settings.get('ui.gui') === 'og';
+      const secEl = h('div.sp-section', { dataset: { section: sec }, style: { '--section-accent': accent } }, h('h3', og ? sec : h('span', sec)));
       for (const [g, items] of groups) {
+        if (og) { secEl.append(h('div.sp-group', g), ...items.map(it=>this.row(it))); continue; }
         const card = h('div.sp-group-card', g !== sec ? h('h4.sp-group', g) : null);
         for (const it of items) card.append(this.row(it));
         secEl.append(card);
@@ -110,7 +112,7 @@ const SettingsPanel = {
     // (and past everything, at the very bottom: Neru, bored at her desk — NeruEggs.finePrint)
     const neru = !q && typeof NeruCameo !== 'undefined' ? NeruCameo.make('finePrint', 'nc-fine', { delay: 0 }) : null;
     if (neru) { scroll.append(neru); NeruEggs.finePrint(neru, scroll); }
-    clearEl(this.nav).append(...[...bySec.keys()].map(sec => h('button.sp-nb', { 'aria-label': sec, dataset: { sec }, onclick: () => { UISounds.click(); this.scrollTo(sec); } }, h('span.sp-nb-ind'), icon(SECTION_ICONS[sec] || 'gear'), h('span', sec === 'User Interface' ? 'interface' : sec.toLowerCase()))));
+    clearEl(this.nav).append(...[...bySec.keys()].map(sec => h('button.sp-nb', { 'aria-label': sec, dataset: { sec }, onclick: () => { UISounds.click(); this.scrollTo(sec); } }, h('span.sp-nb-ind'), icon(SECTION_ICONS[sec] || 'gear'), h('span', sec === 'User Interface' && Settings.get('ui.gui') !== 'og' ? 'interface' : sec.toLowerCase()))));
     this.syncNav();
   },
   /** One setting as osu!lazer's form controls (SettingsItemV2): a rounded box with the caption inside, the control on

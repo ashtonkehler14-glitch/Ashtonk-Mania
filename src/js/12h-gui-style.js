@@ -1,53 +1,74 @@
-/* Only the menu presentation changes between Default and the preserved OG appearance. */
-const OG_TRIANGLE_PAINTER = {
-paint(x, W, H, [hue, sat]) {
-    const k = Math.max(W / 2000, H / 1125), ox = (W - 2000 * k) / 2, oy = (H - 1125 * k) / 2;
-    const S = v => (v * 100).toFixed(1) + '%', hsl = (h2, s2, l2, a = 1) => `hsla(${((h2 % 360) + 360) % 360} ${S(clamp(s2, 0, 1))} ${S(clamp(l2, 0, 1))} / ${a})`;
-    // the gradient: lighter at the top, darker at the bottom
-    const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, hsl(hue, sat, 0.205)); g.addColorStop(1, hsl(hue + 4, sat * 1.05, 0.095));
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.setTransform(k, 0, 0, k, ox, oy);
-    const R3 = Math.sqrt(3) / 2;
-    const up = (ax, ay, s) => { x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); };
-    // faint outlines first (they sit behind the solid banks)
-    x.lineWidth = 2.2; x.lineJoin = 'miter';
-    for (const [ax, ay, s] of this.OUTLINE) {
-      const l = 0.16 - 0.07 * clamp((ay + s * R3 / 2) / 1125, 0, 1);
-      x.strokeStyle = hsl(hue, sat * 1.05, l, 0.9); up(ax, ay, s); x.stroke();
-    }
-    // the solid banks, each a shade darker than the gradient behind it, with lazer's soft shadow
-    // (one gradient for all of them, so overlapping triangles merge into one bank, as in lazer's picture)
-    x.shadowColor = 'rgba(0, 0, 0, .3)'; x.shadowBlur = 16 * k;
-    const sg = x.createLinearGradient(0, 0, 0, 1125);
-    sg.addColorStop(0, hsl(hue, sat * 1.04, 0.152)); sg.addColorStop(1, hsl(hue + 3, sat * 1.04, 0.066));
-    x.fillStyle = sg;
-    x.beginPath();
-    for (const [ax, ay, s] of this.SOLID) { x.moveTo(ax, ay); x.lineTo(ax + s / 2, ay + s * R3); x.lineTo(ax - s / 2, ay + s * R3); x.closePath(); }
-    x.fill(); // (one shape: overlapping triangles merge, with no seams or shadows inside a bank)
-    x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
-    // the ring: bright outlines in two accent colours, top to bottom (lazer's orange → peach and pink → peach)
-    const a1 = [hue + 48, 0.82, 0.62], a2 = [hue + 62, 0.95, 0.83], b1 = [hue - 8, 0.95, 0.74];
-    x.lineWidth = 2.6;
-    for (const [ax, ay, s] of this.RING) {
-      const t = clamp((ay + s * 0.43 - 170) / 720, 0, 1), left = ax < 1000;
-      const top = left ? a1 : b1, c = [top[0] + (a2[0] - top[0]) * t, top[1] + (a2[1] - top[1]) * t, top[2] + (a2[2] - top[2]) * t];
-      x.strokeStyle = hsl(c[0], c[1], c[2]); up(ax, ay, s); x.stroke();
-    }
-    x.setTransform(1, 0, 0, 1, 0, 0);
-  },
-}.paint;
+/* OG is the preserved presentation from 651ec35, not a recolouring of Default. */
 const GuiStyle = {
-  mode: null, defaultPaint: null,
+  mode: null, defaults: null, icons: new Map(), flats: new Map(),
+  icon(name, cls = '') {
+    const key = name + '|' + cls;
+    if (!this.icons.has(key)) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const src = (/\bfill\b/.test(cls) && OG_ICON_SRC[name + '-fill']) || OG_ICON_SRC[name];
+      svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+      svg.dataset.icon = name; svg.dataset.iconClass = cls;
+      if (src?.[0] === 'L') {
+        svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', `i lzi ${cls}`);
+        svg.style.setProperty('--lzi', `url("${OG_ICON_IMG[src[1]]}")`);
+      } else if (src) {
+        svg.setAttribute('viewBox', `0 0 ${src[1]} ${src[2]}`); svg.setAttribute('class', `i fai ${cls}`);
+        const p = document.createElementNS(svg.namespaceURI, 'path'); p.setAttribute('d', src[3]); p.style.cssText = 'fill:currentColor;stroke:none'; svg.append(p);
+      } else {
+        svg.setAttribute('viewBox', '0 0 256 256'); svg.setAttribute('class', `i phi ${cls}`);
+        svg.innerHTML = (ICON_SRC[name] || ICON_SRC.question)[1];
+      }
+      this.icons.set(key, svg);
+    }
+    return this.icons.get(key).cloneNode(true);
+  },
+  flatIcon(name, alpha) {
+    const key = name + '|' + alpha;
+    if (!this.flats.has(key)) {
+      const src = OG_ICON_SRC[name];
+      const content = src?.[0] === 'L' ? `<image href="${OG_ICON_IMG[src[1]]}" width="24" height="24"/>`
+        : src ? `<path d="${src[3]}"/>` : (ICON_SRC[name] || ICON_SRC.question)[1];
+      const box = src?.[0] === 'L' ? '0 0 24 24' : src ? `0 0 ${src[1]} ${src[2]}` : '0 0 256 256';
+      this.flats.set(key, `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}" fill="#fff" opacity="${alpha}">${content}</svg>`)}")`);
+    }
+    return h('i.fi', { 'aria-hidden':'true', dataset:{icon:name,iconAlpha:String(alpha)}, style:{backgroundImage:this.flats.get(key)} });
+  },
   apply(og) {
     if (this.mode === og) return;
+    const changed = this.mode !== null;
     this.mode = og;
-    this.defaultPaint ||= MenuTriangles.paint;
+    const keys = Object.keys(OG_REFERENCE.home);
+    this.defaults ||= { home:Object.fromEntries(keys.map(k=>[k,HomeScreen[k]])), triangles:Object.fromEntries(Object.keys(OG_REFERENCE.triangles).map(k=>[k,MenuTriangles[k]])), logoSource:LogoPainter.SRC };
+    Object.assign(HomeScreen, og ? OG_REFERENCE.home : this.defaults.home);
     MenuTriangles._w?.close?.(); delete MenuTriangles._w;
-    MenuTriangles.paint = og ? OG_TRIANGLE_PAINTER : this.defaultPaint;
-    MenuTriangles.guiMode = og ? 'og' : 'default';
-    MenuTriangles._drawn = null;
-    if (MenuTriangles.running) MenuTriangles.render(true);
+    Object.assign(MenuTriangles, og ? OG_REFERENCE.triangles : this.defaults.triangles);
+    MenuTriangles.guiMode = og ? 'og' : 'default'; MenuTriangles._drawn = null;
+    if (MenuTriangles.running) MenuTriangles.fromImage(Background.current);
+    LogoPainter.w?.terminate(); Object.assign(LogoPainter,{w:null,ready:false,broken:false,SRC:og ? OG_REFERENCE.logoSource : this.defaults.logoSource});
+    if (changed) {
+      // Rebuild the visual pieces in place; keep the current page, song, settings and game state.
+      if (HomeScreen.el?.isConnected) {
+        const home = HomeScreen, state = home.menuState;
+        cancelAnimationFrame(home._raf); clearTimeout(home._perfT);
+        const logo = home.buildLogo(); home.logo.replaceWith(logo); home.logo = logo;
+        clearEl(home.left); clearEl(home.right); home.buildButtons(); home.setState(state,true); home.paintDaily();
+        home.el.querySelector('.lz-bottom')?.remove(); home.tip = null;
+        if (og) { home.tip = h('div.lz-tipbox'); home.el.append(h('div.lz-bottom',home.tip)); home.showTip(); }
+        home.loop();
+      }
+      if (SettingsPanel.o) { const top = SettingsPanel.scrollEl.scrollTop; SettingsPanel.build(SettingsPanel.q || ''); SettingsPanel.scrollEl.scrollTop = top; }
+      if (Toolbar.clock) { Toolbar.build(); Toolbar.sync(); }
+      for (const old of $$('svg[data-icon]')) {
+        const cls = old.dataset.iconClass ?? [...old.classList].filter(c=>!['i','phi','lzi','fai'].includes(c)).join(' ');
+        old.replaceWith(icon(old.dataset.icon, cls));
+      }
+      for (const old of $$('i.fi[data-icon]')) old.replaceWith(flatIcon(old.dataset.icon, Number(old.dataset.iconAlpha)));
+      if (Screens.currentName === 'explore') {
+        Screens.current.el.style.setProperty('--o-h', og ? OVERLAY_HUES.blue : OVERLAY_HUES.pink);
+        ExplorerScreen._mDirty = true; ExplorerScreen.renderResults();
+        if (ExplorerScreen.setView) ExplorerScreen.renderSet();
+      }
+    }
     Screens.syncMenuFrame();
   },
 };

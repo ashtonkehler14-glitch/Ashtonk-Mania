@@ -111,13 +111,14 @@ function trimChatLines(list, limit) {
 
 /** Phosphor's bold paths stay crisp at toolbar and mobile sizes. Templates are parsed once and cloned. */
 function icon(name, cls = '') {
+  if (typeof GuiStyle !== 'undefined' && GuiStyle.mode) return GuiStyle.icon(name, cls);
   const key = name + '|' + cls;
   let t = icon.cache.get(key);
   if (!t) {
     t = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     t.setAttribute('aria-hidden', 'true'); t.setAttribute('focusable', 'false');
     t.setAttribute('viewBox', '0 0 256 256'); t.setAttribute('class', `i phi ${cls}`);
-    t.dataset.icon = name;
+    t.dataset.icon = name; t.dataset.iconClass = cls;
     const src = (/\bfill\b/.test(cls) && ICON_SRC[name + '-fill']) || ICON_SRC[name] || ICON_SRC.question;
     t.innerHTML = src[1];
     icon.cache.set(key, t);
@@ -130,6 +131,7 @@ icon.cache = new Map();
  *  of the long lists. An inline SVG brings its own scale, clip and colour mask, and each of those split every card into
  *  more pieces for the browser to sort out again in every frame of a scroll; a picture is one piece of the card. */
 function flatIcon(name, alpha = 1) {
+  if (typeof GuiStyle !== 'undefined' && GuiStyle.mode) return GuiStyle.flatIcon(name, alpha);
   const key = name + '|' + alpha;
   let cls = flatIcon.cls.get(key);
   if (!cls) {
@@ -140,7 +142,7 @@ function flatIcon(name, alpha = 1) {
     if (!flatIcon.sheet) { flatIcon.sheet = document.createElement('style'); document.head.appendChild(flatIcon.sheet); }
     flatIcon.sheet.append(`.${cls} { background-image: url("data:image/svg+xml,${encodeURIComponent(svg)}"); }\n`);
   }
-  return h(`i.fi.${cls}`, { 'aria-hidden': 'true' });
+  return h(`i.fi.${cls}`, { 'aria-hidden': 'true', dataset:{icon:name,iconAlpha:String(alpha)} });
 }
 flatIcon.cls = new Map();
 
@@ -758,7 +760,7 @@ const Toolbar = {
    *  Tooltips are lazer's: big shadowed lowercase text under the button with the hotkey in a little box, over an 80px
    *  shade that fades in below the bar while the pointer is on it. */
   build() {
-    const tb = $('#toolbar');
+    const tb = $('#toolbar'), og = Settings.get('ui.gui') === 'og';
     clearEl(tb);
     if (!tb._wired) {
       tb._wired = true;
@@ -785,13 +787,18 @@ const Toolbar = {
     // like lazer's toolbar toggles: a page's button closes that page when it's already open
     const page = name => () => { if (Screens.currentName === name) Screens.back(); else Screens.go(name); };
     this.pages = { explore: page('explore'), profile: page('profile'), rankings: page('rankings'), changelog: page('changelog') };
-    this.clock = h('button.tb-clock', { 'aria-label': 'Time and notifications', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', dataset: { ov: 'notifications' }, onclick: () => { UISounds.click(); Notifications.toggle(); } });
+    this.clock = h('button.tb-clock', { 'aria-label': 'Time and notifications', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', dataset: { ov: 'notifications' }, onclick: () => { UISounds.click(); og ? OG_REFERENCE.clock.cycleClock.call(this) : Notifications.toggle(); } });
+    this.bellCount = h('span.tb-badge', h('span'));
+    this.bell = og ? btn('bell', 'notifications', 'waiting for you', () => Notifications.toggle(), { right:true, dataset:{ov:'notifications'} }) : null;
+    if (this.bell) this.bell.append(this.bellCount);
     tb.append(
       h('div.tb-group.tb-left',
         btn('gear', 'settings', `change the way ${APP_NAME} behaves`, () => SettingsPanel.toggle(), { key: 'Ctrl+O', dataset: { ov: 'settings' } }),
-        btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home', dataset: { tab: 'home' } })),
+        btn('home', 'home', 'return to the main menu', () => this.home(), { key: 'Alt+Home', dataset: og ? {} : { tab: 'home' } })),
+      og ? h('div.tb-ruleset', btn('mania', 'osu!mania', 'play some osu!mania', () => {}, {cls:'.tb-rs'}), h('span.tb-rs-line')) : null,
       h('div.tb-spacer'),
       h('div.tb-group.tb-right',
+        og ? btn('sparkle', 'changelog', 'track recent updates', this.pages.changelog, {right:true,cls:'.tb-changelog',dataset:{tab:'changelog'}}) : null,
         btn('trophy', 'rankings', 'find out who\'s the best right now', this.pages.rankings, { right: true, dataset: { tab: 'rankings' } }),
         btn('beatmap', 'beatmap listing', 'browse for new beatmaps', this.pages.explore, { key: 'Ctrl+B', right: true, dataset: { tab: 'explore' } }),
         this.chatBtn = btn('chat', 'chat', 'join the real-time discussion', () => Chat.toggle(), { key: 'F8', right: true, dataset: { ov: 'chat' } }),
@@ -801,18 +808,23 @@ const Toolbar = {
         // (lazer's order: you, then the clock, then notifications)
         this.profileBtn = h('button.tb-btn.tb-profile', { dataset: { tab: 'profile' }, 'aria-label': 'your profile', onclick: () => { UISounds.click(); this.pages.profile(); },
           oncontextmenu: e => { e.preventDefault(); this.userMenu(e); } }),
-        this.clock),
+        this.clock, this.bell),
     );
     this.chatBtn.append(this.chatCount);
     this.updateProfile();
     this.buildClock();
     this.tick();
-    setInterval(() => this.tick(), 1000);
-    Bus.on('music:changed', () => this.updateNp());
-    Bus.on('settings:changed', k => { if (k === 'audio.master' || k === '*') this.updateVolume(); });
-    Bus.on('screen:changed', () => this.sync());
-    this.updateVolume();
+    if (!this._subscriptions) {
+      this._subscriptions = true;
+      setInterval(() => this.tick(), 1000);
+      Bus.on('music:changed', () => this.updateNp());
+      Bus.on('settings:changed', k => { if (k === 'audio.master' || k === '*') this.updateVolume(); });
+      Bus.on('screen:changed', () => this.sync());
+      Bus.on('notif:changed', () => this.updateBell());
+    }
+    this.updateVolume(); this.updateBell();
   },
+  updateBell() { if (this.bell) OG_REFERENCE.clock.updateBell.call(this); },
   tip(title, sub, key, right) {
     return h(`span.tb-tip${right ? '.r' : ''}`, h('b', title), h('span.tb-sub', h('span', sub), key ? h('kbd', key.toUpperCase()) : null));
   },
@@ -854,16 +866,21 @@ const Toolbar = {
   },
   /** A compact 12-hour clock doubles as the notification-centre button. */
   buildClock() {
+    if (Settings.get('ui.gui') === 'og') return OG_REFERENCE.clock.buildClock.call(this);
     this.clockTime = h('span.tb-time');
     clearEl(this.clock).append(h('span.tb-st'), this.clockTime);
     this.clock.dataset.mode = 'digital';
     this.clock.classList.add('tb-btn');
   },
+  get CLOCK_MODES() { return OG_REFERENCE.clock.CLOCK_MODES; },
+  use24h() { return OG_REFERENCE.clock.use24h.call(this); },
+  turn(k, deg) { return OG_REFERENCE.clock.turn.call(this, k, deg); },
   formatTime(d) {
     const p2 = n => String(n).padStart(2, '0');
     return `${p2(d.getHours() % 12 || 12)}:${p2(d.getMinutes())}:${p2(d.getSeconds())} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
   },
   tick() {
+    if (Settings.get('ui.gui') === 'og') return OG_REFERENCE.clock.tick.call(this);
     if ($('#app').classList.contains('in-game')) return;
     const text = this.formatTime(new Date());
     if (this.clockTime && this.clockTime.textContent !== text) {
