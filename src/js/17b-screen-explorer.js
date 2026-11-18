@@ -750,7 +750,7 @@ const ExplorerScreen = {
       h('div.ex-cb',
         h('div.ex-cb-top',
           h('div.ex-titles', h('div.ex-t', { title }, h('span.ex-tt', title), set.video ? h('span.ex-vid', { title: 'Has video' }, flatIcon('film', 0.7)) : null), h('div.ex-a', { title: artist }, artist)),
-          h('div.ex-counts', h('span', { title: 'Favourites' }, flatIcon('heart', 0.68), fmtCompact(set.favourites)), h('span', { title: 'Play count' }, flatIcon('play', 0.68), fmtCompact(set.playCount)))),
+          null),
         h('div.ex-m', 'mapped by ', h('b', set.creator)),
         h('div.ex-foot', h(`span.ex-statuspill.st-${set.status}`, h('span', set.status.toUpperCase())), spectrum,
           h('span.ex-keys', h('span', keys.length > 3 ? `${keys[0]}–${keys[keys.length - 1]}K` : keys.map(k => k + 'K').join(' '))),

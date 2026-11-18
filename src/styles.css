@@ -6029,3 +6029,15 @@ body.se-open .gp-chat .gp-chat-in { pointer-events: none; }
 
 /* Keep song details and scores steady while browsing; the screen's entrance still animates. */
 .ss:not(.entering) .wedge, .ss:not(.entering) .wd, .ss:not(.entering) .lbs { animation: none; }
+
+/* A quiet artwork ribbon: retain the slant without the extra badges, accent rule or deep borders. */
+.explorer .ex-card::before { border-color: #ffffff0b; box-shadow: none; }
+.explorer .ex-card::after { border-bottom: 0; }
+.explorer .ex-card:focus-visible::after { box-shadow: inset 0 0 0 2px #c695db; }
+.explorer .ex-keys { background: transparent; padding: 0; }
+.explorer .ex-m { color: #c3bac9; }
+.explorer .ex-m b { color: inherit; font-weight: 400; }
+.explorer .ex-foot { gap: 8px; }
+.explorer .ex-cardshade { background: linear-gradient(90deg,#211b2bf5 10%,#211b2bd9 48%,#211b2b80); }
+.hud-mp-row[hidden] { display: none !important; }
+.hud-lb .hud-mp-row { animation: none; }

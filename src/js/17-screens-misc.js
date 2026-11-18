@@ -906,6 +906,10 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.17h', title: 'A leaderboard that follows your play', sections: [
+    { title: 'Gameplay', items: ['The live leaderboard shows nearby places and shifts as you climb, instead of showing every score together. Multiplayer standings follow your position too.'] },
+    { title: 'Beatmap explorer', items: ['Cards keep their slanted artwork shape with simpler details and fewer decorative borders.'] }
+  ] },
   { id: '2026.11.17g', title: 'Temporary spectator maps and steady mod controls', sections: [
     { title: 'Spectating', items: ['Missing maps downloaded for spectating stay temporary and are released when you stop. Existing maps are checked first and kept unchanged.', 'Watching a play uses a single Stop watching button in the top strip.'] },
     { title: 'Song select', items: ['Mod select opens without flashing columns, and toggling mods keeps buttons and scroll positions steady.', 'Opening your leaderboard score uses its exact saved play and replay when available.'] }

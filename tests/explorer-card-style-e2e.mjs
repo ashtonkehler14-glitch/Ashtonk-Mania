@@ -44,6 +44,8 @@ try {
   });
   await page.evaluate(async()=>Screens.go('explore'));await page.waitForFunction(()=>!Screens.busy && document.querySelector('.ex-cardbg.loaded'));await page.waitForTimeout(500);
   const first=page.locator('.explorer .ex-card').first(),side=first.locator('.ex-side');
+  assert.equal(await page.locator('.explorer .ex-counts').count(),0,'Browse cards leave popularity counts to the detail view');
+  assert.equal(await first.evaluate(el=>getComputedStyle(el,'::after').borderBottomWidth),'0px','Cards have no decorative accent underline');
   if(process.env.CARD_PORTRAIT==='1') {
     assert.ok(await page.locator('.ex-search').isVisible());
     assert.ok(await page.locator('.explorer').evaluate(el=>el.scrollWidth<=el.clientWidth),'Explorer stays within portrait width');

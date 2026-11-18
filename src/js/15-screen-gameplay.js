@@ -1262,8 +1262,8 @@ const GameplayScreen = {
     const online = (scope === 'global' || scope === 'friends') && on && on.key === s.rec.hash && on.scope === scope && s.mode !== 'replay';
     const rows = sample ? [['Neru', .9921, 1412, 991204], ['Kori', .9803, 1288, 962880], ['Teto', .9655, 1102, 931337]].map(([name, acc, combo, score]) => ({ name, acc, combo, score }))
       : online
-      ? on.scores.slice(0, 6).map(x => ({ name: x.pid === Presence.pid() ? ProfileManager.profile.name : x.name, avatar: x.avatar, own: x.pid === Presence.pid(), acc: x.acc, combo: x.combo, score: x.score }))
-      : ScoreManager.forMap(s.rec.hash).filter(x => x.id !== skip && x.passed).slice(0, 6).map(x => ({ name: x.player || ProfileManager.profile.name, own: !x.player || x.player === ProfileManager.profile.name, acc: x.accuracy, combo: x.maxCombo, score: ScoreManager.value(x) }));
+      ? on.scores.map(x => ({ name: x.pid === Presence.pid() ? ProfileManager.profile.name : x.name, avatar: x.avatar, own: x.pid === Presence.pid(), acc: x.acc, combo: x.combo, score: x.score }))
+      : ScoreManager.forMap(s.rec.hash).filter(x => x.id !== skip && x.passed).map(x => ({ name: x.player || ProfileManager.profile.name, own: !x.player || x.player === ProfileManager.profile.name, acc: x.accuracy, combo: x.maxCombo, score: ScoreManager.value(x) }));
     // nothing to climb past on a first play: no board (a lone "#1 you" row is just clutter, and lazer shows none)
     if (!rows.length) { this.lbEl.classList.add('lb-empty'); return; }
     const mk = (x, me) => {
@@ -1271,7 +1271,9 @@ const GameplayScreen = {
       r.sub.textContent = fmtAcc(x.acc); r.combo.textContent = `${fmtInt(x.combo)}x`; r.sc.textContent = fmtScore(x.score);
       this.lbEl.append(r.el); return r;
     };
-    this._lbRows = rows.map(x => Object.assign(mk(x, false), { score: x.score }));
+    this._lbMake = x => mk(x, false);
+    this._lbRows = rows.sort((a,b)=>b.score-a.score).map(data=>({data,score:data.score,panel:null}));
+    this._lbVisible=[];
     const myName = s.mode === 'replay' ? (s.replay.player || 'Player') : ProfileManager.profile.name;
     this._lbMe = mk({ name: myName, own: s.mode !== 'replay', acc: 1, combo: 0, score: 0 }, true);
     this.updateLeaderboard(true);
@@ -1289,25 +1291,36 @@ const GameplayScreen = {
     this._lbJudged = e.score.judged;
     const sc = ScoreManager.value(e.score);
     // ties go to the score that was set first
-    const above = this._lbRows.filter(r => r.score >= sc).length;
-    if (me._pos !== above + 1) {
-      // (rows slide to their new places — lazer's leaderboard animates each score's move — instead of jumping)
-      // (not while the song plays — the board shows just the places then — where measuring the rows laid the page out
-      // in the middle of a frame: they swap places)
-      const rows = [me, ...this._lbRows], before = me._pos && this.lbEl._full !== false ? rows.map(r => r.el.getBoundingClientRect().top) : null;
-      me._pos = above + 1; setText(me.pos, `#${above + 1}`); me.el.style.order = above * 2 + 1; me.el.classList.toggle('first', above === 0);
-      this._lbRows.forEach((r, i) => { const p = i + 1 + (i >= above ? 1 : 0); setText(r.pos, `#${p}`); r.el.style.order = i * 2 + (i >= above ? 2 : 0); r.el.classList.toggle('first', p === 1); });
-      if (before) rows.forEach((r, i) => {
-        const d = before[i] - r.el.getBoundingClientRect().top;
-        if (!d) return;
-        r.el.animate([{ transform: `translateY(${d}px)` }, { transform: 'none' }], { duration: 450, easing: 'cubic-bezier(.22, 1, .36, 1)' });
-      });
+    let low=0,high=this._lbRows.length;
+    while(low<high){const mid=(low+high)>>>1;if(this._lbRows[mid].score>=sc)low=mid+1;else high=mid;}
+    const above=low;
+    if (me._pos !== above + 1 || force) {
+      const live={panel:me,live:true};
+      const {from,to}=this.leaderboardRange(this._lbRows.length+1,above);
+      const visibleRows=Array.from({length:to-from},(_,slot)=>{const i=from+slot;return i===above?live:this._lbRows[i<above?i:i-1];}),visible=new Set(visibleRows);
+      // Only nearby score panels are mounted; climbing a long board does not build every avatar at once.
+      for(const row of this._lbVisible || [])if(!row.live && row.panel && !visible.has(row)){row.panel.el.remove();row.panel=null;}
+      for(let i=from;i<to;i++){
+        const slot=i-from,row=visibleRows[slot],panel=row.panel || (row.panel=this._lbMake(row.data));
+        setText(panel.pos,`#${i+1}`);panel.el.classList.toggle('first',i===0);panel.el.style.order=slot;
+        this.lbEl.append(panel.el);
+        if(panel._slot!=null && panel._slot!==slot && Settings.get('ui.animSpeed')>0){
+          panel._move?.cancel();panel._move=panel.el.animate([{translate:`0 ${(panel._slot-slot)*41}px`},{translate:'0 0'}],{duration:220,easing:'cubic-bezier(.22,1,.36,1)'});
+        }
+        panel._slot=slot;
+      }
+      this._lbVisible=visibleRows;me._pos=above+1;
     }
     if (this.lbEl._full === false) return; // (compact: only the places show — the numbers are written when it opens)
     const sub = fmtAcc(e.score.judged ? e.score.accuracy : 1), cmb = `${fmtInt(e.score.combo)}x`, st = fmtScore(sc);
     if (me._sub !== sub) { me._sub = sub; setText(me.sub, String(sub)); }
     if (me._cmb !== cmb) { me._cmb = cmb; setText(me.combo, cmb); }
     if (me._st !== st) { me._st = st; setText(me.sc, String(st)); }
+  },
+  /** Five adjacent places follow the player, with a complete window at either end of the board. */
+  leaderboardRange(total, index) {
+    const from=clamp(index-2,0,Math.max(0,total-5));
+    return {from,to:Math.min(total,from+5)};
   },
   /** lazer's DrawableGameplayLeaderboardScore: a 38px sheared panel — the place on the left, the avatar on the seam,
    *  then the name and accuracy over the score and combo; lime for first place, orange for you (or team colours). */
@@ -1370,7 +1383,9 @@ const GameplayScreen = {
     if (t - (this._mpDrawn || 0) < 100) return;
     this._mpDrawn = t;
     const order = [...this._mpRows].sort((a, b) => (b.shown - a.shown) || ((b.v.score || 0) - (a.v.score || 0)));
+    const window=this.leaderboardRange(order.length,Math.max(0,order.findIndex(r=>r.me)));
     order.forEach((r, i) => {
+      r.el.hidden=i<window.from || i>=window.to;
       // (a player whose connection dropped keeps their place while they reconnect)
       const away = !r.me && !!(room && (room.players.find(p => p.id === r.id) || {}).away);
       if (away !== r._away) { r._away = away; r.el.classList.toggle('away', away); }
