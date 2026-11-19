@@ -56,6 +56,7 @@ test('the stylesheet has no :has() selectors', () => {
 
 // The optional style is bundled but inactive until selected, including in saved HTML copies.
 test('OG appearance is bundled as an opt-in stylesheet with its font and license',()=>{
+ assert.ok(read('src/styles-og.css').includes(read('src/styles-og-compat.css')), 'Regenerate OG styles after updating compatibility rules');
  const page=read('index.html');assert.ok(page.includes(read('src/styles-og.css')));assert.ok(page.includes('id="css-og" media="not all"'));
  const files=JSON.parse(read('public/files.json'));assert.ok(files.includes('fonts/Outfit-Variable.ttf'));assert.ok(files.includes('fonts/Outfit-LICENSE.txt'));
 });

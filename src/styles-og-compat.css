@@ -1,0 +1,14 @@
+/* Current message rows include an avatar and a header; the historical three-column
+   timestamp/name/text layout cannot place those nodes correctly. Keep OG's skin
+   while using the current row geometry, including grouped and local messages. */
+.ch-line { grid-template-columns:30px minmax(0, 1fr) auto; gap:1px 9px; padding:6px 10px; }
+.ch-line > .chat-avatar { grid-column:1; grid-row:1 / span 2; }
+.ch-line > .ch-name { grid-column:2; grid-row:1; text-align:left; }
+.ch-line > .ch-time { grid-column:3; grid-row:1; font-size:10px; opacity:.8; }
+.ch-line > .ch-text { grid-column:2 / -1; grid-row:2; }
+.ch-line.local > .ch-text { grid-column:2 / -1; }
+
+/* Room and spectator messages share the same avatar/copy structure. */
+.mp-msg:not(.sys):not(.suggest), .gp-chat-l:not(.sys) { display:flex; align-items:flex-start; gap:8px; padding:4px 0; line-height:1.45; white-space:normal; overflow:visible; }
+.gp-chat-list { gap:0; }
+.rkm-msg:not(.sys) { display:flex; align-items:flex-start; gap:8px; }

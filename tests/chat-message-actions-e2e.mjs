@@ -25,6 +25,7 @@ try {
     await page.waitForSelector('.setup-step-wom, .setup-step-mobile'); await page.evaluate(() => Onboarding.finish());
   }
   await page.waitForFunction(() => !Screens.busy);
+  await page.evaluate(gui=>Settings.set('ui.gui',gui),process.env.GUI_MODE || 'default');
   const pid=await page.evaluate(()=>Presence.pid()),logic=new PresenceLogic(()=>Date.now());
   logic.join('a',{pid,name:'ActionTester',key:'a'.repeat(32)});logic.join('b',{pid:'bobbbbb1',name:'Bob',key:'b'.repeat(32)});logic.makeFriends(pid,'ActionTester','offline1','Offline Friend');
   await page.exposeFunction('actionMessage',packet=>logic.message('a',packet));

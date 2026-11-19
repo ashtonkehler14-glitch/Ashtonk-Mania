@@ -39,6 +39,23 @@ try {
   assert.equal(await lines.nth(1).locator('.chat-avatar').isVisible(),false);
   await lines.first().locator('.chat-avatar').click();assert.equal(await page.evaluate(()=>window._openedChatProfile),'fixture-Alice');
   await page.evaluate(()=>Chat.paint());assert.equal(await page.locator('.ch-line.chat-continuation').count(),2,'History repaint preserves grouping');
+  for(const gui of ['og','default']){
+    await page.evaluate(gui=>Settings.set('ui.gui',gui),gui);
+    for(const viewport of [{width:1280,height:591},{width:844,height:390},{width:390,height:844}]){
+      await page.setViewportSize(viewport);
+      await page.waitForTimeout(120);
+      const alignment=await lines.first().evaluate(el=>{
+        const box=s=>el.querySelector(s).getBoundingClientRect(), av=box('.chat-avatar'), name=box('.ch-name'), time=box('.ch-time'), text=box('.ch-text');
+        return {avatarBeforeName:av.right<=name.left+1,nameAboveMessage:Math.abs(name.left-text.left)<1 && name.bottom<=text.top+1,timeAfterName:time.left>=name.right-1,noOverflow:el.scrollWidth<=el.clientWidth+1};
+      });
+      assert.deepEqual(alignment,{avatarBeforeName:true,nameAboveMessage:true,timeAfterName:true,noOverflow:true},`${gui} chat row alignment at ${viewport.width}x${viewport.height}`);
+      const grouped=await lines.nth(1).evaluate(el=>({avatar:getComputedStyle(el.querySelector('.chat-avatar')).visibility,row:getComputedStyle(el.querySelector('.ch-text')).gridRowStart}));
+      assert.equal(grouped.row,'1','Grouped text uses its single row');
+      assert.equal(await lines.nth(1).locator('.chat-avatar').isVisible(),false);
+      if(gui==='og' && viewport.width===1280)await page.screenshot({path:'/tmp/og-chat-fixed.png'});
+    }
+  }
+  await page.setViewportSize({width:1280,height:591});
   await page.screenshot({path:'/tmp/grouped-lobby-chat.png'});
   await page.evaluate(()=>{
     Chat.close();SpectatorChat.context=()=>({id:'fixture-host',name:'Alice',host:true});SpectatorChat.refresh();
@@ -47,6 +64,16 @@ try {
   assert.equal(await page.locator('.spectator-chat .chat-continuation').count(),3);
   assert.equal(await page.locator('.spectator-chat .gp-chat-l').count(),7);
   await page.screenshot({path:'/tmp/grouped-spectator-chat.png'});
+  await page.evaluate(()=>Settings.set('ui.gui','og'));
+  const compactAlignment=await page.evaluate(()=>{
+    const holder=h('div',{style:{position:'absolute',left:'200px',top:'100px',width:'300px'}});$('#app').append(holder);
+    const results=['mp-msg','gp-chat-l','rkm-msg'].map(cls=>{
+      const line=compactChatLine('div.'+cls,{pid:'fixture-Alice',name:'Alice'},'Message text that can wrap to another line.');holder.append(line);
+      const av=line.querySelector('.chat-avatar').getBoundingClientRect(),copy=line.querySelector('.chat-copy').getBoundingClientRect();
+      return {cls,adjacent:copy.left>=av.right && copy.top<=av.bottom && copy.width>50};
+    });holder.remove();return results;
+  });
+  assert.ok(compactAlignment.every(r=>r.adjacent),'Room, gameplay and ranked chats align avatars beside message content: '+JSON.stringify(compactAlignment));
   const trim=await page.evaluate(()=>{
     const list=h('div');for(let i=0;i<6;i++)list.append(groupChatLine(list,compactChatLine('div.gp-chat-l',{pid:'Alice',name:'Alice'},'line '+i),{pid:'Alice',name:'Alice'},Date.now()+i));
     trimChatLines(list,3);return {count:list.children.length,firstGrouped:list.firstChild.classList.contains('chat-continuation'),followingGrouped:list.lastChild.classList.contains('chat-continuation')};

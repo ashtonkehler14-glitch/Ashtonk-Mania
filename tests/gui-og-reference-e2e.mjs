@@ -43,7 +43,7 @@ try {
   await setup(original);await setup(page);await page.evaluate(()=>Settings.set('ui.gui','og'));
   const snapshot=async(p,selectors)=>p.evaluate(selectors=>Object.fromEntries(selectors.map(sel=>{
     const el=document.querySelector(sel);if(!el)return [sel,null];const cs=getComputedStyle(el),rect=el.getBoundingClientRect();
-    return [sel,{style:Object.fromEntries(['backgroundColor','backgroundImage','color','fontFamily','fontSize','fontWeight','borderRadius','borderWidth','padding','gap','transform','boxShadow','display'].map(k=>[k,cs[k]])),rect:[rect.x,rect.y,rect.width,rect.height].map(v=>Math.round(v*10)/10)}];
+    return [sel,{style:Object.fromEntries(['backgroundColor','backgroundImage','color','fontFamily','fontSize','fontWeight','borderRadius','borderWidth','padding','gap','transform','boxShadow','display'].map(k=>[k,k==='transform' && cs[k]!=='none' && [1,0,0,1,0,0].every((v,i)=>Math.abs(v-[new DOMMatrix(cs[k]).a,new DOMMatrix(cs[k]).b,new DOMMatrix(cs[k]).c,new DOMMatrix(cs[k]).d,new DOMMatrix(cs[k]).e,new DOMMatrix(cs[k]).f][i])<1e-6) ? 'none' : cs[k]])),rect:[rect.x,rect.y,rect.width,rect.height].map(v=>Math.round(v*10)/10 || 0)}];
   })),selectors);
   for(const state of ['top','play','multi','edit']){
     for(const p of [page,original])await p.evaluate(state=>{HomeScreen.setState(state,true);HomeScreen._idleAt=performance.now();},state);
@@ -60,6 +60,7 @@ try {
   assert.deepEqual(await iconSnapshot(page),await iconSnapshot(original),'Original icon assets and view boxes');
   for(const p of [page,original])await p.evaluate(()=>SettingsPanel.open('Skin'));
   await page.waitForTimeout(800);
+  for(const p of [page,original])await p.locator('.settings-panel').evaluate(el=>Promise.all(el.getAnimations().map(a=>a.finished.catch(()=>{}))));
   assert.deepEqual(await snapshot(page,['.settings-panel','.sp-nav','.sp-head','.sp-search','.sp-section h3','.sp-group','.set-row']),await snapshot(original,['.settings-panel','.sp-nav','.sp-head','.sp-search','.sp-section h3','.sp-group','.set-row']),'OG settings chrome matches reference');
   await page.screenshot({path:'/tmp/og-651ec35-settings.png'});
   for(const p of [page,original])await p.evaluate(()=>{SettingsPanel.close();HomeScreen.setState('top',true);});

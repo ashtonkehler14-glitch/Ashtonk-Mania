@@ -906,6 +906,9 @@ const SkinsScreen = {
  *  (osu!lazer shows its changelog after an update); new players start with everything marked as seen. */
 // What's new: only what a player will notice, in a few words each (no behind-the-scenes changes)
 const CHANGELOG = [
+  { id: '2026.11.18c', title: 'OG chat layout fix', sections: [
+    { title: 'Chat', items: ['Fixed misplaced names, avatars and message text in OG mode, including grouped messages on mobile.'] }
+  ] },
   { id: '2026.11.18b', title: 'The original OG interface', sections: [
     { title: 'Interface', items: ['OG mode restores the interface from build 651ec35, including its original icons, font, toolbar, logo animations, settings layout and menu styling.'] }
   ] },
